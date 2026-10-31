@@ -1,0 +1,1 @@
+[2026-10-31] Establish BTAE architecture, PRD and SPEC documentation [completed]
