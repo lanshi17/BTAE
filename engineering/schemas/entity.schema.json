@@ -1,0 +1,196 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://btae.local/schema/entity/v1",
+  "title": "BTAE Entity",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "type",
+    "name",
+    "source"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9]*-[A-Z0-9][A-Z0-9_-]*$"
+    },
+    "type": {
+      "enum": [
+        "Intent",
+        "Spec",
+        "Architecture",
+        "Module",
+        "Component",
+        "Class",
+        "Contract",
+        "ADR",
+        "Source",
+        "Symbol",
+        "API",
+        "DataModel",
+        "Test",
+        "Evaluation",
+        "Evidence"
+      ]
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "type": [
+        "string",
+        "integer"
+      ]
+    },
+    "source": {
+      "$ref": "#/$defs/location"
+    },
+    "design_status": {
+      "enum": [
+        "draft",
+        "reviewed",
+        "approved"
+      ]
+    },
+    "implementation_status": {
+      "enum": [
+        "not_started",
+        "in_progress",
+        "implemented"
+      ]
+    },
+    "verification_status": {
+      "enum": [
+        "pending",
+        "passed",
+        "failed"
+      ]
+    },
+    "implementation": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/implementation"
+      }
+    },
+    "verification": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "test_id"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "test_id": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "contracts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "relations": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "extensions": {
+      "type": "object"
+    },
+    "lifecycle": {
+      "enum": [
+        "active",
+        "archived"
+      ]
+    },
+    "schema": {}
+  },
+  "$defs": {
+    "location": {
+      "type": "object",
+      "required": [
+        "path"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "column": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "implementation": {
+      "type": "object",
+      "required": [
+        "path"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "symbol": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "Contract"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "then": {
+        "required": [
+          "version",
+          "schema"
+        ],
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "schema": {
+            "type": "object"
+          }
+        }
+      },
+      "else": {
+        "not": {
+          "required": [
+            "schema"
+          ]
+        }
+      }
+    }
+  ]
+}

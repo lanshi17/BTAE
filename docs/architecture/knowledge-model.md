@@ -1,6 +1,6 @@
 # 工程知识模型与双向追溯
 
-状态：v0.1 设计草案。以下字段是 Schema 设计依据，尚无对应的可执行 Schema 校验器。
+状态：v0.1 设计草案。以下字段是 Schema 设计依据；对应 JSON Schema 已位于 `engineering/schemas/`，完整运行时校验仍在演进。
 
 ## 1. 统一实体
 
@@ -63,7 +63,7 @@ origin:
 verified: false
 ```
 
-来源类型区分 `explicit/static/inferred`，验证状态独立记录验证者、方法、时间与依据版本。显式声明或高 confidence 不自动等同于真实、已批准或已验证。
+来源类型区分 `explicit/static/inferred`，且每条关系必须记录非空 `origin.source`；验证状态独立记录 `verifier`、`method`、UTC 时间与依据 `version`。`verified=true` 必须提供完整验证元数据，未验证关系不能携带矛盾的 verification 对象。显式声明或高 confidence 不自动等同于真实、已批准或已验证。
 
 ## 3. 权威来源与派生数据
 

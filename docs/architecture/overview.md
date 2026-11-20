@@ -1,8 +1,9 @@
 ---
 id: ARCH-001
+type: Architecture
 name: BTAE Overall Architecture
 design_status: draft
-implementation_status: not_started
+implementation_status: in_progress
 verification_status: pending
 ---
 

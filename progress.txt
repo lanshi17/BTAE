@@ -1,1 +1,3 @@
 [2026-10-31] Establish BTAE architecture, PRD and SPEC documentation [completed]
+[2026-11-19] Deliver local EPE MVP: schemas, core registry, parsers, graph, gates, Evidence runner, CLI, tests and CI workflow [in_progress]
+[2026-11-19] Add signed approval trust, ChangeSet baseline comparison, design/contracts, static import architecture checks, context cache/incremental plans, host capability matrix and task workflow transitions [in_progress]

@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://btae.local/schema/workflow/v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "type", "required"],
+  "properties": {"schema_version": {"const": 1}, "type": {"enum": ["feature", "bugfix", "refactor", "exploration"]}, "required": {"type": "array", "items": {"type": "string"}}, "gates": {"type": "array", "items": {"type": "string"}}}
+}

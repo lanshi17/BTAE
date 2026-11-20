@@ -1,0 +1,6 @@
+schema_version: 1
+type: feature
+required:
+- objective
+- acceptance
+- target_entities

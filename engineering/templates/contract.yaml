@@ -1,0 +1,9 @@
+schema_version: 1
+id: CONTRACT-001
+type: Contract
+name: ""
+design_status: draft
+implementation_status: not_started
+verification_status: pending
+version: 1
+schema: {}

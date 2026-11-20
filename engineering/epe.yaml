@@ -1,0 +1,28 @@
+schema_version: 1
+project_id: PROJ-BTAE
+managed:
+  design_roots:
+  - docs
+  code_roots:
+  - src
+  test_roots:
+  - tests
+  contract_roots:
+  - engineering/contracts
+exclude:
+- .git
+- .engineering
+- reports
+- .venv
+- venv
+- __pycache__
+policies:
+  architecture: engineering/policies/architecture.yaml
+  verification: engineering/policies/verification.yaml
+storage:
+  derived: .engineering
+  tasks: engineering/tasks
+  changesets: engineering/changesets
+  approvals: engineering/approvals
+  evidence: engineering/evidence
+  audit: engineering/audit/events.jsonl

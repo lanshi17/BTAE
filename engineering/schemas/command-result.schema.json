@@ -1,0 +1,5 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "https://btae.local/schema/command-result/v1", "title": "EPE Command Result", "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "command", "status", "diagnostics", "data", "evidence_ids"],
+  "properties": {"schema_version": {"const": 1}, "command": {"type": "string"}, "status": {"enum": ["passed", "blocked", "error", "unsupported"]}, "diagnostics": {"type": "array", "items": {"type": "object"}}, "data": {}, "evidence_ids": {"type": "array", "items": {"type": "string"}}}
+}

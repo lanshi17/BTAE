@@ -1,5 +1,6 @@
 ---
 id: INTENT-001
+type: Intent
 name: BTAE Product Requirements
 version: 0.1
 design_status: draft
@@ -11,7 +12,7 @@ design_status: draft
 
 BTAE 面向长期使用 AI Agent 开发软件的个人与团队，以轻量工程协议引擎 EPE 连接设计、契约、代码、测试和证据。首个产品目标是让开发者知道每次修改依据什么设计、影响哪些实体、经过哪些检查，以及当前结果能否作为完成依据。
 
-本文定义产品问题、范围与发布条件；[SPEC](requirements/SPEC-BTAE.md) 定义对应的技术行为。当前均为草案，尚无产品实现或效果验证。
+本文定义产品问题、范围与发布条件；[SPEC](requirements/SPEC-BTAE.md) 定义对应的技术行为。当前文档仍为草案；仓库已提供本地 EPE MVP 实现和基础测试，但尚未完成 V0.2 全部验收或效果验证。
 
 ## 2. 相关角色
 

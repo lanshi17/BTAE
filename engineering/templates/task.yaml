@@ -1,0 +1,8 @@
+schema_version: 1
+id: TASK-001
+type: feature
+objective: ""
+acceptance: []
+risk: low
+target_entities: []
+status: planned

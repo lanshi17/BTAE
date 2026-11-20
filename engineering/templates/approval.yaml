@@ -1,0 +1,11 @@
+schema_version: 1
+id: APPROVAL-001
+entity_id: CLASS-001
+revision: ""
+decision: approved
+identity:
+  id: ""
+authorization_source: ""
+timestamp: ""
+risk_scope: [low]
+signature: ""

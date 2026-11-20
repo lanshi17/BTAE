@@ -2,6 +2,8 @@
 
 状态：v0.1 设计草案。本文的版本号表示目标里程碑，不表示当前已完成对应版本。
 
+本页保持版本路线与研究验证范围；逐项实施步骤、依赖及负责人安排见[实施计划](../../plans/backlog/BTAE-implementation-plan.md)，工作包任务分解见[细化计划](../../plans/backlog/work-packages/README.md)，模块细节见[模块设计](../modules/README.md)。
+
 ## 1. 分阶段交付
 
 | 版本 | 目标 | 主要交付 |
@@ -48,7 +50,7 @@ epe sync
 epe check
 ```
 
-这些命令尚未实现，具体参数和输出需在 CLI 规格中冻结。`design approve` 表示提交或记录经授权的审批操作，不允许普通调用者自授权限。
+当前已实现 `init`、`inspect`、任务登记/分类、ChangeSet 基线、设计生成/校验/批准、契约 Schema 校验、映射校验、图构建、架构校验、`verify`、`sync`、`check`，基础 `context resolve` / `impact analyze`、增量计划/重建和宿主能力矩阵。`design approve` 只接受配置受信公钥验证的签名记录，不允许调用者自授权限；Hermes 仍明确为未集成 unsupported。
 
 查询命令默认只读；生成命令仅更新声明的派生工件；初始化需避免覆盖现有内容。影响权威工件的操作应提供可审查变更。统一输出诊断、实体 ID、来源和证据定位；机器输出与人类输出共享结果模型。退出码、幂等性、并发和失败恢复在实现前定义。
 

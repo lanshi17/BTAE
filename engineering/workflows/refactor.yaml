@@ -1,0 +1,6 @@
+schema_version: 1
+type: refactor
+required:
+- objective
+- acceptance
+- target_entities

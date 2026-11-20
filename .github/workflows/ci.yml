@@ -1,0 +1,32 @@
+name: btae-epe
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install -e '.[test]'
+      - run: pytest -q
+      - run: epe --format json policy validate
+      - run: epe --format json inspect
+      - run: epe --format json graph build
+      - run: epe --format json architecture validate
+      - run: epe --format json audit verify
+      - run: epe --format json host capabilities
+      - name: Verify wheel outside source tree
+        run: |
+          python -m pip wheel . --no-deps -w /tmp/epe-wheel
+          python -m venv /tmp/epe-wheel-venv
+          /tmp/epe-wheel-venv/bin/pip install --no-deps /tmp/epe-wheel/*.whl
+          mkdir -p /tmp/epe-wheel-project
+          cd /tmp/epe-wheel-project
+          /tmp/epe-wheel-venv/bin/epe --format json init
+          /tmp/epe-wheel-venv/bin/epe --format json policy validate
+          /tmp/epe-wheel-venv/bin/epe --format json host capabilities

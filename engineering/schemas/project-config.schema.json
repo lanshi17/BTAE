@@ -1,0 +1,170 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://btae.local/schema/project-config/v1",
+  "title": "EPE Project Configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "project_id": {
+      "type": "string",
+      "pattern": "^PROJ-[A-Z0-9][A-Z0-9_-]*$"
+    },
+    "managed": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "design_roots": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "code_roots": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "test_roots": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "contract_roots": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "module_roots": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {
+            "pattern": "^MOD-[A-Z0-9][A-Z0-9_-]*$"
+          },
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          }
+        }
+      }
+    },
+    "exclude": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "policies": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "architecture": {
+          "type": "string",
+          "minLength": 1
+        },
+        "verification": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "storage": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "derived": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tasks": {
+          "type": "string",
+          "minLength": 1
+        },
+        "changesets": {
+          "type": "string",
+          "minLength": 1
+        },
+        "approvals": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence": {
+          "type": "string",
+          "minLength": 1
+        },
+        "audit": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "approval_trust": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "identities": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.@-]{0,127}$"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "public_key",
+              "kind",
+              "risk_scope"
+            ],
+            "properties": {
+              "public_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "enum": [
+                  "human",
+                  "service"
+                ]
+              },
+              "risk_scope": {
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "low",
+                    "medium",
+                    "high"
+                  ]
+                },
+                "uniqueItems": true
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

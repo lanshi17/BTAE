@@ -1,9 +1,10 @@
 ---
 id: SPEC-001
+type: Spec
 name: BTAE Engineering Protocol Engine Specification
 version: 0.1
 design_status: draft
-implementation_status: not_started
+implementation_status: in_progress
 verification_status: pending
 ---
 
@@ -131,6 +132,7 @@ Low 可由配置的自动规则完成设计审核，Medium 增加独立评审记
 | `epe inspect` | 只读列出纳管范围、配置和实现状态 |
 | `epe task create --file PATH` | 校验并登记任务；ID 冲突拒绝 |
 | `epe task classify TASK-ID` | 返回当前分类和缺失项，不伪称智能推断已完成 |
+| `epe task transition TASK-ID EVENT` | 以 revision 校验并登记激活、完成或中止；完成要求 passed 门禁 |
 | `epe design validate ENTITY-ID` | 只读校验设计及相关契约 |
 | `epe design approve ENTITY-ID --record PATH` | 验证可信审批记录并登记；不信任调用者自报权限 |
 | `epe mapping validate` | 校验纳管实体映射 |
@@ -140,7 +142,7 @@ Low 可由配置的自动规则完成设计审核，Medium 增加独立评审记
 | `epe sync` | 重建派生视图，不修改设计意图或审批 |
 | `epe check --task TASK-ID` | 综合检查现有门禁与证据，不隐式执行任意测试命令 |
 
-`design create`、`context resolve`、`impact analyze` 为后续接口；若命令暴露但未实现，返回明确 unsupported，不返回空成功。
+当前 `design create` 按实体 ID 生成缺省设计模板并拒绝覆盖已有文件；`context resolve` 提供 C0–C2 基础装配，`impact analyze` 提供有预算的图传播。缺少图或任务时返回明确诊断，不返回空成功。
 
 统一结果包含 `schema_version/command/status/diagnostics/data/evidence_ids`。status 为 `passed/blocked/error/unsupported`；诊断包含稳定 code、severity、message、entity_id、path 和建议动作。退出码约定：0 成功、1 门禁阻断、2 参数或配置错误、3 执行/解析/存储故障、4 不支持、5 写入冲突；多种问题并存时优先报告故障，其次阻断，并保留全部诊断。
 
@@ -171,8 +173,8 @@ Low 可由配置的自动规则完成设计审核，Medium 增加独立评审记
 
 自动化测试和样例工程必须独立断言以上行为，并保存执行结果。文档中的验收表不表示测试已经实现或通过。
 
-## 11. 冻结前需补齐的机器工件
+## 11. 当前机器工件与未决范围
 
-实体/关系/Evidence/Task/ChangeSet/Approval Schema，Policy 与 Workflow 定义，文档模板，检查器与 CI 配置，以及可信身份/审批 adapter 契约。性能基线与可支持仓库规模在可运行原型上测量后确定；当前不承诺未经测量的耗时指标。
+初版 Entity、Relation、Evidence、Task、ChangeSet、Approval、CommandResult Schema，Policy/Workflow 默认文件，设计类模板、本地检查器和 CI 工作流已位于 `engineering/`、`docs/classes/` 与 `.github/workflows/ci.yml`。可信身份/审批 adapter、宿主隔离、完整契约执行、影响分析和性能基线仍待后续工作包冻结；当前不承诺未经测量的耗时指标。
 
 本文与 PRD、架构发现冲突时必须显式修订并评审，不由 Agent 隐式选取较宽松规则。任何字段、状态、退出码或授权变化都应保留版本与迁移说明。

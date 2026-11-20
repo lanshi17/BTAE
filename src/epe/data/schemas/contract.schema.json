@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://btae.local/schema/contract/v1",
+  "title": "BTAE Contract Entity",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "type",
+    "name",
+    "version",
+    "schema"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^CONTRACT-[A-Z0-9][A-Z0-9_-]*$"
+    },
+    "type": {
+      "const": "Contract"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "schema": {
+      "type": "object"
+    },
+    "design_status": {
+      "enum": [
+        "draft",
+        "reviewed",
+        "approved"
+      ]
+    },
+    "implementation_status": {
+      "enum": [
+        "not_started",
+        "in_progress",
+        "implemented"
+      ]
+    },
+    "verification_status": {
+      "enum": [
+        "pending",
+        "passed",
+        "failed"
+      ]
+    },
+    "lifecycle": {
+      "enum": [
+        "active",
+        "archived"
+      ]
+    },
+    "relations": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "extensions": {
+      "type": "object"
+    }
+  }
+}

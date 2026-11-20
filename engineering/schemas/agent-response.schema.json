@@ -1,0 +1,5 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "https://btae.local/schema/agent-response/v1", "title": "EPE Agent Response", "type": "object", "additionalProperties": false,
+  "required": ["decision", "reasons", "diagnostics", "evidence_ids", "next_steps"],
+  "properties": {"decision": {"enum": ["accepted", "blocked", "error"]}, "reasons": {"type": "array", "items": {"type": "string"}}, "diagnostics": {"type": "array", "items": {"type": "object"}}, "evidence_ids": {"type": "array", "items": {"type": "string"}}, "next_steps": {"type": "array", "items": {"type": "string"}}}
+}

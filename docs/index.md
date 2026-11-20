@@ -2,7 +2,7 @@
 
 Bottom-Up Traceable Agentic Engineering：自下而上构建、规格约束、双向追溯、证据验证与持续演进的智能体工程体系。
 
-本组文档依据项目初始方案整理，版本为 **v0.1 设计草案**。它描述目标架构，不代表工具已实现、规范已冻结或设计已获审批。仓库尚无正式 EPE 实现、自动化门禁或 CI。
+本组文档依据项目初始方案整理，版本为 **v0.1 设计草案**。仓库现已包含可运行的本地 EPE MVP 骨架、机器 Schema、基础门禁与测试；规范尚未宣称冻结，设计审批和 CI 强制状态仍按各实体记录。
 
 ## 阅读顺序
 
@@ -10,6 +10,14 @@ Bottom-Up Traceable Agentic Engineering：自下而上构建、规格约束、�
 
 - [BTAE PRD](intent/PRD-BTAE.md)：用户、问题、产品范围、优先级与发布条件。
 - [BTAE SPEC](intent/requirements/SPEC-BTAE.md)：MVP 数据契约、接口、门禁、证据与验收矩阵。
+
+模块与实施：
+
+- [模块设计索引](modules/README.md)：9 个逻辑模块的职责、接口、依赖、工作包与验收。
+- [Agent 操作协议](contracts/agent-protocol.md)：宿主适配器请求/响应的最小结构与可信身份边界。
+- [实施计划](../plans/backlog/BTAE-implementation-plan.md)：14 个工作包、里程碑、交付顺序、风险与完成条件。
+- [工作包细化计划](../plans/backlog/work-packages/README.md)：各 WP 的任务分解、决策项、拟议路径与完成门槛。
+- [计划状态索引](../plans/README.md)：计划的执行与归档位置。
 
 架构设计：
 

@@ -1,0 +1,16 @@
+schema_version: 1
+id: EVIDENCE-001
+run_id: RUN-001
+target_entities: []
+checker: ""
+checker_version: "1"
+command: []
+cwd: ""
+started_at: ""
+finished_at: ""
+result: not_run
+validity: unknown
+input_manifest: {}
+artifacts: []
+environment: {}
+provenance: {}

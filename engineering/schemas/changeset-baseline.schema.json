@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://btae.local/schema/changeset-baseline/v1",
+  "title": "ChangeSet Baseline",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "entries", "digest"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "entries": {"type": "array", "items": {"type": "object", "additionalProperties": false,
+      "required": ["path", "sha256", "kind"], "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "kind": {"enum": ["file", "symlink"]}}}},
+    "digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}
