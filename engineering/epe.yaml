@@ -9,6 +9,16 @@ managed:
   - tests
   contract_roots:
   - engineering/contracts
+  module_roots:
+    MOD-001: [src/epe/core, src/epe/data]
+    MOD-002: [src/epe/parsers]
+    MOD-003: [src/epe/graph]
+    MOD-004: [src/epe/context]
+    MOD-005: [src/epe/design]
+    MOD-006: [src/epe/verification]
+    MOD-007: [src/epe/governance]
+    MOD-008: [src/epe/cli.py, src/epe/__main__.py, src/epe/__init__.py]
+    MOD-009: [src/epe/adapters]
 exclude:
 - .git
 - .engineering

@@ -22,7 +22,8 @@ from epe.graph.builder import analyze_impact, trace_path
 from epe.context.resolver import resolve_context, load_cached_context, store_cached_context
 from epe.governance.gates import finalize_gate
 from epe.governance.tasks import load_task, save_task, validate_task, transition_task, check_scope
-from epe.governance.policies import validate_policy_files, validate_policy_document
+from epe.governance.policies import validate_policy_files
+from epe.core.policy import validate_policy_document
 from epe.governance.baseline import capture_baseline, changeset_paths, compare_baseline, validate_changeset, transition_changeset, changeset_declaration, baseline_binding_version
 from epe.parsers.documents import discover_documents, parse_yaml_bytes
 from epe.parsers.python import parse_python_tree

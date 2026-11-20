@@ -58,7 +58,7 @@ def load_required_checks(root: Path, config: dict[str, Any]) -> tuple[list[dict[
                 or len(set(artifacts)) != len(artifacts)):
             return [], [Diagnostic("EPE-VERIFY-CONFIG", Severity.ERROR, f"产物必须为不重复的仓库相对路径数组: {check['id']}", path=str(rel))]
         seen.add(check["id"])
-    from epe.governance.policies import validate_policy_document
+    from epe.core.policy import validate_policy_document
     policy_for_validation = dict(raw) if isinstance(raw, dict) else raw
     # Direct library callers historically supplied a minimal checks document;
     # retain that compatibility while still applying the full schema to its
