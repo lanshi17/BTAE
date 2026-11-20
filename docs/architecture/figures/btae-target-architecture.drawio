@@ -1,0 +1,119 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net">
+  <diagram name="BTAE 目标架构">
+    <mxGraphModel dx="1200" dy="830" grid="0" page="1" pageWidth="1200" pageHeight="830">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="BTAE / EPE 目标架构" style="rounded=1;whiteSpace=wrap;html=0;fillColor=none;strokeColor=none;fontColor=#171717;fontSize=25;fontFamily=Arial;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="12" width="1160" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle" value="设计草案 · 逻辑责任边界，非部署拓扑或实现完成声明" style="rounded=1;whiteSpace=wrap;html=0;fillColor=none;strokeColor=none;fontColor=#171717;fontSize=16;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="20" y="57" width="1160" height="28" as="geometry" />
+        </mxCell>
+        <mxCell id="lh" value="七层工程责任" style="rounded=1;whiteSpace=wrap;html=0;fillColor=none;strokeColor=none;fontColor=#171717;fontSize=20;fontFamily=Arial;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="105" width="410" height="42" as="geometry" />
+        </mxCell>
+        <mxCell id="rh" value="EPE 协调的横向设施与工作流" style="rounded=1;whiteSpace=wrap;html=0;fillColor=none;strokeColor=none;fontColor=#171717;fontSize=20;fontFamily=Arial;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="500" y="105" width="660" height="42" as="geometry" />
+        </mxCell>
+        <mxCell id="l0" value="L0  宪章与全局约束&#10;原则 · 安全 · 治理" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#F4F4F4;strokeColor=#222222;fontColor=#171717;fontSize=17;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="40" y="155" width="410" height="62" as="geometry" />
+        </mxCell>
+        <mxCell id="l1" value="L1  意图与规格&#10;目标 · 行为 · 验收" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#F4F4F4;strokeColor=#222222;fontColor=#171717;fontSize=17;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="40" y="227" width="410" height="62" as="geometry" />
+        </mxCell>
+        <mxCell id="l2" value="L2  架构与领域&#10;边界 · 模块 · ADR" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#F4F4F4;strokeColor=#222222;fontColor=#171717;fontSize=17;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="40" y="299" width="410" height="62" as="geometry" />
+        </mxCell>
+        <mxCell id="l3" value="L3  组件、类与契约&#10;职责 · 接口 · 状态" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#F4F4F4;strokeColor=#222222;fontColor=#171717;fontSize=17;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="40" y="371" width="410" height="62" as="geometry" />
+        </mxCell>
+        <mxCell id="l4" value="L4  实现&#10;代码 · API · 数据模型" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#F4F4F4;strokeColor=#222222;fontColor=#171717;fontSize=17;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="40" y="443" width="410" height="62" as="geometry" />
+        </mxCell>
+        <mxCell id="l5" value="L5  验证与证据&#10;测试 · 检查 · 执行记录" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#F4F4F4;strokeColor=#222222;fontColor=#171717;fontSize=17;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="40" y="515" width="410" height="62" as="geometry" />
+        </mxCell>
+        <mxCell id="l6" value="L6  演进与维护&#10;影响 · 迁移 · 归档" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#F4F4F4;strokeColor=#222222;fontColor=#171717;fontSize=17;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="40" y="587" width="410" height="62" as="geometry" />
+        </mxCell>
+        <mxCell id="note" value="责任划分，不规定瀑布顺序" style="rounded=1;whiteSpace=wrap;html=0;fillColor=none;strokeColor=none;fontColor=#171717;fontSize=16;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="40" y="670" width="410" height="42" as="geometry" />
+        </mxCell>
+        <mxCell id="gov" value="治理平面&#10;协议 · 权限 · 生命周期&#10;门禁 · 架构适应度" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#FCE2C4;strokeColor=#222222;fontColor=#171717;fontSize=17;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="500" y="155" width="320" height="104" as="geometry" />
+        </mxCell>
+        <mxCell id="kg" value="工程知识图谱&#10;实体 · 关系 · 影响 · 证据索引&#10;提供事实，不授予权限" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#CDEBF5;strokeColor=#222222;fontColor=#171717;fontSize=17;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="840" y="155" width="320" height="104" as="geometry" />
+        </mxCell>
+        <mxCell id="flowh" value="示意工作流：箭头表示主要执行方向" style="rounded=1;whiteSpace=wrap;html=0;fillColor=none;strokeColor=none;fontColor=#171717;fontSize=17;fontFamily=Arial;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="500" y="277" width="660" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="flow0" value="任务与上下文&#10;分类 · 检索 · 影响" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#D5EED8;strokeColor=#222222;fontColor=#171717;fontSize=16;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="500" y="325" width="156" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="flow1" value="设计与门禁&#10;规格 · 契约 · 评审" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#D5EED8;strokeColor=#222222;fontColor=#171717;fontSize=16;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="668" y="325" width="156" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="a1" style="endArrow=block;endFill=1;strokeColor=#222222;strokeWidth=1.5;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="657" y="367" as="sourcePoint" />
+            <mxPoint x="666" y="367" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow2" value="实现与验证&#10;行为 · 架构检查" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#D5EED8;strokeColor=#222222;fontColor=#171717;fontSize=16;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="836" y="325" width="156" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="a2" style="endArrow=block;endFill=1;strokeColor=#222222;strokeWidth=1.5;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="825" y="367" as="sourcePoint" />
+            <mxPoint x="834" y="367" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow3" value="证据与同步&#10;记录 · 索引 · 协调" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#D5EED8;strokeColor=#222222;fontColor=#171717;fontSize=16;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="1004" y="325" width="156" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="a3" style="endArrow=block;endFill=1;strokeColor=#222222;strokeWidth=1.5;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="993" y="367" as="sourcePoint" />
+            <mxPoint x="1002" y="367" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="mh" value="逻辑模块（可在同一进程中实现）" style="rounded=1;whiteSpace=wrap;html=0;fillColor=none;strokeColor=none;fontColor=#171717;fontSize=17;fontFamily=Arial;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="500" y="437" width="660" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="m0" value="core&#10;实体与关系" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#E8E4F4;strokeColor=#222222;fontColor=#171717;fontSize=16;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="500" y="485" width="216" height="58" as="geometry" />
+        </mxCell>
+        <mxCell id="m1" value="parsers&#10;解析与来源" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#E8E4F4;strokeColor=#222222;fontColor=#171717;fontSize=16;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="722" y="485" width="216" height="58" as="geometry" />
+        </mxCell>
+        <mxCell id="m2" value="graph&#10;索引与影响" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#E8E4F4;strokeColor=#222222;fontColor=#171717;fontSize=16;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="944" y="485" width="216" height="58" as="geometry" />
+        </mxCell>
+        <mxCell id="m3" value="context&#10;检索与装配" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#E8E4F4;strokeColor=#222222;fontColor=#171717;fontSize=16;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="500" y="553" width="216" height="58" as="geometry" />
+        </mxCell>
+        <mxCell id="m4" value="design&#10;设计与评审" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#E8E4F4;strokeColor=#222222;fontColor=#171717;fontSize=16;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="722" y="553" width="216" height="58" as="geometry" />
+        </mxCell>
+        <mxCell id="m5" value="verification&#10;验证与证据" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#E8E4F4;strokeColor=#222222;fontColor=#171717;fontSize=16;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="944" y="553" width="216" height="58" as="geometry" />
+        </mxCell>
+        <mxCell id="m6" value="governance&#10;策略与门禁" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#E8E4F4;strokeColor=#222222;fontColor=#171717;fontSize=16;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="500" y="621" width="216" height="58" as="geometry" />
+        </mxCell>
+        <mxCell id="m7" value="cli&#10;调用与输出" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#E8E4F4;strokeColor=#222222;fontColor=#171717;fontSize=16;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="722" y="621" width="216" height="58" as="geometry" />
+        </mxCell>
+        <mxCell id="m8" value="adapters&#10;宿主与基础设施" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#E8E4F4;strokeColor=#222222;fontColor=#171717;fontSize=16;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="944" y="621" width="216" height="58" as="geometry" />
+        </mxCell>
+        <mxCell id="foot" value="BTAE 是工程方法；EPE 是协调引擎。Hermes 为优先集成对象；宿主强制取决于实际权限与 CI。" style="rounded=1;whiteSpace=wrap;html=0;fillColor=none;strokeColor=none;fontColor=#171717;fontSize=16;fontFamily=Arial;" vertex="1" parent="1">
+          <mxGeometry x="40" y="742" width="1120" height="55" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
