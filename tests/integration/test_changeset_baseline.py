@@ -73,6 +73,16 @@ def test_changeset_runtime_validation_rejects_unknown_and_wrong_typed_fields():
         validate_changeset({**base, "baseline_manifest": []}, "TASK-001")
 
 
+def test_changeset_schema_rejects_empty_required_collections():
+    import json
+    import jsonschema
+    from pathlib import Path
+    schema = json.loads((Path(__file__).resolve().parents[2] / "engineering/schemas/changeset.schema.json").read_text(encoding="utf-8"))
+    value = {"schema_version": 1, "id": "CHANGE-001", "task": "TASK-001", "owner": "owner", "affected_entities": [], "write_scope": [], "protected": [], "dependencies": [], "status": "planned"}
+    errors = list(jsonschema.Draft202012Validator(schema).iter_errors(value))
+    assert errors
+
+
 def test_baseline_rejects_escape_symlink(tmp_path, capsys):
     setup_project(tmp_path, capsys)
     (tmp_path / "src/escape").symlink_to(tmp_path.parent, target_is_directory=True)
