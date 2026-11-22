@@ -206,17 +206,34 @@ def cmd_init(args) -> CommandResult:
                 matches = existing.split("---", 2)[:2] == expected.split("---", 2)[:2]
             if not matches: conflicts.append(Diagnostic("EPE-INIT-CONFLICT", Severity.ERROR, f"目标文件已存在且内容不同: {rel}", path=rel))
     if conflicts: return _result("init", "blocked", conflicts, {"created": []})
-    created = [rel for rel in list(targets) + list(template_defaults) if not (root / rel).exists()]
-    for rel, value in targets.items():
-        path = root / rel; path.parent.mkdir(parents=True, exist_ok=True)
-        if not path.exists(): path.write_text(yaml_dump(value), encoding="utf-8")
-    for rel, value in template_defaults.items():
-        path = root / rel; path.parent.mkdir(parents=True, exist_ok=True)
-        if not path.exists(): path.write_text(value, encoding="utf-8")
-    for rel in ["engineering/tasks", "engineering/changesets", "engineering/approvals", "engineering/evidence", "engineering/audit", ".engineering"]:
-        if _init_path_has_symlink(root, rel):
-            return _result("init", "blocked", [Diagnostic("EPE-PATH-SYMLINK", Severity.ERROR, f"初始化目录不能包含符号链接: {rel}", path=rel)], {"created": []})
-        (root / rel).mkdir(parents=True, exist_ok=True)
+    created: list[str] = []
+    try:
+        lock = _safe_input(root, ".engineering/.write.lock")
+        with acquire_write_lock(lock):
+            for rel, value in targets.items():
+                path = root / rel
+                if not path.exists():
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    with path.open("x", encoding="utf-8") as handle:
+                        handle.write(yaml_dump(value)); handle.flush(); os.fsync(handle.fileno())
+                    created.append(rel)
+            for rel, value in template_defaults.items():
+                path = root / rel
+                if not path.exists():
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    with path.open("x", encoding="utf-8") as handle:
+                        handle.write(value); handle.flush(); os.fsync(handle.fileno())
+                    created.append(rel)
+            for rel in ["engineering/tasks", "engineering/changesets", "engineering/approvals", "engineering/evidence", "engineering/audit", ".engineering"]:
+                if _init_path_has_symlink(root, rel):
+                    return _result("init", "blocked", [Diagnostic("EPE-PATH-SYMLINK", Severity.ERROR, f"初始化目录不能包含符号链接: {rel}", path=rel)], {"created": []})
+                (root / rel).mkdir(parents=True, exist_ok=True)
+    except WriteConflict as exc:
+        return _result("init", "blocked", [Diagnostic("EPE-WRITE-CONFLICT", Severity.ERROR, str(exc))], {"created": []})
+    except FileExistsError as exc:
+        return _result("init", "blocked", [Diagnostic("EPE-WRITE-CONFLICT", Severity.ERROR, f"初始化并发冲突: {exc}")], {"created": []})
+    except OSError as exc:
+        return _result("init", "error", [Diagnostic("EPE-INIT-STORE", Severity.ERROR, str(exc))], {"created": created})
     return _result("init", "passed", data={"created": created})
 
 
