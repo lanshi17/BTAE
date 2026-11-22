@@ -10,7 +10,7 @@
 
 可下载 [可编辑的 draw.io 图](docs/architecture/figures/btae-target-architecture.drawio)或 [PDF 版本](docs/architecture/figures/btae-target-architecture.pdf)。架构的设计依据和模块边界分别见[总体架构](docs/architecture/overview.md)和[模块与依赖边界](docs/architecture/boundaries.md)。
 
-本地回归记录见[2026-11-23 本地复核](reports/acceptance/local-regression-20261123.md)，逐包边界见[本地 MVP 完成审计](reports/acceptance/local-mvp-completion-audit-20261122.md)。当前代码基线已执行 259 个测试、策略与 Workflow 校验、图构建和架构边界检查；这些结果只证明本地检查可复现，不代表远程 CI、分支保护或真实 Hermes 权限已经启用。
+本地回归记录见[2026-11-23 本地复核](reports/acceptance/local-regression-20261123.md)，远程执行记录见[2026-11-23 GitHub Actions 复核](reports/acceptance/remote-ci-20261123.md)，逐包边界见[本地 MVP 完成审计](reports/acceptance/local-mvp-completion-audit-20261122.md)。当前代码基线的本地与 GitHub Actions 检查均已通过；`master` 尚未配置保护规则，真实 Hermes 权限仍未验证。
 
 ## 本地运行
 
