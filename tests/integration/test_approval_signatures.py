@@ -126,20 +126,23 @@ def test_audit_failure_leaves_approval_ineligible_until_signed_retry(tmp_path, c
     monkeypatch.setattr(cli, "append_audit", lambda *args, **kwargs: (_ for _ in ()).throw(OSError("disk full")))
     assert main(command) != 0
     assert any(d["code"] == "EPE-AUDIT-WRITE" for d in json.loads(capsys.readouterr().out)["diagnostics"])
+    monkeypatch.setattr(cli, "append_audit", real_append)
     task = {"id": "TASK-001", "type": "feature", "objective": "test", "acceptance": ["ok"], "risk": "high", "target_entities": ["CLASS-001"]}
     (tmp_path / "task.json").write_text(json.dumps(task))
     assert main(base + ["task", "create", "--file", "task.json"]) == 0; capsys.readouterr()
     main(base + ["check", "--task", "TASK-001"])
     assert json.loads(capsys.readouterr().out)["data"]["design_ok"] is False
+    monkeypatch.setattr(cli, "append_audit", lambda *args, **kwargs: (_ for _ in ()).throw(OSError("disk full")))
     assert main(command) != 0; capsys.readouterr()
     monkeypatch.setattr(cli, "append_audit", real_append)
     assert main(command) == 0; capsys.readouterr()
     main(base + ["check", "--task", "TASK-001"])
     assert json.loads(capsys.readouterr().out)["data"]["design_ok"] is True
     events = (tmp_path / "engineering/audit/events.jsonl").read_text().splitlines()
-    assert len(events) == 1 and json.loads(events[0])["event_type"] == "approval_committed"
+    event_types = [json.loads(event)["event_type"] for event in events]
+    assert event_types == ["task_created", "approval_committed"]
     assert main(command) == 0; capsys.readouterr()
-    assert len((tmp_path / "engineering/audit/events.jsonl").read_text().splitlines()) == 1
+    assert len((tmp_path / "engineering/audit/events.jsonl").read_text().splitlines()) == 2
     # A valid signed revocation must remain conservative if its audit append fails.
     revoked = dict(record, id="APPROVAL-002", decision="revoked", supersedes="APPROVAL-001")
     (tmp_path / "record.json").write_text(json.dumps(sign(tmp_path, key, revoked)))

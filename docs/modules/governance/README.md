@@ -79,6 +79,8 @@ ChangeSet 生命周期通过 `changeset transition` 迁移：planned → active 
 
 审计记录保留策略版本、事实摘要、调用者身份来源、决策和原因。当前状态可重建，历史拒绝或批准记录不被覆盖。配置无法读取和规则自身无效属于故障，检查发现违规属于 blocked，二者不能混淆。
 
+Task/ChangeSet 创建和生命周期迁移追加 `task_created`、`task_transition`、`changeset_created`、`changeset_transition` 事件，并绑定 revision、前后状态和记录摘要。状态文件写入与审计追加不是同一事务；若状态已写入但审计失败，CLI 返回 `EPE-AUDIT-WRITE`，后续检查必须通过摘要和审计完整性重新核对，不能把该次调用当作成功完成。
+
 拟议测试：缺设计、批准失配、伪造身份、风险降级、超范围写入、警告/阻断规则、过期 ADR、事实版本不匹配，均可独立断言决策原因。四类任务缺少各自必要信息时不能激活；旧 revision 的状态写入返回冲突。
 
 测试位置为 `tests/unit/governance/`、`tests/acceptance/gate_cases/`。应直接注入事实验证决策表，并用端到端场景证明事实来自真实检查。

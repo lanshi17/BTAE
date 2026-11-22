@@ -60,6 +60,12 @@ def _safe_input(root: Path, relative: str) -> Path:
     return candidate
 
 
+def _append_state_audit(root: Path, config: dict[str, Any], event_type: str, payload: dict[str, Any]) -> None:
+    """Append a lifecycle event to the configured hash-chain audit log."""
+    audit_path = _safe_input(root, config.get("storage", {}).get("audit", "engineering/audit/events.jsonl"))
+    append_audit(audit_path, event_type, payload)
+
+
 def _result(command: str, status: str, diagnostics: list[Diagnostic] | None = None, data: Any = None, evidence_ids: list[str] | None = None) -> CommandResult:
     unique: list[Diagnostic] = []; seen: set[tuple] = set()
     for diagnostic in diagnostics or []:
@@ -242,7 +248,15 @@ def cmd_task_create(args) -> CommandResult:
         return _result("task create", "blocked", [Diagnostic("EPE-TASK-INITIAL-STATE", Severity.ERROR, "新任务必须从 planned、revision 1 开始")])
     from epe.governance.tasks import task_path
     if task_path(root, config, task.id).exists(): return _result("task create", "blocked", [Diagnostic("EPE-TASK-DUPLICATE", Severity.ERROR, f"任务 ID 已存在: {task.id}", entity_id=task.id)])
-    save_task(root, config, task)
+    try:
+        save_task(root, config, task)
+        from epe.core.fingerprint import sha256_json
+        _append_state_audit(root, config, "task_created", {
+            "task_id": task.id, "status": task.status, "revision": task.revision,
+            "record_sha256": sha256_json(task.to_dict()),
+        })
+    except (OSError, ValueError, TypeError, KeyError) as exc:
+        return _result("task create", "error", [Diagnostic("EPE-AUDIT-WRITE", Severity.ERROR, f"任务已写入但无法登记审计: {exc}")])
     return _result("task create", "passed", tds, task.to_dict())
 
 
@@ -292,6 +306,12 @@ def cmd_task_transition(args) -> CommandResult:
             if transition_diagnostics: return _result("task transition", "blocked", transition_diagnostics, {"task_id": task.id, "status": task.status})
             assert updated is not None
             save_task(root, config, updated)
+            from epe.core.fingerprint import sha256_json
+            _append_state_audit(root, config, "task_transition", {
+                "task_id": updated.id, "event": args.event,
+                "previous_status": task.status, "status": updated.status,
+                "revision": updated.revision, "record_sha256": sha256_json(updated.to_dict()),
+            })
             return _result("task transition", "passed", data=updated.to_dict())
     except WriteConflict as exc:
         return _result("task transition", "blocked", [Diagnostic("EPE-WRITE-CONFLICT", Severity.ERROR, str(exc))])
@@ -348,6 +368,12 @@ def cmd_changeset_transition(args) -> CommandResult:
                 if current_task is None or sha256_json(current_task.to_dict()) != task_digest or sha256_json(json.loads(change_path.read_text(encoding="utf-8"))) != change_digest:
                     return _result("changeset transition", "blocked", task_diagnostics + [Diagnostic("EPE-CHANGESET-REVISION", Severity.ERROR, "门禁检查期间 Task 或 ChangeSet 已变化")])
             atomic_write_json(change_path, updated)
+            from epe.core.fingerprint import sha256_json
+            _append_state_audit(root, config, "changeset_transition", {
+                "changeset_id": updated["id"], "task_id": updated["task"], "event": args.event,
+                "previous_status": value["status"], "status": updated["status"],
+                "revision": updated["revision"], "record_sha256": sha256_json(updated),
+            })
             return _result("changeset transition", "passed", scope_diagnostics, updated)
     except WriteConflict as exc:
         return _result("changeset transition", "blocked", [Diagnostic("EPE-WRITE-CONFLICT", Severity.ERROR, str(exc))])
@@ -399,6 +425,15 @@ def cmd_changeset_create(args) -> CommandResult:
                     except FileNotFoundError:
                         pass
                 raise
+        try:
+            from epe.core.fingerprint import sha256_json
+            _append_state_audit(root, config, "changeset_created", {
+                "changeset_id": value["id"], "task_id": value["task"], "status": value["status"],
+                "revision": value.get("revision", 1), "record_sha256": sha256_json(value),
+                "baseline_sha256": sha256_json(first),
+            })
+        except (OSError, ValueError, TypeError, KeyError) as exc:
+            return _result("changeset create", "error", [Diagnostic("EPE-AUDIT-WRITE", Severity.ERROR, f"ChangeSet 已写入但无法登记审计: {exc}")])
         return _result("changeset create", "passed", data={"id": value["id"], "baseline_manifest": first["digest"], "baseline_path": str(baseline_path.relative_to(root)), "excluded": [".git", ".engineering", "virtual environments", "caches", "reports", "evidence", "this changeset's records"]})
     except FileExistsError as exc:
         return _result("changeset create", "blocked", [Diagnostic("EPE-WRITE-CONFLICT", Severity.ERROR, str(exc))])

@@ -143,6 +143,14 @@ def test_changeset_lifecycle_transitions_and_revision_conflicts(tmp_path, capsys
     assert main(base + ["changeset", "transition", "CHANGE-001", "abort", "--expected-revision", "2"]) == 0
     aborted = json.loads(capsys.readouterr().out)
     assert aborted["data"]["status"] == "aborted" and aborted["data"]["revision"] == 3
+    from epe.adapters.audit import read_audit_events
+    events = read_audit_events(tmp_path / "engineering/audit/events.jsonl")
+    types = [event["event_type"] for event in events]
+    assert "task_created" in types
+    assert types.count("task_transition") == 1
+    assert "changeset_created" in types
+    assert types.count("changeset_transition") == 2
+    assert all(event["payload"].get("record_sha256") for event in events if event["event_type"] in {"task_created", "task_transition", "changeset_created", "changeset_transition"})
 
 
 def test_changeset_complete_requires_clean_declared_scope(tmp_path, capsys):
