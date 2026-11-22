@@ -206,6 +206,8 @@ def cmd_init(args) -> CommandResult:
                 matches = existing.split("---", 2)[:2] == expected.split("---", 2)[:2]
             if not matches: conflicts.append(Diagnostic("EPE-INIT-CONFLICT", Severity.ERROR, f"目标文件已存在且内容不同: {rel}", path=rel))
     if conflicts: return _result("init", "blocked", conflicts, {"created": []})
+    if _init_path_has_symlink(root, ".engineering"):
+        return _result("init", "blocked", [Diagnostic("EPE-PATH-SYMLINK", Severity.ERROR, "初始化派生目录不能是符号链接: .engineering", path=".engineering")], {"created": []})
     created: list[str] = []
     created_files: list[tuple[Path, int, int]] = []
 
@@ -221,7 +223,10 @@ def cmd_init(args) -> CommandResult:
                 pass
 
     try:
-        lock = _safe_input(root, ".engineering/.write.lock")
+        try:
+            lock = _safe_input(root, ".engineering/.write.lock")
+        except ValueError as exc:
+            return _result("init", "blocked", [Diagnostic("EPE-PATH-SYMLINK", Severity.ERROR, str(exc), path=".engineering")], {"created": []})
         with acquire_write_lock(lock):
             for rel, value in targets.items():
                 path = root / rel

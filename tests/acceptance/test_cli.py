@@ -71,6 +71,16 @@ def test_init_rolls_back_files_created_before_storage_failure(tmp_path, capsys, 
     assert not list((tmp_path / ".engineering").glob(".write.lock")) if (tmp_path / ".engineering").exists() else True
 
 
+def test_init_rejects_symlinked_derived_directory(tmp_path, capsys):
+    outside = tmp_path.parent / f"{tmp_path.name}-derived-outside"
+    outside.mkdir()
+    (tmp_path / ".engineering").symlink_to(outside, target_is_directory=True)
+    assert main(["--root", str(tmp_path), "--format", "json", "init"]) == 1
+    result = json.loads(capsys.readouterr().out)
+    assert result["diagnostics"][0]["code"] == "EPE-PATH-SYMLINK"
+    assert not (outside / ".write.lock").exists()
+
+
 def test_parameter_and_path_errors_use_exit_code_two(tmp_path, capsys):
     outside = tmp_path.parent / f"{tmp_path.name}-outside-exit"; outside.mkdir()
     (tmp_path / "engineering").symlink_to(outside, target_is_directory=True)
