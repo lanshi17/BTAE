@@ -737,6 +737,7 @@ def cmd_host_capabilities(args) -> CommandResult:
 
 
 def cmd_host_request(args) -> CommandResult:
+    root = _root(args.root)
     try:
         parameters = json.loads(args.parameters)
     except (TypeError, json.JSONDecodeError) as exc:
@@ -761,9 +762,9 @@ def cmd_host_request(args) -> CommandResult:
         response = LocalHostAdapter().dispatch(request)
     elif args.host == "hermes":
         if not command:
-            response = HermesHostAdapter().dispatch(request)
+            response = HermesHostAdapter(cwd=root).dispatch(request)
         else:
-            response = HermesHostAdapter(command).dispatch(request)
+            response = HermesHostAdapter(command, cwd=root).dispatch(request)
     else:
         return _result("host request", "unsupported", [Diagnostic("EPE-HOST-UNSUPPORTED", Severity.INFO, f"不支持的宿主: {args.host}")])
     status = {"accepted": "passed", "blocked": "blocked", "unsupported": "unsupported", "error": "error"}.get(response.decision, "error")

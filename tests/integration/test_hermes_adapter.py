@@ -30,6 +30,14 @@ def test_configured_hermes_requires_and_uses_handshake():
     assert adapter.dispatch(request()).decision == "accepted"
 
 
+def test_hermes_runs_bridge_in_explicit_repository_directory(tmp_path):
+    code = ("import json,os,sys; p=json.load(sys.stdin); "
+            "print(json.dumps({'status':'ok','capabilities':{'protocol_version':'1','operations':['verify']}} "
+            "if p.get('operation')=='capabilities' else {'status':'ok','response':{'decision':'accepted','reasons':[os.getcwd()]}}))")
+    adapter = HermesHostAdapter([sys.executable, "-c", code], cwd=tmp_path)
+    assert adapter.dispatch(request()).reasons == [str(tmp_path)]
+
+
 def test_hermes_rejects_handshake_protocol_mismatch():
     code = "import json; print(json.dumps({'status':'ok','capabilities':{'protocol_version':'2','operations':['verify']}}))"
     adapter = HermesHostAdapter([sys.executable, "-c", code])

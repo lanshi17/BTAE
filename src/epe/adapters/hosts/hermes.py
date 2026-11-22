@@ -19,10 +19,12 @@ class HermesHostAdapter:
     an explicit unsupported state.
     """
 
-    def __init__(self, command: list[str] | None = None, timeout: float = 10.0, trusted_capabilities: bool = False):
+    def __init__(self, command: list[str] | None = None, timeout: float = 10.0,
+                 trusted_capabilities: bool = False, cwd: Path | None = None):
         self.command = command
         self.timeout = timeout
         self.trusted_capabilities = trusted_capabilities
+        self.cwd = (cwd or Path.cwd()).resolve()
         self.capabilities = HostCapabilities("hermes", "1", False, False, False, False, (), "unsupported-unintegrated")
 
     def handshake(self) -> HostCapabilities:
@@ -73,7 +75,7 @@ class HermesHostAdapter:
 
     def _call(self, payload: dict[str, Any]) -> dict[str, Any] | None:
         if not self.command or not isinstance(self.command, list) or not self.command or not all(isinstance(item, str) and item for item in self.command): return None
-        process = run_process(self.command, Path.cwd(), timeout=self.timeout, max_output_bytes=1024 * 1024, input_data=(json.dumps(payload, ensure_ascii=False) + "\n").encode("utf-8"))
+        process = run_process(self.command, self.cwd, timeout=self.timeout, max_output_bytes=1024 * 1024, input_data=(json.dumps(payload, ensure_ascii=False) + "\n").encode("utf-8"))
         if (process.returncode != 0 or process.timed_out or process.cancelled
                 or process.stdout_truncated or process.stderr_truncated or process.stdin_incomplete):
             return None

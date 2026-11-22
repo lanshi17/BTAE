@@ -16,4 +16,4 @@ Hermes 桥接协议使用一行 JSON 请求和一行 JSON 响应；capability ha
 
 设计批准通过 `epe design approve ENTITY-ID --record PATH` 导入，不接受仅在请求中自报身份。受信签名及配置格式见[设计模块](../modules/design/README.md)；请求层的 `trusted_identity` 字段本身并不完成密码学校验或授予权限。
 
-CLI 提供 `epe host request` 作为协议桥接的结构化入口。`--identity-source` 只是请求中携带的来源标签，不能替代可信身份；`local-cli` 只接受 `verify`，Hermes 必须显式提供 argv 命令（可用 `--command-json` 避免 shell/参数解析歧义）并完成 capability handshake。CLI 不把请求结果写入 Task、批准或 Evidence，也不把 `accepted` 解释为治理门禁通过；调用者仍需单独运行 `check` / `verify`。
+CLI 提供 `epe host request` 作为协议桥接的结构化入口。`--identity-source` 只是请求中携带的来源标签，不能替代可信身份；`local-cli` 只接受 `verify`，Hermes 必须显式提供 argv 命令（可用 `--command-json` 避免 shell/参数解析歧义）并完成 capability handshake。Hermes 子进程的 cwd 固定为 `--root` 解析出的仓库根。CLI 不把请求结果写入 Task、批准或 Evidence，也不把 `accepted` 解释为治理门禁通过；调用者仍需单独运行 `check` / `verify`。
