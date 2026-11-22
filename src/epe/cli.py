@@ -22,7 +22,7 @@ from epe.graph.builder import build_graph, build_graph_incremental, load_graph, 
 from epe.graph.builder import analyze_impact, trace_path
 from epe.context.resolver import resolve_context, load_cached_context, store_cached_context
 from epe.governance.gates import finalize_gate
-from epe.governance.tasks import load_task, save_task, validate_task, transition_task, check_scope
+from epe.governance.tasks import load_task, save_task, create_task, validate_task, transition_task, check_scope
 from epe.governance.policies import validate_policy_files
 from epe.core.policy import validate_policy_document
 from epe.governance.baseline import capture_baseline, changeset_paths, compare_baseline, validate_changeset, transition_changeset, changeset_declaration, baseline_binding_version
@@ -246,15 +246,22 @@ def cmd_task_create(args) -> CommandResult:
     if task is None: return _result("task create", "error", tds)
     if task.status != "planned" or task.revision != 1:
         return _result("task create", "blocked", [Diagnostic("EPE-TASK-INITIAL-STATE", Severity.ERROR, "新任务必须从 planned、revision 1 开始")])
-    from epe.governance.tasks import task_path
-    if task_path(root, config, task.id).exists(): return _result("task create", "blocked", [Diagnostic("EPE-TASK-DUPLICATE", Severity.ERROR, f"任务 ID 已存在: {task.id}", entity_id=task.id)])
     try:
-        save_task(root, config, task)
-        from epe.core.fingerprint import sha256_json
-        _append_state_audit(root, config, "task_created", {
-            "task_id": task.id, "status": task.status, "revision": task.revision,
-            "record_sha256": sha256_json(task.to_dict()),
-        })
+        lock = _safe_input(root, config.get("storage", {}).get("derived", ".engineering") + "/.write.lock")
+        with acquire_write_lock(lock):
+            from epe.governance.tasks import task_path
+            if task_path(root, config, task.id).exists():
+                return _result("task create", "blocked", [Diagnostic("EPE-TASK-DUPLICATE", Severity.ERROR, f"任务 ID 已存在: {task.id}", entity_id=task.id)])
+            create_task(root, config, task)
+            from epe.core.fingerprint import sha256_json
+            _append_state_audit(root, config, "task_created", {
+                "task_id": task.id, "status": task.status, "revision": task.revision,
+                "record_sha256": sha256_json(task.to_dict()),
+            })
+    except WriteConflict as exc:
+        return _result("task create", "blocked", [Diagnostic("EPE-WRITE-CONFLICT", Severity.ERROR, str(exc))])
+    except FileExistsError:
+        return _result("task create", "blocked", [Diagnostic("EPE-WRITE-CONFLICT", Severity.ERROR, f"任务 ID 并发冲突: {task.id}", entity_id=task.id)])
     except (OSError, ValueError, TypeError, KeyError) as exc:
         return _result("task create", "error", [Diagnostic("EPE-AUDIT-WRITE", Severity.ERROR, f"任务已写入但无法登记审计: {exc}")])
     return _result("task create", "passed", tds, task.to_dict())

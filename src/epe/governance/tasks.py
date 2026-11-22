@@ -55,6 +55,18 @@ def save_task(root: Path, config: dict[str, Any], task: Task) -> None:
     atomic_write_json(task_path(root, config, task.id), task.to_dict())
 
 
+def create_task(root: Path, config: dict[str, Any], task: Task) -> None:
+    """Create a task with exclusive file creation; never replace authority."""
+    path = task_path(root, config, task.id)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("x", encoding="utf-8") as handle:
+        json.dump(task.to_dict(), handle, ensure_ascii=False, sort_keys=True, indent=2)
+        handle.write("\n")
+        handle.flush()
+        import os
+        os.fsync(handle.fileno())
+
+
 def load_task(root: Path, config: dict[str, Any], task_id: str) -> tuple[Task | None, list[Diagnostic]]:
     if not re.fullmatch(r"TASK-[A-Z0-9][A-Z0-9_-]*", task_id):
         return None, [Diagnostic("EPE-TASK-ID", Severity.ERROR, "任务 ID 格式非法", entity_id=task_id)]
