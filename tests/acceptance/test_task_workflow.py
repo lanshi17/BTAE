@@ -81,3 +81,11 @@ def test_workflow_specific_fields_have_strict_types(tmp_path, capsys):
     assert main(["--root", str(tmp_path), "--format", "json", "task", "create", "--file", "task.yaml"]) == 2
     result = json.loads(capsys.readouterr().out)
     assert any(item["code"] == "EPE-TASK-WORKFLOW" for item in result["diagnostics"])
+
+
+def test_task_classify_reports_workflow_specific_missing_fields(tmp_path, capsys):
+    create(tmp_path, capsys, "bugfix")
+    assert main(["--root", str(tmp_path), "--format", "json", "task", "classify", "TASK-001"]) == 1
+    result = json.loads(capsys.readouterr().out)
+    assert result["data"]["missing"] == ["reproduction"]
+    assert result["diagnostics"][0]["code"] == "EPE-TASK-INCOMPLETE"

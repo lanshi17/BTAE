@@ -321,10 +321,10 @@ def cmd_task_classify(args) -> CommandResult:
     if failure: return failure
     task, ds = load_task(root, config, args.task_id)
     if task is None: return _result("task classify", "error", ds)
-    missing = []
-    if not task.objective: missing.append("objective")
-    if not task.acceptance: missing.append("acceptance")
-    if not task.target_entities: missing.append("target_entities")
+    required, workflow_ds = load_workflow_requirements(root, task.type)
+    if workflow_ds:
+        return _result("task classify", "error", workflow_ds, {"id": task.id, "type": task.type})
+    missing = [field for field in required or () if not task.raw.get(field)]
     return _result("task classify", "blocked" if missing else "passed", [Diagnostic("EPE-TASK-INCOMPLETE", Severity.ERROR, "任务缺少必要字段: " + ", ".join(missing))] if missing else [], {"id": task.id, "type": task.type, "risk": task.risk, "missing": missing, "confidence": "declared"})
 
 
