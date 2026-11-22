@@ -105,6 +105,18 @@ def test_design_revision_binds_raw_extensions_and_rejects_symlink(tmp_path):
         design_revision(tmp_path, entity)
 
 
+def test_design_revision_rejects_symlinked_parent_directory(tmp_path):
+    from epe.core.models import Entity, SourceLocation
+    from epe.design.manager import design_revision
+    outside = tmp_path / "outside"; outside.mkdir()
+    (outside / "design.md").write_text("# design\n")
+    (tmp_path / "linked").symlink_to(outside, target_is_directory=True)
+    entity = Entity(1, "CLASS-002", "Class", "Class", SourceLocation("linked/design.md"))
+    import pytest
+    with pytest.raises(ValueError):
+        design_revision(tmp_path, entity)
+
+
 def test_audit_failure_leaves_approval_ineligible_until_signed_retry(tmp_path, capsys, monkeypatch):
     import epe.cli as cli
     key = tmp_path.parent / (tmp_path.name + "-key")

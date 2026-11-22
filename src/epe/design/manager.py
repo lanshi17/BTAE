@@ -13,13 +13,22 @@ from epe.core.registry import Registry
 from epe.parsers.documents import parse_yaml_bytes
 
 
+def _design_source_path(root: Path, path_text: str) -> Path:
+    root = root.resolve()
+    raw_path = root / path_text
+    current = root
+    for component in Path(path_text).parts:
+        current = current / component
+        if current.is_symlink():
+            raise ValueError(f"设计或契约源不能经过符号链接: {path_text}")
+    path = raw_path.resolve()
+    path.relative_to(root)
+    return path
+
+
 def design_revision(root: Path, entity: Entity, registry: Registry | None = None) -> str:
     def digest(path_text: str) -> str:
-        raw_path = root / path_text
-        if raw_path.is_symlink():
-            raise ValueError(f"设计或契约源不能是符号链接: {path_text}")
-        path = raw_path.resolve()
-        path.relative_to(root.resolve())
+        path = _design_source_path(root, path_text)
         return sha256_bytes(path.read_bytes())
 
     contracts = {}
@@ -58,12 +67,8 @@ def validate_design(registry: Registry, entity_id: str, root: Path) -> tuple[dic
 
 
 def validate_contract(entity: Entity, root: Path) -> tuple[dict[str, Any], list[Diagnostic]]:
-    raw_path = root / entity.source.path
-    if raw_path.is_symlink():
-        return {}, [Diagnostic("EPE-CONTRACT-READ", Severity.ERROR, "契约文件不能是符号链接", entity_id=entity.id, path=entity.source.path)]
-    path = raw_path.resolve()
     try:
-        path.relative_to(root.resolve())
+        path = _design_source_path(root, entity.source.path)
         raw, diagnostics = parse_yaml_bytes(path.read_bytes(), entity.source.path)
     except (OSError, ValueError) as exc:
         return {}, [Diagnostic("EPE-CONTRACT-READ", Severity.ERROR, str(exc), entity_id=entity.id, path=entity.source.path)]
