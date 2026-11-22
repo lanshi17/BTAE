@@ -3,12 +3,13 @@
 - 目标：确认 README 所引用的本地 MVP 检查路径、架构图产物和当前实现可复现。
 - 执行时间：2026-11-22 11:04 UTC 附近。
 - 环境：Linux，Python 3.14.4，pytest 9.1.1。
-- 运行时代码基线：`087bcc3`（同步 Task Schema 与 Workflow 专属字段，并拒绝错误类型）。
+- 运行时代码基线：`f6682a4`（Task classify 与激活共用 Workflow 专属字段要求）。
 - 文档与契约跟进：`df519e0`（补充 HostPort 机器契约、研究评测计划并修正路线图链接）。
 
 | 实际命令 | 结果 |
 | --- | --- |
-| `PYTHONPATH=src pytest -q` | 通过，252 个测试，退出码 0 |
+| `PYTHONPATH=src pytest -q` | 通过，253 个测试，退出码 0 |
+| `PYTHONPATH=src python -m epe.cli --format json task classify TASK-001`（临时 bugfix 缺 reproduction） | 通过回归；返回缺失字段并阻断分类 |
 | `PYTHONPATH=src python -m epe.cli --format json policy validate` | 通过 |
 | `PYTHONPATH=src python -m epe.cli --format json design validate CONTRACT-HOST-PORT-001` | 通过；HostPort 契约 Schema 可读取 |
 | `cmp engineering/schemas/task.schema.json src/epe/data/schemas/task.schema.json` | 通过；仓库与 wheel Task Schema 一致 |
