@@ -61,6 +61,18 @@ def test_baseline_tracks_committed_renamed_and_protected_changes(tmp_path, capsy
         raise AssertionError("tampered baseline accepted")
 
 
+def test_changeset_runtime_validation_rejects_unknown_and_wrong_typed_fields():
+    from epe.governance.baseline import validate_changeset
+    base = {"id": "CHANGE-001", "task": "TASK-001", "owner": "owner", "affected_entities": ["CLASS-001"], "write_scope": ["src/**"], "protected": [], "dependencies": [], "status": "planned"}
+    import pytest
+    with pytest.raises(ValueError, match="未知字段"):
+        validate_changeset({**base, "unknown": True}, "TASK-001")
+    with pytest.raises(ValueError, match="缺少有效"):
+        validate_changeset({**base, "dependencies": ["bad"]}, "TASK-001")
+    with pytest.raises(ValueError, match="缺少有效"):
+        validate_changeset({**base, "baseline_manifest": []}, "TASK-001")
+
+
 def test_baseline_rejects_escape_symlink(tmp_path, capsys):
     setup_project(tmp_path, capsys)
     (tmp_path / "src/escape").symlink_to(tmp_path.parent, target_is_directory=True)

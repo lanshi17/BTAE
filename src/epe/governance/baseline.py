@@ -109,12 +109,19 @@ def compare_baseline(root: Path, config: dict[str, Any], changeset: dict[str, An
 
 def validate_changeset(changeset: dict[str, Any], task_id: str) -> None:
     revision = changeset.get("revision", 1) if isinstance(changeset, dict) else None
+    allowed = {"schema_version", "id", "task", "owner", "affected_entities", "write_scope", "protected", "dependencies", "baseline_manifest", "status", "revision"}
+    if isinstance(changeset, dict):
+        unknown = sorted(set(changeset) - allowed)
+        if unknown:
+            raise ValueError(f"ChangeSet 包含未知字段: {', '.join(str(item) for item in unknown)}")
     if (not isinstance(changeset, dict) or changeset.get("schema_version", 1) != 1 or not isinstance(changeset.get("id"), str) or not _ID.fullmatch(changeset["id"])
             or isinstance(revision, bool) or not isinstance(revision, int) or revision < 1
             or changeset.get("task") != task_id or not isinstance(changeset.get("owner"), str) or not changeset["owner"].strip()
             or not isinstance(changeset.get("affected_entities"), list) or not changeset["affected_entities"]
             or not all(isinstance(item, str) and item for item in changeset["affected_entities"])
             or not isinstance(changeset.get("dependencies"), list)
+            or not all(isinstance(item, dict) for item in changeset.get("dependencies", []))
+            or ("baseline_manifest" in changeset and changeset.get("baseline_manifest") is not None and not isinstance(changeset.get("baseline_manifest"), str))
             or changeset.get("status") not in {"planned", "active", "completed", "aborted"}):
         raise ValueError("ChangeSet 缺少有效的 ID、任务、负责人、实体、依赖或状态")
     for field in ("write_scope", "protected"):
