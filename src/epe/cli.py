@@ -31,7 +31,9 @@ from epe.verification.architecture import validate_architecture
 from epe.verification.import_boundaries import validate_import_boundaries
 from epe.verification.mapping import validate_mapping
 from epe.verification.runner import evidence_validity, load_evidence, load_required_checks, run_checks
-from epe.adapters.hosts.base import capability_matrix
+from epe.adapters.hosts.base import capability_matrix, LocalHostAdapter
+from epe.adapters.hosts.hermes import HermesHostAdapter
+from epe.adapters.protocol import AgentRequest
 from epe.adapters.audit import append_audit, verify_audit, read_audit_events
 
 
@@ -734,6 +736,40 @@ def cmd_host_capabilities(args) -> CommandResult:
     return _result("host capabilities", "passed", data={"protocol_version": "1", "hosts": [item.to_dict() for item in capability_matrix()]})
 
 
+def cmd_host_request(args) -> CommandResult:
+    try:
+        parameters = json.loads(args.parameters)
+    except (TypeError, json.JSONDecodeError) as exc:
+        return _result("host request", "error", [Diagnostic("EPE-HOST-PARAMETERS", Severity.ERROR, f"parameters 必须是 JSON 对象: {exc}")])
+    if not isinstance(parameters, dict):
+        return _result("host request", "error", [Diagnostic("EPE-HOST-PARAMETERS", Severity.ERROR, "parameters 必须是 JSON 对象")])
+    command = args.command
+    if args.command_json is not None:
+        if command is not None:
+            return _result("host request", "error", [Diagnostic("EPE-HOST-COMMAND", Severity.ERROR, "--command 与 --command-json 不能同时使用")])
+        try:
+            command = json.loads(args.command_json)
+        except (TypeError, json.JSONDecodeError) as exc:
+            return _result("host request", "error", [Diagnostic("EPE-HOST-COMMAND", Severity.ERROR, f"command-json 必须是 JSON 数组: {exc}")])
+        if not isinstance(command, list) or not command or any(not isinstance(item, str) or not item for item in command):
+            return _result("host request", "error", [Diagnostic("EPE-HOST-COMMAND", Severity.ERROR, "command-json 必须是非空字符串数组")])
+    request = AgentRequest(args.request_id, args.operation, args.task_id, args.changeset_id,
+                           tuple(args.target_entity), args.expected_design_revision,
+                           tuple(args.write_scope), parameters,
+                           {"source": args.identity_source})
+    if args.host == "local-cli":
+        response = LocalHostAdapter().dispatch(request)
+    elif args.host == "hermes":
+        if not command:
+            response = HermesHostAdapter().dispatch(request)
+        else:
+            response = HermesHostAdapter(command).dispatch(request)
+    else:
+        return _result("host request", "unsupported", [Diagnostic("EPE-HOST-UNSUPPORTED", Severity.INFO, f"不支持的宿主: {args.host}")])
+    status = {"accepted": "passed", "blocked": "blocked", "unsupported": "unsupported", "error": "error"}.get(response.decision, "error")
+    return _result("host request", status, response.diagnostics, data=response.to_dict(), evidence_ids=response.evidence_ids)
+
+
 def cmd_audit_verify(args) -> CommandResult:
     root = _root(args.root); config, failure = _config_or_result(root, "audit verify")
     if failure: return failure
@@ -883,6 +919,16 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("check"); common(p); p.add_argument("--task", dest="task_id", default=None); p.set_defaults(func=cmd_check)
     host = sub.add_parser("host"); common(host); hs = host.add_subparsers(dest="host_command", required=True)
     p = hs.add_parser("capabilities"); common(p); p.set_defaults(func=cmd_host_capabilities)
+    p = hs.add_parser("request"); common(p)
+    p.add_argument("--host", choices=("local-cli", "hermes"), required=True)
+    p.add_argument("--operation", choices=("start_implementation", "verify", "finalize"), required=True)
+    p.add_argument("--request-id", required=True); p.add_argument("--task-id", required=True)
+    p.add_argument("--changeset-id", default=None); p.add_argument("--target-entity", action="append", required=True)
+    p.add_argument("--expected-design-revision", default=None); p.add_argument("--write-scope", action="append", default=[])
+    p.add_argument("--identity-source", required=True); p.add_argument("--parameters", default="{}")
+    p.add_argument("--command", nargs="+", default=None, help="Hermes JSON-line bridge command; argv only, no shell")
+    p.add_argument("--command-json", default=None, help="Hermes bridge argv as a JSON string array")
+    p.set_defaults(func=cmd_host_request)
     audit = sub.add_parser("audit"); common(audit); aus = audit.add_subparsers(dest="audit_command", required=True)
     p = aus.add_parser("verify"); common(p); p.set_defaults(func=cmd_audit_verify)
     policy = sub.add_parser("policy"); common(policy); ps = policy.add_subparsers(dest="policy_command", required=True)

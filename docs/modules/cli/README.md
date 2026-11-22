@@ -43,6 +43,7 @@ CLI 管参数、装配和流程，不内嵌审批、证据有效性或架构规�
 | architecture validate | graph、verification、governance | 只读检查，报告结果 |
 | verify | governance、verification、adapters | 启动已授权检查，追加产物与 Evidence |
 | check --task | 全部 MVP 事实提供者、governance | 汇总当前事实，不隐式启动测试 |
+| host request | adapters、Agent Protocol | 发送结构化宿主请求；仅报告宿主决定，不授予治理权限 |
 
 签名与必需参数以 SPEC 第 8 节为准。所有命令支持 `--root PATH`、`--format text|json`；不因运行在子目录就扩大纳管范围。
 
@@ -68,6 +69,8 @@ status 为 passed/blocked/error/unsupported。JSON stdout 仅含一个完整结�
 **检查**：读取同版本事实 → 验证缓存新鲜度 → 按需进行只读解析/检查 → 收集现有 Evidence → governance 计算决定 → 展示未执行项。没有测试证据时返回缺失，不借 check 偷跑测试。
 
 **验证**：解析 Task 与 ChangeSet → 权限门禁 → 形成 ExecutionPlan → verification 运行并留证 → 重新核对版本 → 输出结果。客户端不能通过参数直接更改运行命令或审批角色。
+
+**宿主请求**：校验请求值对象 → 选择 `local-cli` 或显式 argv 的 Hermes adapter → 完成能力握手 → 输出 `accepted/blocked/unsupported/error`。该命令不修改权威工件；`--identity-source` 不构成认证，写入类操作在未受信宿主上保持 `unsupported`。
 
 ## 6. 依赖、幂等性与异常
 

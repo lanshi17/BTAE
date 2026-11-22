@@ -50,7 +50,7 @@ epe sync
 epe check
 ```
 
-当前已实现 `init`、`inspect`、任务登记/分类、ChangeSet 基线、设计生成/校验/批准、契约 Schema 校验、映射校验、图构建、架构校验、`verify`、`sync`、`check`，基础 `context resolve` / `impact analyze`、增量计划/重建和宿主能力矩阵。`design approve` 只接受配置受信公钥验证的签名记录，不允许调用者自授权限；Hermes 仍明确为未集成 unsupported。
+当前已实现 `init`、`inspect`、任务登记/分类、ChangeSet 基线、设计生成/校验/批准、契约 Schema 校验、映射校验、图构建、架构校验、`verify`、`sync`、`check`，基础 `context resolve` / `impact analyze`、增量计划/重建、宿主能力矩阵和结构化 `host request` 入口。`design approve` 只接受配置受信公钥验证的签名记录，不允许调用者自授权限；Hermes 仍明确为未集成 unsupported，CLI 入口不会改变这一状态。
 
 查询命令默认只读；生成命令仅更新声明的派生工件；初始化需避免覆盖现有内容。影响权威工件的操作应提供可审查变更。统一输出诊断、实体 ID、来源和证据定位；机器输出与人类输出共享结果模型。退出码、幂等性、并发和失败恢复在实现前定义。
 
