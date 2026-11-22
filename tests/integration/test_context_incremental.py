@@ -166,6 +166,20 @@ def test_context_marks_truncation_and_never_reads_outside_root(tmp_path):
     assert load_cached_context(tmp_path, config(), task, None, 10) is None
 
 
+def test_context_rejects_symlinked_source_parent(tmp_path):
+    from epe.context.resolver import resolve_context
+    from epe.core.models import Entity, SourceLocation
+    (tmp_path / "AGENTS.md").write_text("rules", encoding="utf-8")
+    (tmp_path / "docs").mkdir(); (tmp_path / "docs/index.md").write_text("index", encoding="utf-8")
+    outside = tmp_path / "outside"; outside.mkdir(); (outside / "design.md").write_text("secret", encoding="utf-8")
+    (tmp_path / "linked").symlink_to(outside, target_is_directory=True)
+    entity = Entity(1, "CLASS-1", "Class", "A", SourceLocation("linked/design.md"))
+    task = SimpleNamespace(id="TASK-1", target_entities=[entity.id], objective="")
+    bundle = resolve_context(tmp_path, config(), task, Registry(entities={entity.id: entity}), None, 10)
+    assert "linked/design.md" in bundle["omissions"]
+    assert all("secret" not in item["content"] for item in bundle["items"])
+
+
 def test_context_cache_tracks_custom_evidence_under_reports(tmp_path):
     (tmp_path / "AGENTS.md").write_text("rules")
     (tmp_path / "docs").mkdir(); (tmp_path / "docs/index.md").write_text("index")

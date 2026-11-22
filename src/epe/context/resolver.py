@@ -12,6 +12,21 @@ from epe.core.fingerprint import sha256_json
 from epe.adapters.storage import atomic_write_json
 
 
+def _safe_context_path(root: Path, relative: str) -> Path:
+    root = root.resolve()
+    parsed = Path(relative)
+    if not isinstance(relative, str) or not relative or parsed.is_absolute() or ".." in parsed.parts or "\\" in relative:
+        raise ValueError(f"上下文来源路径必须是仓库相对路径: {relative}")
+    current = root
+    for component in parsed.parts:
+        current = current / component
+        if current.is_symlink():
+            raise ValueError(f"上下文来源不能经过符号链接: {relative}")
+    path = (root / relative).resolve()
+    path.relative_to(root)
+    return path
+
+
 def context_inputs_manifest(root: Path, config: dict[str, Any]):
     managed = config.get("managed", {})
     roots = (managed.get("design_roots", []) + managed.get("code_roots", [])
@@ -21,7 +36,7 @@ def context_inputs_manifest(root: Path, config: dict[str, Any]):
     manifest = build_manifest(root, roots, tuple(config.get("exclude", [])))
     entries = dict(manifest.entries)
     # Evidence may be located under reports/, which generic source manifests omit.
-    evidence_root = root / config.get("storage", {}).get("evidence", "engineering/evidence")
+    evidence_root = _safe_context_path(root, config.get("storage", {}).get("evidence", "engineering/evidence"))
     for path in sorted(evidence_root.rglob("*")):
         if not path.is_file():
             continue
@@ -49,8 +64,7 @@ def load_cached_context(root: Path, config: dict[str, Any], task: Any, snapshot:
         if data.get("cache_key") != key or data.get("input_manifest", {}).get("digest") != context_inputs_manifest(root, config).digest: return None
         if data.get("content_digest") != sha256_json({k: v for k, v in data.items() if k != "content_digest"}): return None
         for item in data.get("items", []):
-            path = (root / item["path"]).resolve()
-            path.relative_to(root.resolve())
+            path = _safe_context_path(root, item["path"])
             if sha256_bytes(path.read_bytes()) != item.get("content_sha256"): return None
         return data
     except (OSError, json.JSONDecodeError, ValueError, TypeError, KeyError, AttributeError): return None
@@ -69,8 +83,7 @@ def store_cached_context(root: Path, config: dict[str, Any], task: Any, snapshot
 
 
 def _item(path: str, level: str, reason: str, root: Path, source_type: str = "file", entity_id: str | None = None, confidence: float = 1.0, freshness: str = "current") -> dict[str, Any]:
-    file_path = (root / path).resolve()
-    file_path.relative_to(root.resolve())
+    file_path = _safe_context_path(root, path)
     data = file_path.read_bytes()
     text = data.decode("utf-8")
     return {"entity_id": entity_id, "path": path, "level": level, "source": path, "source_type": source_type,
@@ -146,7 +159,7 @@ def resolve_context(root: Path, config: dict[str, Any], task: Any, registry: Reg
     if archive.exists():
         for path in sorted(archive.rglob("*.md")):
             add(path.relative_to(root).as_posix(), "C3", "归档背景", source_type="historical", confidence=0.3, freshness="historical")
-    evidence_root = root / config.get("storage", {}).get("evidence", "engineering/evidence")
+    evidence_root = _safe_context_path(root, config.get("storage", {}).get("evidence", "engineering/evidence"))
     if evidence_root.exists():
         for path in sorted(evidence_root.glob("*/evidence.json")):
             try: evidence = json.loads(path.read_text(encoding="utf-8"))
@@ -161,8 +174,7 @@ def resolve_context(root: Path, config: dict[str, Any], task: Any, registry: Reg
     changed = before.digest != manifest.digest
     for item in items:
         try:
-            path = (root / item["path"]).resolve()
-            path.relative_to(root.resolve())
+            path = _safe_context_path(root, item["path"])
             if sha256_bytes(path.read_bytes()) != item["content_sha256"]:
                 changed = True
         except (OSError, ValueError):
