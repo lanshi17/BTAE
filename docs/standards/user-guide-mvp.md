@@ -40,6 +40,7 @@ python -m venv /tmp/epe-wheel-venv
 
 ## 已知限制
 
+- CI 工作流会上传 JUnit 测试报告作为本次运行产物；artifact 保存不等于远程分支保护已启用。
 - 当前 CI 工作流执行检查，但远程分支保护是否启用需要在托管平台单独确认。
 - 本地 hash-chain 审计可以发现链内篡改和摘要不一致，不能防止有权限者同时重写整条链和记录。
 - Linux `renameat2(RENAME_NOREPLACE)` 用于 Evidence bundle 的原子目录发布；其他平台未承诺相同语义。

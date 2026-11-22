@@ -13,7 +13,9 @@ jobs:
         with:
           python-version: "3.11"
       - run: python -m pip install -e '.[test]'
-      - run: pytest -q
+      - run: |
+          mkdir -p /tmp/epe-ci
+          pytest -q --junitxml=/tmp/epe-ci/pytest.xml
       - run: epe --format json policy validate
       - run: epe --format json inspect
       - run: epe --format json graph build
@@ -21,6 +23,13 @@ jobs:
       - run: epe --format json audit verify
       - run: epe --format json host capabilities
       - run: epe --format json host request --host local-cli --operation verify --request-id REQ-CI --task-id TASK-CI --target-entity CLASS-CI --identity-source ci
+      - name: Upload CI evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: epe-ci-evidence
+          path: /tmp/epe-ci/
+          if-no-files-found: warn
       - name: Verify wheel outside source tree
         run: |
           python -m pip wheel . --no-deps -w /tmp/epe-wheel
