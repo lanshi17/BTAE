@@ -27,10 +27,24 @@ from epe.adapters.clock import SystemClock
 def now(clock: ClockPort | None = None) -> str: return (clock or SystemClock()).now_utc()
 
 
+def _safe_verification_path(root: Path, relative: str) -> Path:
+    root = root.resolve()
+    parsed = Path(relative)
+    if not isinstance(relative, str) or not relative or parsed.is_absolute() or ".." in parsed.parts or "\\" in relative:
+        raise ValueError(f"验证策略路径必须是仓库相对路径: {relative}")
+    current = root
+    for component in parsed.parts:
+        current = current / component
+        if current.is_symlink():
+            raise ValueError(f"验证策略路径不能经过符号链接: {relative}")
+    path = (root / relative).resolve()
+    path.relative_to(root)
+    return path
+
+
 def _verification_policy_fingerprint(root: Path, config: dict[str, Any]) -> str:
     relative = config.get("policies", {}).get("verification", "engineering/policies/verification.yaml")
-    path = (root / relative).resolve()
-    path.relative_to(root.resolve())
+    path = _safe_verification_path(root, relative)
     return sha256_bytes(path.read_bytes())
 
 
@@ -38,9 +52,8 @@ def load_required_checks(root: Path, config: dict[str, Any]) -> tuple[list[dict[
     """Read and validate required checks without executing any commands."""
     from epe.parsers.documents import parse_yaml_bytes
     rel = config.get("policies", {}).get("verification", "engineering/policies/verification.yaml")
-    path = (root / rel).resolve()
     try:
-        path.relative_to(root.resolve())
+        path = _safe_verification_path(root, rel)
         raw, ds = parse_yaml_bytes(path.read_bytes(), str(rel))
     except (OSError, ValueError) as exc:
         return [], [Diagnostic("EPE-VERIFY-POLICY", Severity.ERROR, f"无法读取验证策略: {exc}", path=str(rel))]

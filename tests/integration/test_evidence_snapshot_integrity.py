@@ -159,6 +159,16 @@ def test_allowed_environment_is_filtered_and_values_are_not_recorded(tmp_path, m
     assert "do-not-pass" not in json.dumps(evidence)
 
 
+def test_verification_policy_rejects_symlinked_parent_directory(tmp_path):
+    from epe.verification.runner import run_checks
+    outside = tmp_path / "outside-policy"; outside.mkdir()
+    (outside / "verification.json").write_text(json.dumps({"checks": [{"id": "ok", "command": [sys.executable, "-c", "pass"]}]}), encoding="utf-8")
+    (tmp_path / "custom").symlink_to(outside, target_is_directory=True)
+    cfg = config(); cfg["policies"]["verification"] = "custom/verification.json"
+    evidence, diagnostics = run_checks(tmp_path, cfg, "TASK-001")
+    assert not evidence and diagnostics[0].code == "EPE-VERIFY-POLICY"
+
+
 def test_real_pytest_requires_executed_tests(tmp_path):
     policy = tmp_path / "engineering/policies/verification.yaml"
     policy.parent.mkdir(parents=True)
