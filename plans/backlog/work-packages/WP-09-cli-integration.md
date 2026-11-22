@@ -23,7 +23,7 @@
 | `epe verify` | 执行并写 Evidence |
 | `epe sync` | 仅派生视图 |
 | `epe check` | 聚合已有事实，**不**偷跑测试 |
-| `context resolve` / `impact analyze` / `design create` | 若暴露则 unsupported |
+| `context resolve` / `impact analyze` / `design create` | 已提供本地基础实现；质量评测、外部语义后端和高级宿主能力仍 deferred |
 
 ## 3. 任务分解
 

@@ -1,0 +1,19 @@
+schema_version: 1
+id: CONTRACT-HOST-PORT-001
+type: Contract
+name: EPE HostPort v1
+design_status: draft
+implementation_status: implemented
+verification_status: passed
+version: 1
+schema:
+  type: object
+  additionalProperties: false
+  required: [request, response]
+  properties:
+    request:
+      $ref: "../../engineering/schemas/agent-request.schema.json"
+    response:
+      $ref: "../../engineering/schemas/agent-response.schema.json"
+extensions:
+  prose: docs/contracts/host-port.md
