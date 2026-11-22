@@ -16,3 +16,10 @@ def test_packaged_schemas_match_authoritative_schemas():
     for source in sorted(Path("engineering/schemas").glob("*.json")):
         packaged = json.loads(files("epe.data.schemas").joinpath(source.name).read_text(encoding="utf-8"))
         assert packaged == json.loads(source.read_text(encoding="utf-8")), source.name
+
+
+def test_all_authoritative_schemas_are_packaged():
+    from importlib.resources import files
+    names = {path.name for path in Path("engineering/schemas").glob("*.json")}
+    packaged = {item.name for item in files("epe.data.schemas").iterdir() if item.name.endswith(".json")}
+    assert names <= packaged

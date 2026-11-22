@@ -13,6 +13,8 @@ jobs:
         with:
           python-version: "3.11"
       - run: python -m pip install -e '.[test]'
+      - name: Check patch whitespace
+        run: git diff --check
       - run: |
           mkdir -p /tmp/epe-ci
           pytest -q --junitxml=/tmp/epe-ci/pytest.xml
