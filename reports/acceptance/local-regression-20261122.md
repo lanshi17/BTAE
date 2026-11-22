@@ -3,17 +3,17 @@
 - 目标：确认 README 所引用的本地 MVP 检查路径、架构图产物和当前实现可复现。
 - 执行时间：2026-11-22 11:04 UTC 附近。
 - 环境：Linux，Python 3.14.4，pytest 9.1.1。
-- 运行时代码基线：`d092d7b`（增加仓库内 JSON Schema `$ref` 解析、目标 Schema 校验与拒绝远程引用）。
+- 运行时代码基线：`8dc9296`（任务激活读取并校验 Workflow `required` 字段，配置漂移 fail closed）。
 - 文档与契约跟进：`df519e0`（补充 HostPort 机器契约、研究评测计划并修正路线图链接）。
 
 | 实际命令 | 结果 |
 | --- | --- |
-| `PYTHONPATH=src pytest -q` | 通过，247 个测试，退出码 0 |
+| `PYTHONPATH=src pytest -q` | 通过，249 个测试，退出码 0 |
 | `PYTHONPATH=src python -m epe.cli --format json policy validate` | 通过 |
 | `PYTHONPATH=src python -m epe.cli --format json design validate CONTRACT-HOST-PORT-001` | 通过；HostPort 契约 Schema 可读取 |
 | `PYTHONPATH=src python -m epe.cli --format json host capabilities --host hermes` | 通过；Hermes 保持 `unsupported-unintegrated` |
-| `PYTHONPATH=src python -m epe.cli --format json graph build` | 通过；发布 319 个节点、442 条边 |
-| `PYTHONPATH=src python -m epe.cli --format json architecture validate`（图重建后） | 通过；345 个导入检查，无违规或盲区 |
+| `PYTHONPATH=src python -m epe.cli --format json graph build` | 通过；发布 320 个节点、443 条边 |
+| `PYTHONPATH=src python -m epe.cli --format json architecture validate`（图重建后） | 通过；346 个导入检查，无违规或盲区 |
 | `python /home/lanshi/.agents/skills/scientific-architecture-diagram/scripts/check_layout.py docs/architecture/figures/btae-target-architecture.drawio --strict` | 通过；`FAIL 0 / WARN 0` |
 | `git diff --check` | 通过 |
 | `git push origin master` | `Everything up-to-date`（随后追加文档提交前） |
