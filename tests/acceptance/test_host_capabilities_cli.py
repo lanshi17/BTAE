@@ -72,3 +72,12 @@ def test_host_request_rejects_malformed_command_json(tmp_path, capsys):
                  "--command-json", "{not-json}"])
     result = json.loads(capsys.readouterr().out)
     assert code == 3 and result["diagnostics"][0]["code"] == "EPE-HOST-COMMAND"
+
+
+def test_host_capabilities_can_measure_explicit_hermes_bridge(tmp_path, capsys):
+    code_text = "import json; print(json.dumps({'status':'ok','capabilities':{'protocol_version':'1','operations':['verify']}}))"
+    code = main(["--root", str(tmp_path), "--format", "json", "host", "capabilities", "--host", "hermes",
+                 "--command-json", json.dumps([sys.executable, "-c", code_text])])
+    result = json.loads(capsys.readouterr().out)
+    assert code == 0 and result["status"] == "passed"
+    assert result["data"]["hosts"][0]["status"] == "handshaken-untrusted"

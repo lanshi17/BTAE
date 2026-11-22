@@ -840,6 +840,16 @@ def cmd_unsupported(args) -> CommandResult:
 
 
 def cmd_host_capabilities(args) -> CommandResult:
+    if getattr(args, "host", None) == "hermes" and getattr(args, "command_json", None) is not None:
+        try:
+            command = json.loads(args.command_json)
+        except (TypeError, json.JSONDecodeError) as exc:
+            return _result("host capabilities", "error", [Diagnostic("EPE-HOST-COMMAND", Severity.ERROR, f"command-json 必须是 JSON 数组: {exc}")])
+        if not isinstance(command, list) or not command or any(not isinstance(item, str) or not item for item in command):
+            return _result("host capabilities", "error", [Diagnostic("EPE-HOST-COMMAND", Severity.ERROR, "command-json 必须是非空字符串数组")])
+        capabilities = HermesHostAdapter(command, cwd=_root(args.root)).handshake()
+        status = "passed" if capabilities.status in {"handshaken", "handshaken-untrusted"} else ("unsupported" if capabilities.status == "unsupported-unintegrated" else "error")
+        return _result("host capabilities", status, data={"protocol_version": "1", "hosts": [capabilities.to_dict()]})
     return _result("host capabilities", "passed", data={"protocol_version": "1", "hosts": [item.to_dict() for item in capability_matrix()]})
 
 
@@ -1026,7 +1036,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("sync"); common(p); p.set_defaults(func=cmd_graph, command_name="sync")
     p = sub.add_parser("check"); common(p); p.add_argument("--task", dest="task_id", default=None); p.set_defaults(func=cmd_check)
     host = sub.add_parser("host"); common(host); hs = host.add_subparsers(dest="host_command", required=True)
-    p = hs.add_parser("capabilities"); common(p); p.set_defaults(func=cmd_host_capabilities)
+    p = hs.add_parser("capabilities"); common(p); p.add_argument("--host", choices=("local-cli", "hermes"), default=None); p.add_argument("--command-json", default=None); p.set_defaults(func=cmd_host_capabilities)
     p = hs.add_parser("request"); common(p)
     p.add_argument("--host", choices=("local-cli", "hermes"), required=True)
     p.add_argument("--operation", choices=("start_implementation", "verify", "finalize"), required=True)

@@ -38,6 +38,8 @@ python -m venv /tmp/epe-wheel-venv
 
 `epe host request --host local-cli --operation verify ...` 只校验并转发结构化协议请求，不运行治理门禁，不写入 Task、Approval 或 Evidence。`start_implementation` 与 `finalize` 在本地宿主上明确返回 `unsupported`。Hermes 需要显式 argv bridge、capability handshake、可信身份和隔离实测；仓库当前不声称已完成这些集成。
 
+可用 `epe host capabilities --host hermes --command-json '[...]'` 单独执行 capability handshake。`handshaken-untrusted` 只表示协议响应结构有效，不表示身份或写入隔离可信。
+
 ## 已知限制
 
 - CI 工作流会上传 JUnit 测试报告作为本次运行产物；artifact 保存不等于远程分支保护已启用。
