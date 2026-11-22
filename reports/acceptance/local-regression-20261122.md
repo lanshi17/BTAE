@@ -17,6 +17,7 @@
 | `PYTHONPATH=src pytest -q tests/integration/test_changeset_baseline.py` | 通过；ChangeSet 运行时契约反例覆盖 |
 | `PYTHONPATH=src pytest -q tests/unit/test_approval_schema_runtime.py` | 通过；Approval 风险范围唯一性覆盖 |
 | `PYTHONPATH=src pytest -q tests/integration/test_evidence_schema_runtime.py` | 通过；Evidence artifact 结构覆盖 |
+| 源码外 wheel 安装项目依赖后 `epe init` / `epe policy validate` / `epe host capabilities` | 通过；运行时 Schema 与 CLI 可用 |
 | `PYTHONPATH=src python -m epe.cli --format json host capabilities --host hermes` | 通过；Hermes 保持 `unsupported-unintegrated` |
 | `PYTHONPATH=src python -m epe.cli --format json graph build` | 通过；发布 321 个节点、443 条边 |
 | `PYTHONPATH=src python -m epe.cli --format json architecture validate`（图重建后） | 通过；346 个导入检查，无违规或盲区 |
