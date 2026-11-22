@@ -29,6 +29,8 @@ docs/standards/runbook-recovery.md
 plans/backlog/mvp-release-checklist.md  # 发布时填写
 ```
 
+当前清单见[ MVP 发布清单](../mvp-release-checklist.md)；它按本地证据与外部待确认条件分栏，不把 CI 配置文件当作远程保护证明。
+
 ## 4. PRD KR 对照（发布时实测勾选）
 
 | KR | 含义（见 PRD） | 证据形式 |
