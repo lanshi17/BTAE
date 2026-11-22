@@ -4,7 +4,7 @@ type: Class
 name: Evidence Runner
 design_status: reviewed
 implementation_status: implemented
-verification_status: pending
+verification_status: passed
 implementation:
   - path: src/epe/verification/runner.py
     symbol: run_checks

@@ -4,7 +4,7 @@ type: Class
 name: Python AST Parser
 design_status: reviewed
 implementation_status: implemented
-verification_status: pending
+verification_status: passed
 implementation:
   - path: src/epe/parsers/python.py
     symbol: parse_python

@@ -7,7 +7,7 @@
 | 工作包 | 当前可证明范围 | 证据 | 尚未关闭的门槛 |
 | --- | --- | --- | --- |
 | WP-01 | Schema、模板、状态/关系/结果契约已入库；HostPort 机器契约新增 | `engineering/schemas/`、`engineering/templates/`、`docs/contracts/host-port.md`、`engineering/contracts/host-port.yaml` | 适用的人类评审、正式批准和迁移记录 |
-| WP-02 | 可安装包、核心模型、Registry、端口、CLI inspect 已实现；Task Schema 与 Workflow 字段保持同步 | `pyproject.toml`、`tests/unit/test_core.py`、`tests/acceptance/test_cli.py`、`engineering/schemas/task.schema.json` | 核心设计从 draft 进入批准流程 |
+| WP-02 | 可安装包、核心模型、Registry、端口、CLI inspect 已实现；核心类设计文档与本地验证状态已同步；Task Schema 与 Workflow 字段保持同步 | `pyproject.toml`、`docs/classes/`、`tests/unit/test_core.py`、`tests/acceptance/test_cli.py`、`engineering/schemas/task.schema.json` | 核心设计从 draft 进入批准流程 |
 | WP-03 | Markdown/YAML/Python 批量解析、来源和不完整状态已测试 | `src/epe/parsers/`、`tests/unit/test_parsers.py` | 多语言解析与正式评审 |
 | WP-04 | AST 符号/导入、映射正反例和动态盲区已测试 | `tests/acceptance/test_ac03_mapping_cli.py`、`tests/unit/test_parsers.py` | 运行时动态依赖无法由静态 AST 证明 |
 | WP-05 | 确定性图、模块覆盖、架构规则、generation 原子发布和冲突保护已测试；最终快照 321 节点 / 443 边 | `tests/integration/test_graph_generations.py`、`tests/acceptance/test_ac10_graph_publication_cli.py` | 断电持久性和完整平台矩阵 |

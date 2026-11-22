@@ -4,7 +4,7 @@ type: Class
 name: Registry
 design_status: reviewed
 implementation_status: implemented
-verification_status: pending
+verification_status: passed
 implementation:
   - path: src/epe/core/registry.py
     symbol: Registry

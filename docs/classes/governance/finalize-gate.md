@@ -4,10 +4,13 @@ type: Class
 name: Finalize Gate
 design_status: reviewed
 implementation_status: implemented
-verification_status: pending
+verification_status: passed
 implementation:
   - path: src/epe/governance/gates.py
     symbol: finalize_gate
+verification:
+  - test_id: TEST-GATE-001
+    path: tests/unit/test_finalize_gate.py
 ---
 
 # Finalize Gate
