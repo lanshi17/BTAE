@@ -26,6 +26,7 @@ jobs:
           python -m pip wheel . --no-deps -w /tmp/epe-wheel
           python -m venv /tmp/epe-wheel-venv
           /tmp/epe-wheel-venv/bin/pip install /tmp/epe-wheel/*.whl
+          /tmp/epe-wheel-venv/bin/python -c "from importlib.resources import files; names=('approval.schema.json','agent-request.schema.json','agent-response.schema.json','changeset-baseline.schema.json','changeset.schema.json','command-result.schema.json','contract.schema.json','entity.schema.json','evidence.schema.json','policy.schema.json','project-config.schema.json','relation.schema.json','task.schema.json','workflow.schema.json'); assert all(files('epe.data.schemas').joinpath(name).is_file() for name in names)"
           mkdir -p /tmp/epe-wheel-project
           cd /tmp/epe-wheel-project
           /tmp/epe-wheel-venv/bin/epe --format json init

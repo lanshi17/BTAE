@@ -1,0 +1,5 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "https://btae.local/schema/changeset/v1", "title": "BTAE ChangeSet", "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "id", "task", "owner", "affected_entities", "write_scope", "protected", "dependencies", "status"],
+  "properties": {"schema_version": {"const": 1}, "id": {"type": "string", "pattern": "^CHANGE-"}, "task": {"type": "string", "pattern": "^TASK-"}, "owner": {"type": "string", "minLength": 1}, "affected_entities": {"type": "array", "items": {"type": "string"}}, "write_scope": {"type": "array", "items": {"type": "string"}}, "protected": {"type": "array", "items": {"type": "string"}}, "dependencies": {"type": "array", "items": {"type": "object"}}, "baseline_manifest": {"type": ["string", "null"]}, "status": {"enum": ["planned", "active", "completed", "aborted"]}, "revision": {"type": "integer", "minimum": 1}}
+}
