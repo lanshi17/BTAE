@@ -1,7 +1,7 @@
 # WP-07：任务、权限和质量门禁
 
-**状态：** planned · **里程碑：** M2 · **实施：** not_started  
-**负责模块：** [governance](../../../docs/modules/governance/README.md)、core  
+**状态：** in_progress · **里程碑：** M2 · **实施：** in_progress
+**负责模块：** [governance](../../../docs/modules/governance/README.md)、core
 **前置：** WP-06 · **下游：** WP-08（事实接入）、WP-09
 
 ## 1. 目标

@@ -1,7 +1,7 @@
 # WP-11：CI、使用文档与 MVP 发布
 
-**状态：** planned · **里程碑：** M3 / V0.2 发布 · **实施：** not_started  
-**负责模块：** cli / adapters；维护者配置远程门禁  
+**状态：** in_progress · **里程碑：** M3 / V0.2 发布 · **实施：** in_progress
+**负责模块：** cli / adapters；维护者配置远程门禁
 **前置：** WP-10
 
 ## 1. 目标

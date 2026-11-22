@@ -1,7 +1,7 @@
 # WP-04：Python AST、符号与映射检查
 
-**状态：** planned · **里程碑：** M1 · **实施：** not_started  
-**负责模块：** parsers、[verification](../../../docs/modules/verification/README.md)  
+**状态：** in_progress · **里程碑：** M1 · **实施：** in_progress
+**负责模块：** parsers、[verification](../../../docs/modules/verification/README.md)
 **前置：** WP-02 · **可并行：** WP-03 · **下游：** WP-05、WP-08
 
 ## 1. 目标

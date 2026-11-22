@@ -1,7 +1,7 @@
 # WP-09：统一 CLI 与完整应用链路
 
-**状态：** planned · **里程碑：** M2 · **实施：** not_started  
-**负责模块：** [cli](../../../docs/modules/cli/README.md) 牵头，装配全部 MVP 模块  
+**状态：** in_progress · **里程碑：** M2 · **实施：** in_progress
+**负责模块：** [cli](../../../docs/modules/cli/README.md) 牵头，装配全部 MVP 模块
 **前置：** WP-05、WP-06、WP-07、WP-08
 
 ## 1. 目标

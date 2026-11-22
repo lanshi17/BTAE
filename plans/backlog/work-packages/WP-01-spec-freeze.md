@@ -1,7 +1,7 @@
 # WP-01：冻结规范、机器契约和样例
 
-**状态：** planned · **里程碑：** M0 / V0.1 · **实施：** not_started  
-**负责模块：** 全部；core / governance / design 牵头  
+**状态：** in_progress · **里程碑：** M0 / V0.1 · **实施：** in_progress
+**负责模块：** 全部；core / governance / design 牵头
 **上游：** PRD、SPEC、架构、9 模块草案 · **下游：** 全部实现 WP
 
 ## 1. 目标

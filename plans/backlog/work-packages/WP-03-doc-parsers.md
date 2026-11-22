@@ -1,7 +1,7 @@
 # WP-03：文档与结构化工件解析
 
-**状态：** planned · **里程碑：** M1 · **实施：** not_started  
-**负责模块：** [parsers](../../../docs/modules/parsers/README.md)、core  
+**状态：** in_progress · **里程碑：** M1 · **实施：** in_progress
+**负责模块：** [parsers](../../../docs/modules/parsers/README.md)、core
 **前置：** WP-02 · **可并行：** WP-04（共享 WP-01 的 SourceLocation / ParseBatch 契约）
 
 ## 1. 目标

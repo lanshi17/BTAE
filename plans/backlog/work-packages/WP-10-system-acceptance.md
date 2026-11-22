@@ -1,7 +1,7 @@
 # WP-10：系统验收、竞态和恢复
 
-**状态：** planned · **里程碑：** M3 · **实施：** not_started  
-**负责模块：** cli / adapters / verification / governance 联合  
+**状态：** in_progress · **里程碑：** M3 · **实施：** in_progress
+**负责模块：** cli / adapters / verification / governance 联合
 **前置：** WP-09 · **下游：** WP-11
 
 ## 1. 目标

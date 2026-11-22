@@ -1,7 +1,7 @@
 # WP-02：工程骨架、领域模型与最小端口
 
-**状态：** planned · **里程碑：** M1 · **实施：** not_started  
-**负责模块：** [core](../../../docs/modules/core/README.md)、[adapters](../../../docs/modules/adapters/README.md)、[cli](../../../docs/modules/cli/README.md)  
+**状态：** in_progress · **里程碑：** M1 · **实施：** in_progress
+**负责模块：** [core](../../../docs/modules/core/README.md)、[adapters](../../../docs/modules/adapters/README.md)、[cli](../../../docs/modules/cli/README.md)
 **前置：** WP-01 · **下游：** WP-03 起全部实现包
 
 ## 1. 目标

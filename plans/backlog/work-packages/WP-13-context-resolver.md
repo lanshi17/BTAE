@@ -1,7 +1,7 @@
 # WP-13：分级上下文与混合检索
 
-**状态：** planned · **里程碑：** M4 / V0.3 · **实施：** not_started  
-**负责模块：** [context](../../../docs/modules/context/README.md)、graph、cli  
+**状态：** in_progress · **里程碑：** M4 / V0.3 · **实施：** in_progress
+**负责模块：** [context](../../../docs/modules/context/README.md)、graph、cli
 **前置：** WP-12
 
 ## 1. 目标

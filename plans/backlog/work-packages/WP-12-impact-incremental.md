@@ -1,8 +1,8 @@
 # WP-12：双向影响分析与增量图
 
-**状态：** planned · **里程碑：** M4 / V0.3 · **实施：** not_started  
-**负责模块：** graph、parsers、adapters  
-**前置：** WP-11 · **下游：** WP-13  
+**状态：** in_progress · **里程碑：** M4 / V0.3 · **实施：** in_progress
+**负责模块：** graph、parsers、adapters
+**前置：** WP-11 · **下游：** WP-13
 **说明：** 进入实施前应单独立项补充专属验收（PRD-010），**不得**冒用 AC-01–12 声称高级影响能力已验收。
 
 ## 1. 目标

@@ -1,7 +1,7 @@
 # WP-08：检查运行器与 Evidence
 
-**状态：** planned · **里程碑：** M2 · **实施：** not_started  
-**负责模块：** verification、adapters  
+**状态：** in_progress · **里程碑：** M2 · **实施：** in_progress
+**负责模块：** verification、adapters
 **前置：** WP-05、WP-07（授权上下文契约） · **下游：** WP-09、WP-10
 
 ## 1. 目标

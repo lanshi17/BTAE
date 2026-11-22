@@ -1,8 +1,8 @@
 # WP-06：设计、契约与批准适用性
 
-**状态：** planned · **里程碑：** M2 · **实施：** not_started  
-**负责模块：** [design](../../../docs/modules/design/README.md)、adapters  
-**前置：** WP-03；公共记录契约来自 WP-01 · **下游：** WP-07、WP-09  
+**状态：** in_progress · **里程碑：** M2 · **实施：** in_progress
+**负责模块：** [design](../../../docs/modules/design/README.md)、adapters
+**前置：** WP-03；公共记录契约来自 WP-01 · **下游：** WP-07、WP-09
 **说明：** 不依赖完整图（WP-05）；可与 WP-05 部分并行，但可信身份依赖 adapters。
 
 ## 1. 目标

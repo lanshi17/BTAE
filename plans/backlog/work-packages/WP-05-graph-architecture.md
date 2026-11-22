@@ -1,7 +1,7 @@
 # WP-05：基础图、架构规则与快照发布
 
-**状态：** planned · **里程碑：** M1 · **实施：** not_started  
-**负责模块：** [graph](../../../docs/modules/graph/README.md)、verification、adapters  
+**状态：** in_progress · **里程碑：** M1 · **实施：** in_progress
+**负责模块：** [graph](../../../docs/modules/graph/README.md)、verification、adapters
 **前置：** WP-03、WP-04 · **下游：** WP-08、WP-09、WP-12
 
 ## 1. 目标
