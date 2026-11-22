@@ -20,6 +20,7 @@ jobs:
       - run: epe --format json architecture validate
       - run: epe --format json audit verify
       - run: epe --format json host capabilities
+      - run: epe --format json host request --host local-cli --operation verify --request-id REQ-CI --task-id TASK-CI --target-entity CLASS-CI --identity-source ci
       - name: Verify wheel outside source tree
         run: |
           python -m pip wheel . --no-deps -w /tmp/epe-wheel
