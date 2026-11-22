@@ -50,6 +50,14 @@ def test_repository_port_reads_only_regular_in_root_files(tmp_path):
     assert not repo.exists("link")
 
 
+def test_repository_rejects_symlinked_parent_directory(tmp_path):
+    from epe.adapters.repository import Repository
+    outside = tmp_path.parent / "outside-parent"; outside.mkdir()
+    (tmp_path / "linked").symlink_to(outside, target_is_directory=True)
+    with __import__("pytest").raises(ValueError):
+        Repository(tmp_path).safe_path("linked/file.txt")
+
+
 def test_invalid_unhashable_entity_fields_do_not_crash():
     from epe.core.registry import validate_entity_dict
     base = {"id": "CLASS-1", "type": "Class", "name": "Example"}

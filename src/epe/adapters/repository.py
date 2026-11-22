@@ -34,8 +34,14 @@ class Repository:
         return path.resolve().relative_to(self.root).as_posix()
 
     def safe_path(self, rel: str) -> Path:
-        if not isinstance(rel, str) or not rel or Path(rel).is_absolute() or ".." in Path(rel).parts or "\\" in rel:
+        relative = Path(rel) if isinstance(rel, str) else Path()
+        if not isinstance(rel, str) or not rel or relative.is_absolute() or ".." in relative.parts or "\\" in rel:
             raise ValueError(f"路径必须是仓库相对路径: {rel}")
+        current = self.root
+        for component in relative.parts:
+            current = current / component
+            if current.is_symlink():
+                raise ValueError(f"路径不能经过符号链接: {rel}")
         candidate = (self.root / rel).resolve()
         try:
             candidate.relative_to(self.root)
@@ -75,7 +81,10 @@ class Repository:
 
 def load_config(root: Path) -> tuple[dict[str, Any] | None, list[Diagnostic]]:
     repo = Repository(root)
-    path = repo.config_path
+    try:
+        path = repo.safe_path("engineering/epe.yaml")
+    except ValueError as exc:
+        return None, [Diagnostic("EPE-PATH-SYMLINK", Severity.ERROR, str(exc), path="engineering/epe.yaml")]
     if not path.exists():
         return None, [Diagnostic("EPE-CONFIG-MISSING", Severity.ERROR, "工程尚未初始化，请运行 epe init", path="engineering/epe.yaml")]
     try:

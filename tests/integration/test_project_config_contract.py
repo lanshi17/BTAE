@@ -44,6 +44,13 @@ def test_config_failure_is_structured_for_real_cli(tmp_path):
         assert json.loads(result.stdout)["diagnostics"][0]["code"] == "EPE-CONFIG-INVALID"
 
 
+def test_config_rejects_symlinked_parent_directory(tmp_path):
+    outside = tmp_path.parent / "config-parent-outside"; outside.mkdir()
+    (tmp_path / "engineering").symlink_to(outside, target_is_directory=True)
+    result, diagnostics = load_config(tmp_path)
+    assert result is None and diagnostics[0].code == "EPE-PATH-SYMLINK"
+
+
 def test_packaged_schema_matches_repository_schema():
     root = Path(__file__).resolve().parents[2]
     assert (root / "engineering/schemas/project-config.schema.json").read_bytes() == (root / "src/epe/data/schemas/project-config.schema.json").read_bytes()
