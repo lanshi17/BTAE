@@ -25,3 +25,9 @@ def test_result_normalizer_preserves_valid_contract():
         "data": {"ok": True},
         "evidence_ids": [],
     }
+
+
+def test_result_normalizer_converts_schema_validation_failure_to_error():
+    result = _normalize_result(CommandResult("fixture", "not-a-status"))
+    assert result["status"] == "error"
+    assert result["diagnostics"][0]["code"] == "EPE-RESULT-SCHEMA"

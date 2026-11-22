@@ -97,7 +97,7 @@ def _normalize_result(result: CommandResult) -> dict[str, Any]:
         jsonschema.Draft202012Validator(schema).validate(obj)
         json.dumps(obj, ensure_ascii=False, sort_keys=True)
         return obj
-    except (ImportError, OSError, UnicodeError, json.JSONDecodeError, TypeError, ValueError) as exc:
+    except Exception as exc:
         fallback = CommandResult("internal", "error", [Diagnostic("EPE-RESULT-SCHEMA", Severity.ERROR, f"命令结果不符合公共契约: {exc}")]).to_dict()
         # The fallback is deliberately built only from JSON-native fields.
         return fallback
