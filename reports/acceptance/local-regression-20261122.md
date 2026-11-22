@@ -18,7 +18,7 @@
 | `git diff --check` | 通过 |
 | `git push origin master` | `Everything up-to-date`（随后追加文档提交前） |
 | `git push origin master`（契约与路线图跟进后） | 通过；远程更新至 `df519e0` |
-| `git push origin master`（Schema 引用回归与最终文档跟进后） | 通过；远程更新至 `3d9164a` |
+| `git push origin master`（Schema 引用回归与最终文档跟进后） | 通过；远程分支更新成功 |
 
 契约引用回归还覆盖不存在目标、远程 URL、无效目标 Schema 和有效仓库内 JSON Pointer；这些场景分别验证失败关闭与合法引用路径。
 
