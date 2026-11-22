@@ -39,6 +39,8 @@
 
 当前 [`tests/benchmarks/impact_labeled/cases.json`](../../tests/benchmarks/impact_labeled/cases.json) 只包含三个合成回归场景；它可证明实现稳定性，不能作为真实项目的独立召回率基准。
 
+评测脚本 [`tests/benchmarks/impact_labeled/evaluate.py`](../../tests/benchmarks/impact_labeled/evaluate.py) 可对同一 JSON 结构输出整体及 `determined` / `candidate` 分层的 precision、recall、F1、精确匹配率和不完整标记。当前输出类型固定为 `synthetic_regression`，在独立真实标注集建立前不得把结果解释为方法效果证据。
+
 ### 3.2 上下文质量与成本
 
 为每个任务记录 C0–C3 选择、遗漏、来源类型、预算、字节数、估算 Token、解析时间和缓存命中率。独立评审者对“完成任务所需的最小充分上下文”进行盲评，记录相关性、约束遗漏和错误混入；另记录人工维护设计、审批、索引和重跑的时间成本。
