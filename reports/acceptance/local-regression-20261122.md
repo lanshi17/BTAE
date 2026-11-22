@@ -3,12 +3,13 @@
 - 目标：确认 README 所引用的本地 MVP 检查路径、架构图产物和当前实现可复现。
 - 执行时间：2026-11-22 11:04 UTC 附近。
 - 环境：Linux，Python 3.14.4，pytest 9.1.1。
-- 运行时代码基线：`a8d496c`（Task objective 非空约束与参数错误映射同步）。
+- 运行时代码基线：`eac756f`（CI 增加 whitespace 与完整 Schema packaging 门禁）。
 - 文档与契约跟进：`df519e0`（补充 HostPort 机器契约、研究评测计划并修正路线图链接）。
 
 | 实际命令 | 结果 |
 | --- | --- |
-| `PYTHONPATH=src pytest -q` | 通过，258 个测试，退出码 0 |
+| `PYTHONPATH=src pytest -q` | 通过，259 个测试，退出码 0 |
+| `git diff --check` | 通过；CI 工作流已纳入同一门禁 |
 | `PYTHONPATH=src python -m epe.cli --format json task classify TASK-001`（临时 bugfix 缺 reproduction） | 通过回归；返回缺失字段并阻断分类 |
 | `PYTHONPATH=src python -m epe.cli --format json policy validate` | 通过 |
 | `PYTHONPATH=src python -m epe.cli --format json design validate CONTRACT-HOST-PORT-001` | 通过；HostPort 契约 Schema 可读取 |
