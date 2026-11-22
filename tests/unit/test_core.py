@@ -22,6 +22,15 @@ def test_manifest_is_order_independent(tmp_path):
     assert sha256_json([{"path": p, "sha256": h} for p, h in first.entries]) == first.digest
 
 
+def test_manifest_rejects_nested_symlink_directory(tmp_path):
+    real = tmp_path / "real"; real.mkdir()
+    (real / "file.txt").write_text("value", encoding="utf-8")
+    (tmp_path / "linked").symlink_to(real, target_is_directory=True)
+    import pytest
+    with pytest.raises(ValueError, match="符号链接目录"):
+        build_manifest(tmp_path)
+
+
 def test_entity_schema_rejects_invalid_source_mappings_and_unknown_fields():
     from epe.core.registry import validate_entity_dict
     base = {"id": "CLASS-1", "type": "Class", "name": "Class", "source": {"path": "docs/class.md"}}

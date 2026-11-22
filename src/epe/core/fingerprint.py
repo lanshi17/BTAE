@@ -32,7 +32,16 @@ def build_manifest(root: Path, include_roots: Iterable[str] | None = None,
     for base in roots:
         if not base.exists():
             continue
-        files = [base] if base.is_file() else sorted(p for p in base.rglob("*") if p.is_file())
+        if base.is_symlink():
+            raise ValueError(f"纳管根不能是符号链接: {base}")
+        if base.is_file():
+            files = [base]
+        else:
+            descendants = sorted(base.rglob("*"))
+            linked_dirs = [path for path in descendants if path.is_symlink() and path.is_dir()]
+            if linked_dirs:
+                raise ValueError(f"纳管树不能包含符号链接目录: {linked_dirs[0]}")
+            files = [path for path in descendants if path.is_file()]
         for path in files:
             try:
                 rel = path.resolve().relative_to(root).as_posix()
