@@ -10,6 +10,21 @@ from epe.parsers.documents import parse_yaml_bytes
 from epe.core.policy import validate_policy_document
 
 
+def _safe_policy_path(root: Path, relative: str) -> Path:
+    root = root.resolve()
+    parsed = Path(relative)
+    if not isinstance(relative, str) or not relative or parsed.is_absolute() or ".." in parsed.parts or "\\" in relative:
+        raise ValueError(f"策略路径必须是仓库相对路径: {relative}")
+    current = root
+    for component in parsed.parts:
+        current = current / component
+        if current.is_symlink():
+            raise ValueError(f"策略路径不能经过符号链接: {relative}")
+    path = (root / relative).resolve()
+    path.relative_to(root)
+    return path
+
+
 def validate_policy_files(root: Path, config: dict[str, Any]) -> tuple[dict[str, Any], list[Diagnostic]]:
     diagnostics: list[Diagnostic] = []
     results: list[dict[str, Any]] = []
@@ -34,10 +49,9 @@ def validate_policy_files(root: Path, config: dict[str, Any]) -> tuple[dict[str,
         "verification": (config.get("policies", {}).get("verification", "engineering/policies/verification.yaml"), "policy.schema.json"),
     }
     for kind, (relative, schema_name) in mapping.items():
-        path = (root / relative).resolve()
         try:
-            if path.is_symlink(): raise ValueError("策略文件不能是符号链接")
-            path.relative_to(root.resolve()); raw, parse_diagnostics = parse_yaml_bytes(path.read_bytes(), str(relative))
+            path = _safe_policy_path(root, relative)
+            raw, parse_diagnostics = parse_yaml_bytes(path.read_bytes(), str(relative))
         except (OSError, ValueError) as exc:
             diagnostics.append(Diagnostic("EPE-POLICY-READ", Severity.ERROR, str(exc), path=str(relative))); continue
         diagnostics.extend(parse_diagnostics)
@@ -72,12 +86,13 @@ def validate_policy_files(root: Path, config: dict[str, Any]) -> tuple[dict[str,
         results.append({"kind": kind, "path": str(relative), "valid": not any(d.path == str(relative) and d.is_error for d in diagnostics)})
     workflow_schema = load_schema("workflow.schema.json")
     workflows = root / "engineering/workflows"
-    if workflows.exists():
+    if workflows.is_symlink():
+        diagnostics.append(Diagnostic("EPE-PATH-SYMLINK", Severity.ERROR, "Workflow 目录不能是符号链接", path="engineering/workflows"))
+    elif workflows.exists():
         for path in sorted(workflows.glob("*.yaml")):
             relative = str(path.relative_to(root))
             try:
-                if path.is_symlink(): raise ValueError("Workflow 文件不能是符号链接")
-                raw, parse_diagnostics = parse_yaml_bytes(path.read_bytes(), relative)
+                raw, parse_diagnostics = parse_yaml_bytes(_safe_policy_path(root, relative).read_bytes(), relative)
             except (OSError, ValueError) as exc:
                 diagnostics.append(Diagnostic("EPE-WORKFLOW-READ", Severity.ERROR, str(exc), path=relative)); continue
             diagnostics.extend(parse_diagnostics)

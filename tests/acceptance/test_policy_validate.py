@@ -22,6 +22,17 @@ def test_policy_validate_reports_unknown_fields(tmp_path, capsys):
     assert any(d["code"] == "EPE-POLICY-INVALID" for d in result["diagnostics"])
 
 
+def test_policy_validator_rejects_symlinked_policy_parent(tmp_path):
+    from epe.governance.policies import validate_policy_files
+    outside = tmp_path / "outside-policy"; outside.mkdir()
+    (outside / "verification.yaml").write_text("schema_version: 1\nchecks: []\n", encoding="utf-8")
+    (tmp_path / "engineering").mkdir()
+    (tmp_path / "engineering" / "linked").symlink_to(outside, target_is_directory=True)
+    config = {"policies": {"verification": "engineering/linked/verification.yaml", "architecture": "engineering/linked/verification.yaml"}}
+    _, diagnostics = validate_policy_files(tmp_path, config)
+    assert any(item.code == "EPE-POLICY-READ" for item in diagnostics)
+
+
 def test_architecture_and_verify_consumers_reject_schema_invalid_policy(tmp_path, capsys):
     assert main(["--root", str(tmp_path), "--format", "json", "init"]) == 0
     capsys.readouterr()
