@@ -31,3 +31,4 @@ jobs:
           /tmp/epe-wheel-venv/bin/epe --format json init
           /tmp/epe-wheel-venv/bin/epe --format json policy validate
           /tmp/epe-wheel-venv/bin/epe --format json host capabilities
+          /tmp/epe-wheel-venv/bin/epe --format json host request --host local-cli --operation verify --request-id REQ-WHEEL --task-id TASK-WHEEL --target-entity CLASS-WHEEL --identity-source wheel

@@ -6,6 +6,7 @@ import os
 import re
 import subprocess
 import sys
+from importlib.resources import files
 from pathlib import Path
 from typing import Any, Callable
 
@@ -68,7 +69,7 @@ def _result(command: str, status: str, diagnostics: list[Diagnostic] | None = No
 
 
 def _print(result: CommandResult, fmt: str) -> int:
-    obj = result.to_dict()
+    obj = _normalize_result(result)
     if fmt == "json":
         print(json.dumps(obj, ensure_ascii=False, sort_keys=True))
     else:
@@ -85,6 +86,21 @@ def _print(result: CommandResult, fmt: str) -> int:
     if obj["status"] == "error" and any(str(code).startswith(parameter_prefixes) for code in codes):
         return 2
     return EXIT_CODES.get(obj["status"], 3)
+
+
+def _normalize_result(result: CommandResult) -> dict[str, Any]:
+    """Validate the public result contract before emitting any format."""
+    try:
+        obj = result.to_dict()
+        import jsonschema
+        schema = json.loads(files("epe.data.schemas").joinpath("command-result.schema.json").read_text(encoding="utf-8"))
+        jsonschema.Draft202012Validator(schema).validate(obj)
+        json.dumps(obj, ensure_ascii=False, sort_keys=True)
+        return obj
+    except (ImportError, OSError, UnicodeError, json.JSONDecodeError, TypeError, ValueError) as exc:
+        fallback = CommandResult("internal", "error", [Diagnostic("EPE-RESULT-SCHEMA", Severity.ERROR, f"命令结果不符合公共契约: {exc}")]).to_dict()
+        # The fallback is deliberately built only from JSON-native fields.
+        return fallback
 
 
 def _load_registry(root: Path, config: dict[str, Any]):

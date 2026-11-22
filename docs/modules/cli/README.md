@@ -56,7 +56,7 @@ CommandResult = {
 }
 ```
 
-status 为 passed/blocked/error/unsupported。JSON stdout 仅含一个完整结果，不输出进度、子进程日志或 ANSI 色彩；日志与进度走 stderr。Text 与 JSON 来自同一结果对象，不能一种隐藏 warning。
+status 为 passed/blocked/error/unsupported。JSON stdout 仅含一个完整结果，不输出进度、子进程日志或 ANSI 色彩；日志与进度走 stderr。Text 与 JSON 来自同一结果对象，不能一种隐藏 warning。CLI 输出前加载随包发布的 `command-result.schema.json` 并检查 JSON 可序列化；内部结果结构异常时统一返回 `error` 和 `EPE-RESULT-SCHEMA`。
 
 退出码：0 成功，1 门禁阻断，2 参数/配置错误，3 执行/解析/存储故障，4 不支持，5 写入冲突。混合结果优先返回故障而非普通阻断；具体故障类别与多个故障同时出现的优先表在 WP-01 冻结，不能依赖异常捕获顺序。
 
