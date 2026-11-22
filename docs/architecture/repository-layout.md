@@ -57,6 +57,6 @@ project/
 - 归档保留原 ID、替代关系、归档原因与版本。历史设计不得进入默认当前上下文。
 - `plans/completed/` 存放完成任务；`archive/plans/` 用于历史迁移或不再活跃维护的计划，避免两个目录承担同一状态语义。
 
-## 待交付模板
+## 当前模板与后续补充
 
-后续规范冻结需提供 Architecture、Module、Component、Class、Contract、Task / ChangeSet、ADR 和 Evidence 模板。共同字段为稳定 ID、名称、来源、版本和适用状态；各类型保留自己的必填项，不强迫所有实体采用完全相同正文结构。
+Architecture、Module、Component、Class、Contract、Task / ChangeSet、ADR 和 Evidence 模板已位于 `engineering/templates/`，并由 `epe init` 只在缺失时创建。共同字段为稳定 ID、名称、来源、版本和适用状态；各类型保留自己的必填项，不强迫所有实体采用完全相同正文结构。新增模板仍需通过 Schema、解析和回归证据后再纳入正式规范。

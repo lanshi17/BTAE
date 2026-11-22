@@ -67,8 +67,6 @@ epe check
 
 本地 `context resolve`、`impact analyze` 和 `design create` 已有基础实现；它们的本地测试通过不关闭上述外部或研究验收。
 
-这些内容当前属于待交付项，不能仅凭本组架构文档宣称完整 Engineering Specification 已完成。
-
 ## 5. 方法有效性验证
 
 核心假设：结构化设计知识、可执行契约、双向追溯、增量影响分析和验证门禁的组合，可能降低长期 Agent 开发中的设计漂移与维护成本。

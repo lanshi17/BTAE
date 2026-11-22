@@ -47,7 +47,7 @@ tests/fixtures/architecture_cases/
 
 ## 5. 验收映射
 
-AC-04（静态禁止依赖与环）；AC-10 的重建与基础并发；明确 **不** 交付 impact analyze（unsupported 留给 WP-09/12）。
+AC-04（静态禁止依赖与环）；AC-10 的重建与基础并发。基础 `impact analyze` 已由 WP-12 接线，但独立真实准确率评测仍不属于本包交付。
 
 ## 6. 完成门槛
 

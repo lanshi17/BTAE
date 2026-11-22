@@ -17,7 +17,7 @@
 | T3 | 实现 Entity/Relation/Diagnostic/InputManifest 等值对象与 Schema 加载 |
 | T4 | 实现 `register_batch`、关系校验、状态迁移、`canonical_manifest` |
 | T5 | 定义并实现 Repository / Git / Clock 端口；adapters 提供受限读与真实 Git 事实 |
-| T6 | CLI 入口：`epe --help`、`epe inspect` 最小只读；其余命令返回明确 unsupported |
+| T6 | CLI 入口：`epe --help`、`epe inspect` 及首批 MVP 命令；不具备可靠宿主能力的操作返回明确 unsupported |
 | T7 | 单元/契约测试：重复 ID、commit=null、dirty 含未跟踪、旧 revision 冲突 |
 
 ## 3. 拟议包布局
@@ -73,7 +73,7 @@ tests/
 - [ ] 本地可 `pip install -e .`（或项目选定等价方式）并运行 `epe inspect`
 - [ ] 核心类设计文档存在且与代码符号映射声明一致（实现状态仍可为 in_progress）
 - [ ] T7 测试有真实执行记录（手工日志亦可，路径写入计划备注）
-- [ ] 未实现命令列表与 SPEC §8 对齐并返回 status=unsupported / 退出码 4
+- [ ] 未实现或宿主不支持的操作列表与 SPEC §8/HostPort 对齐并返回 status=unsupported / 退出码 4
 
 ## 7. 明确不做
 
