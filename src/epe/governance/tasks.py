@@ -36,8 +36,8 @@ def validate_task(data: dict[str, Any]) -> tuple[Task | None, list[Diagnostic]]:
         ds.append(Diagnostic("EPE-TASK-RISK", Severity.ERROR, f"风险等级非法: {data.get('risk')}"))
     if not isinstance(data.get("status", "planned"), str) or data.get("status", "planned") not in {"planned", "active", "completed", "aborted"}:
         ds.append(Diagnostic("EPE-TASK-STATUS", Severity.ERROR, f"任务状态非法: {data.get('status')}"))
-    if not isinstance(data.get("objective"), str):
-        ds.append(Diagnostic("EPE-TASK-OBJECTIVE", Severity.ERROR, "objective 必须为字符串"))
+    if not isinstance(data.get("objective"), str) or not data.get("objective", "").strip():
+        ds.append(Diagnostic("EPE-TASK-OBJECTIVE", Severity.ERROR, "objective 必须为非空字符串"))
     if not isinstance(data.get("acceptance"), list) or not data.get("acceptance") or not all(isinstance(item, str) and item for item in data.get("acceptance", [])):
         ds.append(Diagnostic("EPE-TASK-ACCEPTANCE", Severity.ERROR, "acceptance 必须为非空字符串数组"))
     if not isinstance(data.get("target_entities"), list) or not data.get("target_entities") or not all(isinstance(item, str) and item for item in data.get("target_entities", [])):

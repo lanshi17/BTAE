@@ -89,3 +89,13 @@ def test_task_classify_reports_workflow_specific_missing_fields(tmp_path, capsys
     result = json.loads(capsys.readouterr().out)
     assert result["data"]["missing"] == ["reproduction"]
     assert result["diagnostics"][0]["code"] == "EPE-TASK-INCOMPLETE"
+
+
+def test_task_create_rejects_empty_objective(tmp_path, capsys):
+    assert main(["--root", str(tmp_path), "--format", "json", "init"]) == 0
+    capsys.readouterr()
+    task = tmp_path / "task.yaml"
+    task.write_text("id: TASK-001\ntype: feature\nobjective: '   '\nacceptance: [ok]\nrisk: low\ntarget_entities: [CLASS-001]\n", encoding="utf-8")
+    assert main(["--root", str(tmp_path), "--format", "json", "task", "create", "--file", "task.yaml"]) == 2
+    result = json.loads(capsys.readouterr().out)
+    assert any(item["code"] == "EPE-TASK-OBJECTIVE" for item in result["diagnostics"])
