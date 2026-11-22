@@ -12,7 +12,7 @@ verification_status: pending
 
 ## 1. 范围与规范用语
 
-本文落实 [PRD](../PRD-BTAE.md) 的 MVP 需求，以[总体架构](../../architecture/overview.md)为结构依据。必须表示验收要求，应表示默认建议，可表示可选能力。本文是拟议规范，字段和接口尚未由可执行 Schema 或代码实现。
+本文落实 [PRD](../PRD-BTAE.md) 的 MVP 需求，以[总体架构](../../architecture/overview.md)为结构依据。必须表示验收要求，应表示默认建议，可表示可选能力。本文仍是拟议规范；主要字段和接口已有本地 Schema、CLI 与回归实现，但尚未完成正式批准，外部宿主能力不由本地实现推定。
 
 目标环境为单仓库、Python 优先、CLI 驱动的 EPE。MVP 支持实体与文档解析、代码映射、基础依赖图、设计与测试门禁及 Evidence。高级检索、语义漂移裁决、跨仓库、多 Agent 锁与完整宿主适配属于后续范围。
 
@@ -177,6 +177,6 @@ Low 可由配置的自动规则完成设计审核，Medium 增加独立评审记
 
 ## 11. 当前机器工件与未决范围
 
-初版 Entity、Relation、Evidence、Task、ChangeSet、Approval、CommandResult Schema，Policy/Workflow 默认文件，设计类模板、本地检查器和 CI 工作流已位于 `engineering/`、`docs/classes/` 与 `.github/workflows/ci.yml`。可信身份/审批 adapter、宿主隔离、完整契约执行、影响分析和性能基线仍待后续工作包冻结；当前不承诺未经测量的耗时指标。
+初版 Entity、Relation、Evidence、Task、ChangeSet、Approval、CommandResult Schema，Policy/Workflow 默认文件，设计类模板、本地检查器和 CI 工作流已位于 `engineering/`、`docs/classes/` 与 `.github/workflows/ci.yml`，并有本地回归入口。真实可信身份/审批通道、宿主隔离、独立影响/上下文评测和性能基线仍待后续工作包与外部证据；当前不承诺未经测量的耗时指标。
 
 本文与 PRD、架构发现冲突时必须显式修订并评审，不由 Agent 隐式选取较宽松规则。任何字段、状态、退出码或授权变化都应保留版本与迁移说明。

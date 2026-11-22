@@ -2,7 +2,7 @@
 
 状态：v0.1 设计草案。模块是逻辑边界，首版不要求每个职责对应独立包或服务。
 
-各模块详细接口、异常处理、验证和交付安排见[模块设计索引](../modules/README.md)；实施顺序见[工作包计划](../../plans/backlog/BTAE-implementation-plan.md)。模块索引中的允许导入表是本边界的细化，尚未转为可执行 CI 规则。
+各模块详细接口、异常处理、验证和交付安排见[模块设计索引](../modules/README.md)；实施顺序见[工作包计划](../../plans/backlog/BTAE-implementation-plan.md)。模块索引中的允许导入表已由本地架构校验器消费，并纳入 CI 工作流；远程分支保护是否强制执行仍需平台配置证据。
 
 ## 1. 职责分配
 
@@ -38,7 +38,7 @@ Verification Engine（VE）归入 `verification`；Agent Governance（AG）归�
 
 ## 4. Agent 集成协议
 
-建议工具操作为 `create_design`、`validate_design`、`request_approval`、`start_implementation`、`verify`、`finalize`。这些名称是目标接口，尚不可调用。
+协议操作包括 `create_design`、`validate_design`、`request_approval`、`start_implementation`、`verify`、`finalize`。当前 CLI 已提供设计、验证、审批和结构化 `host request` 入口；宿主适配器对未具备可信写入隔离的 `start_implementation`/`finalize` 明确返回 `unsupported`。
 
 请求携带 Task / ChangeSet ID、调用者身份、目标实体、期望版本、写入范围和操作参数。返回决策、原因、诊断、关联 Evidence 与可执行下一步。客户端的 `approved: true` 不能直接改变服务端审批状态。
 
