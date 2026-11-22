@@ -1,6 +1,6 @@
 # 本地 MVP 完成审计（WP-01–WP-14）
 
-执行时间：2026-11-22 · 基线：`efbbdf8`
+执行时间：2026-11-22 · 基线：`5311360`
 
 这份审计把“本地实现已存在”和“完整目标已关闭”分开。状态依据当前文件、真实命令和测试结果；没有把设计草案、模型自述或固定测试夹具当作外部能力证明。
 
@@ -15,7 +15,7 @@
 | WP-07 | Task/ChangeSet 生命周期、风险门禁、范围、Evidence、配置化 Workflow 要求、分类缺项和 ChangeSet 契约反例已测试 | `tests/unit/test_finalize_gate.py`、`tests/integration/test_changeset_baseline.py`、`tests/acceptance/test_task_workflow.py` | 宿主级权限强制 |
 | WP-08 | 真实子进程、超时/取消、JUnit 结果、Evidence Schema/有效性和篡改检测已测试 | `tests/integration/test_process_lifecycle.py`、`tests/integration/test_evidence_snapshot_integrity.py`、`tests/integration/test_evidence_schema_runtime.py` | 远程产物信任与非 POSIX 强制语义 |
 | WP-09 | 首批 CLI、统一结果/退出码和真实闭环已实现 | `src/epe/cli.py`、`tests/acceptance/test_ac12_closed_loop.py` | 复杂宿主编排仍不在本地 CLI 权限边界内 |
-| WP-10 | AC-01–AC-12 均有自动化入口；全量本机回归 256 项通过；存在真实进程/锁/产物故障注入 | `reports/evaluations/ac-coverage-matrix.json`、`reports/acceptance/local-regression-20261122.md` | 完整平台矩阵与所有故障恢复场景的独立记录 |
+| WP-10 | AC-01–AC-12 均有自动化入口；全量本机回归 257 项通过；存在真实进程/锁/产物故障注入 | `reports/evaluations/ac-coverage-matrix.json`、`reports/acceptance/local-regression-20261122.md` | 完整平台矩阵与所有故障恢复场景的独立记录 |
 | WP-11 | CI 工作流、wheel 隔离检查、上手/恢复文档和发布限制已入库 | `.github/workflows/ci.yml`、`docs/standards/`、`plans/backlog/mvp-release-checklist.md` | 远程分支保护和必需检查尚未由仓库证明 |
 | WP-12 | 双向影响、历史快照、预算截断和增量/全量等价已实现并回归 | `tests/unit/test_impact_propagation.py`、`tests/integration/test_context_incremental.py` | 独立真实标注集、精确率/召回率和成本基线 |
 | WP-13 | C0–C2 ID/图/关键词上下文、来源标记和缓存失效已实现并测试 | `src/epe/context/resolver.py`、`tests/unit/test_v03.py`、`tests/acceptance/test_context_cache_cli.py` | 独立相关性评测、Token/成本试点、BM25/向量后端 |
@@ -25,7 +25,7 @@
 
 | 命令 | 结果 |
 | --- | --- |
-| `PYTHONPATH=src pytest -q` | 256 项通过 |
+| `PYTHONPATH=src pytest -q` | 257 项通过 |
 | `PYTHONPATH=src python -m epe.cli --format json policy validate` | `passed` |
 | `PYTHONPATH=src python -m epe.cli --format json design validate CONTRACT-HOST-PORT-001` | `passed` |
 | `PYTHONPATH=src python -m epe.cli --format json graph build` | `passed`，321 节点 / 443 边 |
