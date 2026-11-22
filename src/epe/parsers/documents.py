@@ -88,15 +88,31 @@ def parse_markdown(data: bytes, path: str = "<memory>") -> DocumentParseResult:
 
 def discover_documents(root: Path, roots: Iterable[str] = ("docs",), extensions: tuple[str, ...] = (".md", ".markdown", ".yaml", ".yml", ".json")) -> list[DocumentParseResult]:
     results: list[DocumentParseResult] = []
+    root = root.resolve()
     for root_name in roots:
-        base = (root / root_name).resolve()
+        raw_base = root / root_name
+        if raw_base.is_symlink():
+            results.append(DocumentParseResult(str(raw_base), None, "", [Diagnostic("EPE-PATH-SYMLINK", Severity.ERROR, "文档根不能是符号链接", path=str(root_name))], False))
+            continue
+        base = raw_base.resolve()
         if not base.exists():
             continue
+        for linked in sorted(p for p in base.rglob("*") if p.is_symlink()):
+            results.append(DocumentParseResult(str(linked), None, "", [Diagnostic("EPE-PATH-SYMLINK", Severity.ERROR, "文档树不能包含符号链接", path=str(linked.relative_to(root)))], False))
         for path in sorted(p for p in base.rglob("*") if p.is_file() and p.suffix.lower() in extensions):
             try:
-                rel = path.resolve().relative_to(root.resolve()).as_posix()
+                rel_path = path.relative_to(root)
+                current = root
+                linked = False
+                for component in rel_path.parts:
+                    current = current / component
+                    if current.is_symlink():
+                        linked = True; break
+                if linked:
+                    raise ValueError("路径经过符号链接")
+                rel = path.resolve().relative_to(root).as_posix()
             except ValueError:
-                results.append(DocumentParseResult(str(path), None, "", [Diagnostic("EPE-PATH-SYMLINK", Severity.ERROR, "符号链接解析后逃出仓库根", path=str(path))], False))
+                results.append(DocumentParseResult(str(path), None, "", [Diagnostic("EPE-PATH-SYMLINK", Severity.ERROR, "文档路径不能经过符号链接或逃出仓库根", path=str(path))], False))
                 continue
             if path.suffix.lower() in {".md", ".markdown"}:
                 results.append(parse_markdown(path.read_bytes(), rel))

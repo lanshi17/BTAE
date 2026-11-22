@@ -123,15 +123,27 @@ def parse_python(data: bytes, path: str = "<memory>") -> CodeParseResult:
 def parse_python_tree(root: Path, roots: Iterable[str] = ("src",)) -> tuple[list[CodeParseResult], list[Diagnostic]]:
     results: list[CodeParseResult] = []
     ds: list[Diagnostic] = []
+    root = root.resolve()
     for root_name in roots:
         base = root / root_name
+        if base.is_symlink():
+            ds.append(Diagnostic("EPE-PATH-SYMLINK", Severity.ERROR, "代码根不能是符号链接", path=str(root_name)))
+            continue
         if not base.exists():
             continue
+        for linked in sorted(p for p in base.rglob("*") if p.is_symlink()):
+            ds.append(Diagnostic("EPE-PATH-SYMLINK", Severity.ERROR, "代码树不能包含符号链接", path=str(linked.relative_to(root))))
         for path in sorted(base.rglob("*.py")):
             try:
-                path.resolve().relative_to(root.resolve())
+                rel_path = path.relative_to(root)
+                current = root
+                for component in rel_path.parts:
+                    current = current / component
+                    if current.is_symlink():
+                        raise ValueError("路径经过符号链接")
+                path.resolve().relative_to(root)
             except ValueError:
-                ds.append(Diagnostic("EPE-PATH-SYMLINK", Severity.ERROR, "符号链接解析后逃出仓库根", path=str(path)))
+                ds.append(Diagnostic("EPE-PATH-SYMLINK", Severity.ERROR, "代码路径不能经过符号链接或逃出仓库根", path=str(path)))
                 continue
             rel = path.relative_to(root).as_posix()
             result = parse_python(path.read_bytes(), rel)

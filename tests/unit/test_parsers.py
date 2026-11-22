@@ -48,3 +48,21 @@ def test_unhashable_yaml_key_is_a_located_diagnostic():
     _, diagnostics = parse_yaml_bytes(b"? [a, b]\n: value\n", "docs/bad.yaml")
     assert diagnostics and diagnostics[0].code == "EPE-YAML-PARSE"
     assert diagnostics[0].path == "docs/bad.yaml" and diagnostics[0].line == 1
+
+
+def test_recursive_parsers_reject_nested_symlink_paths(tmp_path):
+    from epe.parsers.documents import discover_documents
+    from epe.parsers.python import parse_python_tree
+    real_docs = tmp_path / "real-docs"; real_docs.mkdir()
+    (real_docs / "design.md").write_text("---\nid: MOD-1\n---\n", encoding="utf-8")
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "linked").symlink_to(real_docs, target_is_directory=True)
+    documents = discover_documents(tmp_path, ["docs"])
+    assert any(item.diagnostics and item.diagnostics[0].code == "EPE-PATH-SYMLINK" for item in documents)
+
+    real_src = tmp_path / "real-src"; real_src.mkdir()
+    (real_src / "module.py").write_text("class Module: pass\n", encoding="utf-8")
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "linked").symlink_to(real_src, target_is_directory=True)
+    _, diagnostics = parse_python_tree(tmp_path, ["src"])
+    assert any(item.code == "EPE-PATH-SYMLINK" for item in diagnostics)
