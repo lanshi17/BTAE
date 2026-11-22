@@ -12,6 +12,8 @@
 
 ## 本地运行
 
+MVP 上手和故障恢复步骤见 [使用指南](docs/standards/user-guide-mvp.md) 与 [恢复手册](docs/standards/runbook-recovery.md)。
+
 无需安装到系统环境时可使用 `PYTHONPATH=src`：
 
 ```bash
