@@ -1,6 +1,6 @@
 # 工作包细化计划索引
 
-本目录将 [总实施计划](../BTAE-implementation-plan.md) 的 14 个工作包拆成可执行明细。每份文档给出任务分解、拟议交付路径、决策项、验收映射与完成门槛；**状态反映当前执行事实：WP-01 至 WP-13 为 in_progress，WP-14 仍为 planned/not_started；**写完计划不等于实现或批准。
+本目录将 [总实施计划](../BTAE-implementation-plan.md) 的 14 个工作包拆成可执行明细。每份文档给出任务分解、拟议交付路径、决策项、验收映射与完成门槛；**状态反映当前执行事实：WP-01 至 WP-13 为 in_progress，WP-14 仍为 planned/not_started；**写完计划不等于实现或批准。逐包的本地证据与未关闭门槛见[本地 MVP 完成审计](../../../reports/acceptance/local-mvp-completion-audit-20261122.md)。
 
 | WP | 里程碑 | 细化计划 | 当前状态 | 前置 |
 | --- | --- | --- | --- | --- |
