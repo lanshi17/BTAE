@@ -42,6 +42,9 @@ def validate_task(data: dict[str, Any]) -> tuple[Task | None, list[Diagnostic]]:
         ds.append(Diagnostic("EPE-TASK-ACCEPTANCE", Severity.ERROR, "acceptance 必须为非空字符串数组"))
     if not isinstance(data.get("target_entities"), list) or not data.get("target_entities") or not all(isinstance(item, str) and item for item in data.get("target_entities", [])):
         ds.append(Diagnostic("EPE-TASK-TARGET", Severity.ERROR, "target_entities 必须为非空字符串数组"))
+    for field in ("baseline_manifest", "reproduction", "hypothesis"):
+        if field in data and (not isinstance(data[field], str) or not data[field].strip()):
+            ds.append(Diagnostic("EPE-TASK-WORKFLOW", Severity.ERROR, f"{field} 必须为非空字符串"))
     if ds:
         return None, ds
     return Task(str(data["id"]), str(data["type"]), str(data["objective"]), list(data["acceptance"]), str(data["risk"]), list(data["target_entities"]), data.get("changeset"), data.get("status", "planned"), revision, dict(data)), []

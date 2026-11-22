@@ -71,3 +71,13 @@ def test_workflow_cannot_remove_mandatory_bugfix_reproduction(tmp_path, capsys):
     result = json.loads(capsys.readouterr().out)
     assert result["status"] == "error"
     assert any(item["code"] == "EPE-WORKFLOW-INVALID" for item in result["diagnostics"])
+
+
+def test_workflow_specific_fields_have_strict_types(tmp_path, capsys):
+    assert main(["--root", str(tmp_path), "--format", "json", "init"]) == 0
+    capsys.readouterr()
+    task = tmp_path / "task.yaml"
+    task.write_text("id: TASK-001\ntype: bugfix\nobjective: work\nacceptance: [ok]\nrisk: low\ntarget_entities: [CLASS-001]\nreproduction: []\n", encoding="utf-8")
+    assert main(["--root", str(tmp_path), "--format", "json", "task", "create", "--file", "task.yaml"]) == 2
+    result = json.loads(capsys.readouterr().out)
+    assert any(item["code"] == "EPE-TASK-WORKFLOW" for item in result["diagnostics"])
