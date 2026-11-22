@@ -61,6 +61,11 @@ def load_required_checks(root: Path, config: dict[str, Any]) -> tuple[list[dict[
                 raise ValueError
         except (ValueError, TypeError):
             return [], [Diagnostic("EPE-VERIFY-CONFIG", Severity.ERROR, f"检查超时必须是正有限数: {check['id']}", path=str(rel))]
+        allowed_env = check.get("allowed_env")
+        if allowed_env is not None and (not isinstance(allowed_env, list)
+                or any(not isinstance(name, str) or not name for name in allowed_env)
+                or len(set(allowed_env)) != len(allowed_env)):
+            return [], [Diagnostic("EPE-VERIFY-CONFIG", Severity.ERROR, f"allowed_env 必须是不重复的非空字符串数组: {check['id']}", path=str(rel))]
         artifacts = check.get("artifacts", check.get("expected_artifacts", []))
         if (not isinstance(artifacts, list) or any(not isinstance(item, str) or not item.strip()
                 or Path(item).is_absolute() or ".." in Path(item).parts for item in artifacts)
@@ -155,6 +160,7 @@ def run_checks(root: Path, config: dict[str, Any], task_id: str | None = None, c
         check_id = str(check.get("id", "CHECK-UNKNOWN")); argv = check.get("command")
         if not isinstance(argv, list) or not argv or not all(isinstance(x, str) for x in argv):
             ds.append(Diagnostic("EPE-VERIFY-COMMAND", Severity.ERROR, f"检查命令必须为参数数组: {check_id}")); continue
+        allowed_env = check.get("allowed_env")
         try:
             timeout = float(check.get("timeout", 300))
             if not 0 < timeout < float("inf"):
@@ -193,7 +199,8 @@ def run_checks(root: Path, config: dict[str, Any], task_id: str | None = None, c
             proc = ProcessResult(argv, None, "", "", 0, termination_reason="unsupported_pytest_command")
             effective_argv = []
         else:
-            proc = run_process(effective_argv, root, timeout, cancel_event=cancel_event)
+            execution_env = None if allowed_env is None else {name: os.environ[name] for name in allowed_env if name in os.environ}
+            proc = run_process(effective_argv, root, timeout, env=execution_env, cancel_event=cancel_event)
         try:
             result, reason, test_counts = _result_from_process(proc, check, xml_path if pytest_check else None)
         finally:
@@ -236,6 +243,8 @@ def run_checks(root: Path, config: dict[str, Any], task_id: str | None = None, c
                 "executed_command": effective_argv,
                 "output_truncated": {"stdout": proc.stdout_truncated, "stderr": proc.stderr_truncated},
                 "verification_policy_sha256": policy_fingerprint,
+                "environment_mode": "inherited" if allowed_env is None else "allowlist",
+                "allowed_env": None if allowed_env is None else list(allowed_env),
             }
             if pytest_check:
                 provenance["test_protocol"] = "pytest-junit-v1"

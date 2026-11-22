@@ -144,6 +144,21 @@ def test_evidence_schema_rejects_extra_fields_but_legacy_environment_is_unknown(
     assert not loaded and any(item.code == "EPE-EVIDENCE-READ" for item in diagnostics)
 
 
+def test_allowed_environment_is_filtered_and_values_are_not_recorded(tmp_path, monkeypatch):
+    policy = tmp_path / "engineering/policies/verification.yaml"
+    policy.parent.mkdir(parents=True)
+    monkeypatch.setenv("EPE_SECRET_FIXTURE", "do-not-pass")
+    command = [sys.executable, "-c", "import os,sys; sys.exit(1 if os.getenv('EPE_SECRET_FIXTURE') else 0)"]
+    check = {"id": "filtered", "command": command, "allowed_env": ["PATH"]}
+    policy.write_text(json.dumps({"checks": [check]}))
+    evidence, diagnostics = run_checks(tmp_path, config(), "TASK-001")
+    assert not diagnostics and evidence[0]["result"] == "passed"
+    provenance = evidence[0]["provenance"]
+    assert provenance["environment_mode"] == "allowlist"
+    assert provenance["allowed_env"] == ["PATH"]
+    assert "do-not-pass" not in json.dumps(evidence)
+
+
 def test_real_pytest_requires_executed_tests(tmp_path):
     policy = tmp_path / "engineering/policies/verification.yaml"
     policy.parent.mkdir(parents=True)
