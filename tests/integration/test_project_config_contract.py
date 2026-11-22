@@ -51,6 +51,16 @@ def test_config_rejects_symlinked_parent_directory(tmp_path):
     assert result is None and diagnostics[0].code == "EPE-PATH-SYMLINK"
 
 
+def test_config_rejects_internal_symlinked_managed_root(tmp_path):
+    engineering = tmp_path / "engineering"; engineering.mkdir()
+    outside = tmp_path / "real-src"; outside.mkdir()
+    (tmp_path / "src").symlink_to(outside, target_is_directory=True)
+    config = default_config(); config["managed"]["code_roots"] = ["src"]
+    (engineering / "epe.yaml").write_text(yaml.safe_dump(config), encoding="utf-8")
+    result, diagnostics = load_config(tmp_path)
+    assert result is None and diagnostics[0].code == "EPE-PATH-SYMLINK"
+
+
 def test_packaged_schema_matches_repository_schema():
     root = Path(__file__).resolve().parents[2]
     assert (root / "engineering/schemas/project-config.schema.json").read_bytes() == (root / "src/epe/data/schemas/project-config.schema.json").read_bytes()

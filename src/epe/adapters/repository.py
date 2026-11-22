@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import math
 from importlib.resources import files
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 import yaml
@@ -130,7 +130,19 @@ def load_config(root: Path) -> tuple[dict[str, Any] | None, list[Diagnostic]]:
         if relative.startswith("/") or "\\" in relative or any(part in {"", ".", ".."} for part in relative.split("/")):
             return None, [Diagnostic("EPE-CONFIG-PATH", Severity.ERROR, f"配置路径必须是规范仓库相对路径: {relative}", path="engineering/epe.yaml")]
         try:
-            (repo.root / relative).resolve().relative_to(repo.root)
-        except (OSError, RuntimeError, ValueError):
+            current = repo.root
+            for component in PurePosixPath(relative).parts:
+                current = current / component
+                if current.is_symlink():
+                    try:
+                        current.resolve().relative_to(repo.root)
+                    except ValueError:
+                        raise ValueError(f"配置路径解析后逃出仓库: {relative}")
+                    raise ValueError(f"配置路径不能经过符号链接: {relative}")
+            current.resolve().relative_to(repo.root)
+        except ValueError as exc:
+            code = "EPE-PATH-SYMLINK" if "符号链接" in str(exc) else "EPE-CONFIG-PATH"
+            return None, [Diagnostic(code, Severity.ERROR, f"配置路径解析后逃出仓库、经过符号链接或无法解析: {relative}", path="engineering/epe.yaml")]
+        except (OSError, RuntimeError):
             return None, [Diagnostic("EPE-CONFIG-PATH", Severity.ERROR, f"配置路径解析后逃出仓库或无法解析: {relative}", path="engineering/epe.yaml")]
     return value, ds
