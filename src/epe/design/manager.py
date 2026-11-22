@@ -196,7 +196,7 @@ def validate_approval_record(record: dict[str, Any]) -> list[Diagnostic]:
             or not isinstance(record.get("decision"), str) or record.get("decision") not in {"approved", "rejected", "revoked"}
             or not isinstance(identity, dict) or set(identity) != {"id"} or not isinstance(identity.get("id"), str) or not identity["id"]
             or not isinstance(record.get("authorization_source"), str) or not record["authorization_source"].strip()
-            or not timestamp_valid or not isinstance(risks, list) or not risks or any(not isinstance(x, str) or x not in {"low", "medium", "high"} for x in risks)
+            or not timestamp_valid or not isinstance(risks, list) or not risks or len(risks) != len(set(risks)) or any(not isinstance(x, str) or x not in {"low", "medium", "high"} for x in risks)
             or not isinstance(record.get("signature"), str) or not record["signature"]):
         return [Diagnostic("EPE-APPROVAL-FIELDS", Severity.ERROR, "审批记录字段或格式非法")]
     if record["decision"] == "revoked" and (not isinstance(record.get("supersedes"), str) or not re.fullmatch(r"APPROVAL-[A-Z0-9][A-Z0-9_-]*", record["supersedes"])):
