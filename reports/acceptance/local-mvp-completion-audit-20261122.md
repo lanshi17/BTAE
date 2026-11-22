@@ -10,7 +10,7 @@
 | WP-02 | 可安装包、核心模型、Registry、端口、CLI inspect 已实现 | `pyproject.toml`、`tests/unit/test_core.py`、`tests/acceptance/test_cli.py` | 核心设计从 draft 进入批准流程 |
 | WP-03 | Markdown/YAML/Python 批量解析、来源和不完整状态已测试 | `src/epe/parsers/`、`tests/unit/test_parsers.py` | 多语言解析与正式评审 |
 | WP-04 | AST 符号/导入、映射正反例和动态盲区已测试 | `tests/acceptance/test_ac03_mapping_cli.py`、`tests/unit/test_parsers.py` | 运行时动态依赖无法由静态 AST 证明 |
-| WP-05 | 确定性图、模块覆盖、架构规则、generation 原子发布和冲突保护已测试 | `tests/integration/test_graph_generations.py`、`tests/acceptance/test_ac10_graph_publication_cli.py` | 断电持久性和完整平台矩阵 |
+| WP-05 | 确定性图、模块覆盖、架构规则、generation 原子发布和冲突保护已测试；最终快照 319 节点 / 441 边 | `tests/integration/test_graph_generations.py`、`tests/acceptance/test_ac10_graph_publication_cli.py` | 断电持久性和完整平台矩阵 |
 | WP-06 | 设计指纹、契约校验（含仓库内 `$ref` 解析）、可信签名批准和撤销路径已测试 | `tests/integration/test_approval_signatures.py`、`tests/unit/test_contract_validation.py`、`src/epe/design/manager.py` | 远程不可变审批审计、人类评审 |
 | WP-07 | Task/ChangeSet 生命周期、风险门禁、范围和 Evidence 决策已测试 | `tests/unit/test_finalize_gate.py`、`tests/integration/test_changeset_baseline.py` | 宿主级权限强制 |
 | WP-08 | 真实子进程、超时/取消、JUnit 结果、Evidence 有效性和篡改检测已测试 | `tests/integration/test_process_lifecycle.py`、`tests/integration/test_evidence_snapshot_integrity.py` | 远程产物信任与非 POSIX 强制语义 |
@@ -28,7 +28,7 @@
 | `PYTHONPATH=src pytest -q` | 246 项通过 |
 | `PYTHONPATH=src python -m epe.cli --format json policy validate` | `passed` |
 | `PYTHONPATH=src python -m epe.cli --format json design validate CONTRACT-HOST-PORT-001` | `passed` |
-| `PYTHONPATH=src python -m epe.cli --format json graph build` | `passed`，316 节点 / 440 边 |
+| `PYTHONPATH=src python -m epe.cli --format json graph build` | `passed`，319 节点 / 441 边 |
 | `PYTHONPATH=src python -m epe.cli --format json architecture validate` | `passed` |
 | `git diff --check` | 通过 |
 

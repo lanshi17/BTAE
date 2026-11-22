@@ -12,7 +12,8 @@
 | `PYTHONPATH=src python -m epe.cli --format json policy validate` | 通过 |
 | `PYTHONPATH=src python -m epe.cli --format json design validate CONTRACT-HOST-PORT-001` | 通过；HostPort 契约 Schema 可读取 |
 | `PYTHONPATH=src python -m epe.cli --format json host capabilities --host hermes` | 通过；Hermes 保持 `unsupported-unintegrated` |
-| `PYTHONPATH=src python -m epe.cli --format json graph build` | 通过；发布 316 个节点、440 条边 |
+| `PYTHONPATH=src python -m epe.cli --format json graph build` | 通过；发布 319 个节点、441 条边 |
+| `PYTHONPATH=src python -m epe.cli --format json architecture validate`（图重建后） | 通过；344 个导入检查，无违规或盲区 |
 | `python /home/lanshi/.agents/skills/scientific-architecture-diagram/scripts/check_layout.py docs/architecture/figures/btae-target-architecture.drawio --strict` | 通过；`FAIL 0 / WARN 0` |
 | `git diff --check` | 通过 |
 | `git push origin master` | `Everything up-to-date`（随后追加文档提交前） |
