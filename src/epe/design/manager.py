@@ -147,6 +147,13 @@ def _first_schema_reference_error(schema: Any, source_path: Path, root: Path) ->
                         document = json.loads(target_path.read_text(encoding="utf-8"))
                     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
                         return f"Schema $ref 目标不是有效 JSON: {ref} ({exc})"
+                    try:
+                        import jsonschema
+                        jsonschema.Draft202012Validator.check_schema(document)
+                    except ImportError:
+                        return "缺少 jsonschema，无法校验 Schema $ref 目标"
+                    except jsonschema.SchemaError as exc:
+                        return f"Schema $ref 目标不是有效 Schema: {ref} ({exc.message})"
                 key = (str(target_path), "#" + fragment if fragment else "#")
                 if key not in visited:
                     visited.add(key)

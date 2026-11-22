@@ -43,3 +43,11 @@ def test_contract_rejects_remote_reference(tmp_path):
     path.write_text("schema_version: 1\nid: CONTRACT-001\ntype: Contract\nname: C\nversion: 1\nschema:\n  $ref: https://example.invalid/schema.json\n", encoding="utf-8")
     _, diagnostics = validate_contract(entity("contract.yaml"), tmp_path)
     assert diagnostics and diagnostics[0].code == "EPE-CONTRACT-REF"
+
+
+def test_contract_rejects_external_document_that_is_not_a_schema(tmp_path):
+    (tmp_path / "refs.json").write_text('{"type": "not-a-schema-type"}', encoding="utf-8")
+    path = tmp_path / "contract.yaml"
+    path.write_text("schema_version: 1\nid: CONTRACT-001\ntype: Contract\nname: C\nversion: 1\nschema:\n  $ref: refs.json\n", encoding="utf-8")
+    _, diagnostics = validate_contract(entity("contract.yaml"), tmp_path)
+    assert diagnostics and diagnostics[0].code == "EPE-CONTRACT-REF"
