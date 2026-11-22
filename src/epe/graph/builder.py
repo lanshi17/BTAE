@@ -470,7 +470,9 @@ def analyze_impact(snapshot: dict[str, Any], changed_entities: list[str], budget
             continue
         for target, edge, direction in adjacency.get(current, []):
             origin_type = edge.get("origin", {}).get("type") if isinstance(edge.get("origin"), dict) else None
-            next_certain = certain and origin_type in {"explicit", "static"}
+            confidence = edge.get("confidence")
+            next_certain = (certain and origin_type in {"explicit", "static"}
+                            and type(confidence) in (int, float) and confidence == 1)
             prior = best.get(target)
             if prior is True or (prior is False and not next_certain):
                 continue

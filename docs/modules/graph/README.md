@@ -64,7 +64,7 @@ analyze_impact(snapshot, changed_entities, change_kind, budget) -> ImpactReport 
 
 代码变化经 `realizes` 反向寻找设计，再沿消费者依赖和验证关系找到契约、测试和 Evidence；设计变化经 `realizes` 正向找到实现。`depends_on` 的消费者影响采用反向遍历。
 
-传播矩阵草案：`realizes` 双向，`depends_on` 反向，`verified_by`、`evidenced_by`、`conforms_to`、`specifies`、`affects` 正向；其余关系不自动传播。Source 与其图内 Symbol 按路径双向关联。推断或未知来源使整条后续路径保持候选，同一节点另有确定路径时可升级。缺失起点或动态依赖等静态盲区使报告标记 incomplete。
+传播矩阵草案：`realizes` 双向，`depends_on` 反向，`verified_by`、`evidenced_by`、`conforms_to`、`specifies`、`affects` 正向；其余关系不自动传播。Source 与其图内 Symbol 按路径双向关联。推断或未知来源、低于 1 的置信度及缺失置信度使整条后续路径保持候选，同一节点另有确定路径时可升级；此处的确定性描述传播所依赖的来源和置信度，不代表关系的 `verified` 状态或审批通过。缺失起点或动态依赖等静态盲区使报告标记 incomplete。
 
 每个结果记录起点、传播路径、关系来源、确定/候选类别和原因。限制遍历预算、去重及循环；触及预算上限标为 truncated，不能声称召回完整。对删除节点使用变更前快照，否则会丢失旧依赖。历史分析需要当前图新鲜，分别返回历史与当前报告；用户指定完整 generation 摘要及可选的新实体 ID，系统验证历史快照自洽但不推断它与当前图的时间邻接或实体身份。历史结果不能作为当前无影响证明。
 

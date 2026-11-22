@@ -19,6 +19,7 @@ class AgentRequest:
     write_scope: tuple[str, ...]
     parameters: dict[str, Any] = field(default_factory=dict)
     trusted_identity: dict[str, Any] | None = None
+    protocol_version: str = "1"
 
 
 @dataclass
@@ -39,10 +40,9 @@ def validate_request(request: AgentRequest) -> AgentResponse:
         return AgentResponse("blocked", ["请求对象类型无效"], [Diagnostic("EPE-AGENT-REQUEST", Severity.ERROR, "请求对象类型无效")])
     if not isinstance(request.request_id, str) or not request.request_id.strip():
         diagnostics.append(Diagnostic("EPE-AGENT-REQUEST-ID", Severity.ERROR, "request_id 不能为空"))
-    protocol_version = getattr(request, "protocol_version", "1")
-    if protocol_version != "1":
+    if request.protocol_version != "1":
         diagnostics.append(Diagnostic("EPE-AGENT-PROTOCOL", Severity.ERROR, "不支持的宿主协议版本"))
-    if request.operation not in {"start_implementation", "verify", "finalize"}:
+    if not isinstance(request.operation, str) or request.operation not in {"start_implementation", "verify", "finalize"}:
         diagnostics.append(Diagnostic("EPE-AGENT-OPERATION", Severity.ERROR, f"不支持的宿主操作: {request.operation}"))
     if not isinstance(request.task_id, str) or not re.fullmatch(r"TASK-[A-Z0-9][A-Z0-9_-]*", request.task_id):
         diagnostics.append(Diagnostic("EPE-AGENT-TASK", Severity.ERROR, "task_id 格式非法"))

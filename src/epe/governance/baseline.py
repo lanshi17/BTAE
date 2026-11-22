@@ -34,6 +34,8 @@ def _audit_exclusions(root: Path, config: dict[str, Any], changeset_id: str) -> 
     paths = {change.relative_to(root).as_posix(), baseline.relative_to(root).as_posix(), "reports"}
     evidence = (root / config.get("storage", {}).get("evidence", "engineering/evidence")).resolve()
     paths.add(evidence.relative_to(root.resolve()).as_posix())
+    audit = (root / config.get("storage", {}).get("audit", "engineering/audit/events.jsonl")).resolve()
+    paths.add(audit.relative_to(root.resolve()).as_posix())
     return paths
 
 
@@ -98,7 +100,9 @@ def baseline_binding_version(root: Path, config: dict[str, Any], changeset: dict
 def compare_baseline(root: Path, config: dict[str, Any], changeset: dict[str, Any]) -> list[str]:
     entries, _ = _validated_baseline(root, config, changeset)
     current = capture_baseline(root, config, changeset["id"])
-    old = {item["path"]: (item["sha256"], item["kind"]) for item in entries}
+    excluded = _audit_exclusions(root.resolve(), config, changeset["id"])
+    old = {item["path"]: (item["sha256"], item["kind"]) for item in entries
+           if not any(item["path"] == path or item["path"].startswith(path + "/") for path in excluded)}
     new = {item["path"]: (item["sha256"], item["kind"]) for item in current["entries"]}
     return sorted(path for path in old.keys() | new.keys() if old.get(path) != new.get(path))
 

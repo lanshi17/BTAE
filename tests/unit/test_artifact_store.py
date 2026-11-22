@@ -84,3 +84,49 @@ def test_artifact_store_bundle_failure_leaves_no_final_directory(tmp_path, monke
         store.publish_bundle("runs/RUN-FAIL", {"a": b"a", "b": b"b"})
     assert not (tmp_path / "runs/RUN-FAIL").exists()
     assert not list((tmp_path / "runs").glob(".epe-bundle-*"))
+
+
+def test_bundle_does_not_replace_directory_created_at_commit(tmp_path, monkeypatch):
+    import os
+    import epe.adapters.artifact_store as module
+    real_publish = module._rename_directory_noreplace
+    created_inode = []
+
+    def concurrent_create(parent_fd, source, destination):
+        os.mkdir(destination, dir_fd=parent_fd)
+        created_inode.append(os.stat(destination, dir_fd=parent_fd).st_ino)
+        real_publish(parent_fd, source, destination)
+
+    monkeypatch.setattr(module, "_rename_directory_noreplace", concurrent_create)
+    with pytest.raises(FileExistsError):
+        ArtifactStore(tmp_path).publish_bundle("runs/RUN-RACE", {"evidence.json": b"{}"})
+    final = tmp_path / "runs/RUN-RACE"
+    assert final.stat().st_ino == created_inode[0]
+    assert list(final.iterdir()) == []
+    assert not list((tmp_path / "runs").glob(".epe-bundle-*"))
+
+
+def test_bundle_concurrent_writers_publish_one_complete_bundle(tmp_path):
+    store = ArtifactStore(tmp_path)
+    def publish(index):
+        try:
+            store.publish_bundle("runs/RUN-SHARED", {"a": str(index).encode(), "b": str(index).encode()})
+            return "ok"
+        except FileExistsError:
+            return "exists"
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        results = list(pool.map(publish, range(8)))
+    assert results.count("ok") == 1
+    final = tmp_path / "runs/RUN-SHARED"
+    assert (final / "a").read_bytes() == (final / "b").read_bytes()
+    assert not list((tmp_path / "runs").glob(".epe-bundle-*"))
+
+
+def test_bundle_fails_closed_if_atomic_rename_is_unavailable(tmp_path, monkeypatch):
+    import epe.adapters.artifact_store as module
+
+    monkeypatch.setattr(module.ctypes, "CDLL", lambda *args, **kwargs: object())
+    with pytest.raises(NotImplementedError):
+        ArtifactStore(tmp_path).publish_bundle("runs/RUN-UNSUPPORTED", {"evidence.json": b"{}"})
+    assert not (tmp_path / "runs/RUN-UNSUPPORTED").exists()
+    assert not list((tmp_path / "runs").glob(".epe-bundle-*"))

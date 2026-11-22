@@ -570,7 +570,55 @@ def cmd_verify(args) -> CommandResult:
     task, tds = load_task(root, config, args.task_id)
     if task is None: return _result("verify", "error", tds)
     evidences, ds = run_checks(root, config, task.id, task.changeset)
+    from epe.core.fingerprint import sha256_bytes
+    for evidence in evidences:
+        try:
+            evidence_root = config.get("storage", {}).get("evidence", "engineering/evidence")
+            record_path = _safe_input(root, f"{evidence_root}/{evidence['run_id']}/evidence.json")
+            audit_path = _safe_input(root, config.get("storage", {}).get("audit", "engineering/audit/events.jsonl"))
+            append_audit(audit_path, "evidence_committed", {"run_id": evidence["run_id"], "task_id": task.id,
+                         "evidence_id": evidence["id"], "record_sha256": sha256_bytes(record_path.read_bytes())})
+        except (OSError, ValueError, TypeError, KeyError) as exc:
+            ds.append(Diagnostic("EPE-EVIDENCE-AUDIT", Severity.ERROR, f"无法登记证据审计: {exc}"))
     return _result("verify", "error" if any(d.is_error for d in ds) or any(e.get("result") == "error" for e in evidences) else ("blocked" if any(e.get("result") != "passed" or e.get("validity") != "valid" for e in evidences) else "passed"), tds + ds, {"results": evidences}, [e["id"] for e in evidences])
+
+
+def _check_evidence_audit(root: Path, config: dict[str, Any], task_id: str | None, evidences: list[dict[str, Any]]) -> list[Diagnostic]:
+    from epe.core.fingerprint import sha256_bytes
+    diagnostics: list[Diagnostic] = []
+    try:
+        audit_path = _safe_input(root, config.get("storage", {}).get("audit", "engineering/audit/events.jsonl"))
+        events = read_audit_events(audit_path)
+        evidence_root = config.get("storage", {}).get("evidence", "engineering/evidence")
+        committed: dict[str, dict[str, Any]] = {}
+        for event in events:
+            if event["event_type"] != "evidence_committed": continue
+            payload = event["payload"]
+            run_id = payload.get("run_id")
+            if (not isinstance(run_id, str) or re.fullmatch(r"RUN-[0-9a-f]{32}", run_id) is None
+                    or not isinstance(payload.get("task_id"), str)
+                    or not isinstance(payload.get("evidence_id"), str)
+                    or not isinstance(payload.get("record_sha256"), str)
+                    or re.fullmatch(r"[0-9a-f]{64}", payload["record_sha256"]) is None
+                    or run_id in committed):
+                raise ValueError("证据审计事件无效或重复")
+            committed[run_id] = payload
+            if task_id is not None and payload["task_id"] != task_id: continue
+            record_path = _safe_input(root, f"{evidence_root}/{run_id}/evidence.json")
+            if sha256_bytes(record_path.read_bytes()) != payload["record_sha256"]:
+                raise ValueError(f"证据记录摘要不匹配: {run_id}")
+        for evidence in evidences:
+            payload = committed.get(evidence["run_id"])
+            if payload is None:
+                evidence["validity"] = "unknown"
+            elif payload["task_id"] != evidence.get("task_id") or payload["evidence_id"] != evidence.get("id"):
+                raise ValueError(f"证据记录身份不匹配: {evidence['run_id']}")
+    except (OSError, ValueError, TypeError, KeyError) as exc:
+        for evidence in evidences:
+            if evidence.get("validity") == "valid":
+                evidence["validity"] = "unknown"
+        diagnostics.append(Diagnostic("EPE-EVIDENCE-AUDIT", Severity.ERROR, f"无法核对证据审计: {exc}"))
+    return diagnostics
 
 
 def cmd_check(args) -> CommandResult:
@@ -666,14 +714,15 @@ def cmd_check(args) -> CommandResult:
         except (OSError, ValueError, TypeError, KeyError) as exc:
             scope_ok = False
             scope_ds.append(Diagnostic("EPE-SCOPE-BASELINE", Severity.ERROR, f"无法验证 ChangeSet 基线或范围: {exc}"))
-    evidences = load_evidence(root, config, task_id)
+    evidences, evidence_ds = load_evidence(root, config, task_id)
     required_checks, policy_ds = load_required_checks(root, config)
     checks_by_id = {check["id"]: check for check in required_checks}
     for evidence in evidences:
         evidence["validity"] = evidence_validity(root, config, evidence, checks_by_id.get(evidence.get("checker")))
+    evidence_ds += _check_evidence_audit(root, config, task_id, evidences)
     status, gate_ds = finalize_gate(task, design_ok, mapping_ok, arch_ok, evidences, scope_ok, required_checks)
-    all_ds = tds + built.diagnostics + design_ds + pds + map_ds + gds + arch_ds + scope_ds + policy_ds + gate_ds
-    if any(d.is_error for d in tds + gds + policy_ds): status = "error"
+    all_ds = tds + built.diagnostics + design_ds + pds + map_ds + gds + arch_ds + scope_ds + policy_ds + evidence_ds + gate_ds
+    if any(d.is_error for d in tds + gds + policy_ds + evidence_ds): status = "error"
     return _result("check", status, all_ds, {"task_id": task_id, "design_ok": design_ok, "mapping_ok": mapping_ok, "architecture_ok": arch_ok, "evidence": evidences}, [e["id"] for e in evidences])
 
 
@@ -786,9 +835,13 @@ def cmd_context(args) -> CommandResult:
     source_assessments: dict[str, Any] = {"entities": {}, "evidence": {}}
     required_checks, check_ds = load_required_checks(root, config)
     checks_by_id = {check["id"]: check for check in required_checks}
-    for evidence in load_evidence(root, config, task.id):
+    evidences, evidence_ds = load_evidence(root, config, task.id)
+    for evidence in evidences:
+        evidence["validity"] = evidence_validity(root, config, evidence, checks_by_id.get(evidence.get("checker")))
+    evidence_ds += _check_evidence_audit(root, config, task.id, evidences)
+    for evidence in evidences:
         evidence_path = f"{config.get('storage', {}).get('evidence', 'engineering/evidence').rstrip('/')}/{evidence.get('run_id', '')}/evidence.json"
-        source_assessments["evidence"][evidence_path] = {"validity": evidence_validity(root, config, evidence, checks_by_id.get(evidence.get("checker")))}
+        source_assessments["evidence"][evidence_path] = {"validity": evidence["validity"]}
     data = None if omissions else load_cached_context(root, config, task, snapshot, args.budget, required_sources, source_assessments)
     cached = data is not None
     if data is None:
@@ -797,7 +850,7 @@ def cmd_context(args) -> CommandResult:
     data["cache"] = "hit" if cached else "miss"
     # Verification policy applicability is provenance input; an absent required
     # check does not make context resolution itself fail.
-    all_ds = tds + built.diagnostics + sds
+    all_ds = tds + built.diagnostics + sds + evidence_ds
     status = "error" if any(d.is_error for d in all_ds) else ("blocked" if data["incomplete"] else "passed")
     return _result("context resolve", status, all_ds, data)
 

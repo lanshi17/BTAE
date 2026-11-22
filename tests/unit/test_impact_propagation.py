@@ -2,7 +2,7 @@ from epe.graph.builder import analyze_impact
 
 
 def edge(source, target, relation, origin="explicit"):
-    return {"from": source, "to": target, "relation": relation, "origin": {"type": origin}}
+    return {"from": source, "to": target, "relation": relation, "origin": {"type": origin}, "confidence": 1.0}
 
 
 def fixture():
@@ -62,3 +62,19 @@ def test_budget_boundary_and_unknowns_are_explicit():
     graph["edges"].append(edge("B", "C", "verified_by"))
     limited = analyze_impact(graph, ["A", "MISSING"], 1)
     assert limited["truncated"] and limited["missing_entities"] == ["MISSING"]
+
+
+def test_low_and_missing_confidence_remain_candidate_until_certain_path_exists():
+    low = edge("A", "B", "verified_by")
+    low["confidence"] = 0.5
+    graph = {"nodes": [{"id": x} for x in ("A", "B", "C", "D")], "edges": [
+        low, edge("B", "D", "verified_by"), edge("A", "C", "verified_by"),
+    ]}
+    found = impacts(analyze_impact(graph, ["A"]))
+    assert found["B"]["classification"] == found["D"]["classification"] == "candidate"
+    graph["edges"].append(edge("C", "B", "verified_by"))
+    found = impacts(analyze_impact(graph, ["A"]))
+    assert found["B"]["classification"] == found["D"]["classification"] == "determined"
+    graph["edges"] = [edge("A", "B", "verified_by")]
+    del graph["edges"][0]["confidence"]
+    assert impacts(analyze_impact(graph, ["A"]))["B"]["classification"] == "candidate"

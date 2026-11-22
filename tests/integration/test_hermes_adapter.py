@@ -1,6 +1,8 @@
 import json
 import sys
 
+import pytest
+
 from epe.adapters.hosts.hermes import HermesHostAdapter
 from epe.adapters.protocol import AgentRequest
 
@@ -52,3 +54,30 @@ def test_hermes_rejects_response_if_request_was_not_fully_sent(monkeypatch):
     response = json.dumps({"status": "ok", "capabilities": {"protocol_version": "1", "operations": ["verify"]}})
     monkeypatch.setattr(hermes, "run_process", lambda *args, **kwargs: ProcessResult([], 0, response, "", 0.1, stdin_incomplete=True))
     assert HermesHostAdapter([sys.executable]).handshake().status == "handshake-failed"
+
+
+@pytest.mark.parametrize("capabilities", [
+    {"operations": None}, {"operations": "verify"}, {"operations": ["verify", 1]},
+    {"operations": ["verify"], "write_isolation": "false"},
+    {"operations": ["verify"], "trusted_identity": 1},
+    {"operations": ["verify"], "cancellation": None},
+])
+def test_hermes_rejects_malformed_capabilities(capabilities):
+    payload = json.dumps({"status": "ok", "capabilities": capabilities})
+    command = [sys.executable, "-c", f"print({payload!r})"]
+    result = HermesHostAdapter(command, trusted_capabilities=True).handshake()
+    assert result.status == "handshake-failed"
+    assert not result.write_isolation and not result.trusted_identity
+
+
+@pytest.mark.parametrize("response", [
+    {"decision": []}, {"decision": "accepted", "reasons": "ok"},
+    {"decision": "accepted", "evidence_ids": None},
+    {"decision": "accepted", "next_steps": [1]},
+])
+def test_hermes_rejects_malformed_dispatch_response(response):
+    handshake = {"status": "ok", "capabilities": {"protocol_version": "1", "operations": ["verify"]}}
+    operation = {"status": "ok", "response": response}
+    code = ("import json,sys; p=json.load(sys.stdin); "
+            f"print(json.dumps({handshake!r} if p['operation']=='capabilities' else {operation!r}))")
+    assert HermesHostAdapter([sys.executable, "-c", code]).dispatch(request()).decision == "error"

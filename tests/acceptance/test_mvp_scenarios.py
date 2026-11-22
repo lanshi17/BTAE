@@ -77,9 +77,10 @@ def test_check_requires_evidence_for_every_configured_check(tmp_path, capsys):
     for item in result["data"]["results"]:
         if item["checker"] == "TWO":
             (tmp_path / "engineering/evidence" / item["run_id"] / "evidence.json").unlink()
-    assert main(["--root", str(tmp_path), "--format", "json", "check", "--task", "TASK-001"]) == 1
+    assert main(["--root", str(tmp_path), "--format", "json", "check", "--task", "TASK-001"]) == 3
     result = json.loads(capsys.readouterr().out)
     assert any(d["code"] == "EPE-GATE-EVIDENCE" and "TWO" in d["message"] for d in result["diagnostics"])
+    assert any(d["code"] == "EPE-EVIDENCE-READ" for d in result["diagnostics"])
     assert any(d["code"] in {"EPE-CHANGESET-INVALID", "EPE-SCOPE-BASELINE"} for d in result["diagnostics"])
 
 

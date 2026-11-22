@@ -24,7 +24,7 @@ jobs:
         run: |
           python -m pip wheel . --no-deps -w /tmp/epe-wheel
           python -m venv /tmp/epe-wheel-venv
-          /tmp/epe-wheel-venv/bin/pip install --no-deps /tmp/epe-wheel/*.whl
+          /tmp/epe-wheel-venv/bin/pip install /tmp/epe-wheel/*.whl
           mkdir -p /tmp/epe-wheel-project
           cd /tmp/epe-wheel-project
           /tmp/epe-wheel-venv/bin/epe --format json init

@@ -9,8 +9,10 @@ from threading import Event
 import xml.etree.ElementTree as ET
 import sys
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from importlib.resources import files
 
 from epe.adapters.git import git_provenance
 from epe.adapters.artifact_store import ArtifactStore
@@ -23,6 +25,13 @@ from epe.adapters.clock import SystemClock
 
 
 def now(clock: ClockPort | None = None) -> str: return (clock or SystemClock()).now_utc()
+
+
+def _verification_policy_fingerprint(root: Path, config: dict[str, Any]) -> str:
+    relative = config.get("policies", {}).get("verification", "engineering/policies/verification.yaml")
+    path = (root / relative).resolve()
+    path.relative_to(root.resolve())
+    return sha256_bytes(path.read_bytes())
 
 
 def load_required_checks(root: Path, config: dict[str, Any]) -> tuple[list[dict[str, Any]], list[Diagnostic]]:
@@ -123,10 +132,19 @@ def _artifact_state(path: Path) -> tuple[int, int, int, int, str] | None:
 
 
 def run_checks(root: Path, config: dict[str, Any], task_id: str | None = None, changeset_id: str | None = None, cancel_event: Event | None = None, clock: ClockPort | None = None) -> tuple[list[dict[str, Any]], list[Diagnostic]]:
+    try:
+        policy_fingerprint = _verification_policy_fingerprint(root, config)
+    except (OSError, ValueError, TypeError) as exc:
+        return [], [Diagnostic("EPE-VERIFY-POLICY", Severity.ERROR, f"无法读取验证策略指纹: {exc}")]
     checks, ds = load_required_checks(root, config)
     clock = clock or SystemClock()
     if ds:
         return [], ds
+    try:
+        if _verification_policy_fingerprint(root, config) != policy_fingerprint:
+            return [], [Diagnostic("EPE-VERIFY-POLICY-CHANGED", Severity.ERROR, "读取期间验证策略发生变化")]
+    except (OSError, ValueError, TypeError) as exc:
+        return [], [Diagnostic("EPE-VERIFY-POLICY", Severity.ERROR, f"无法读取验证策略指纹: {exc}")]
     manifest_roots = config.get("managed", {}).get("design_roots", []) + config.get("managed", {}).get("code_roots", []) + config.get("managed", {}).get("test_roots", []) + config.get("managed", {}).get("contract_roots", []) + ["engineering/epe.yaml", "engineering/policies"]
     before = build_manifest(root, manifest_roots, tuple(config.get("exclude", [])))
     out: list[dict[str, Any]] = []
@@ -181,7 +199,11 @@ def run_checks(root: Path, config: dict[str, Any], task_id: str | None = None, c
         finally:
             xml_path.unlink(missing_ok=True)
         after = build_manifest(root, manifest_roots, tuple(config.get("exclude", [])))
-        validity = "stale" if before.digest != after.digest else "valid"
+        try:
+            policy_changed = _verification_policy_fingerprint(root, config) != policy_fingerprint
+        except (OSError, ValueError, TypeError):
+            policy_changed = True
+        validity = "stale" if before.digest != after.digest or policy_changed else "valid"
         try:
             artifacts: list[dict[str, Any]] = []
             bundle_files: dict[str, bytes] = {}
@@ -213,6 +235,7 @@ def run_checks(root: Path, config: dict[str, Any], task_id: str | None = None, c
                 "effective_command": [arg.replace(str(report_dir.resolve()), str((root / run_dir_relative).resolve())) for arg in effective_argv],
                 "executed_command": effective_argv,
                 "output_truncated": {"stdout": proc.stdout_truncated, "stderr": proc.stderr_truncated},
+                "verification_policy_sha256": policy_fingerprint,
             }
             if pytest_check:
                 provenance["test_protocol"] = "pytest-junit-v1"
@@ -231,19 +254,61 @@ def run_checks(root: Path, config: dict[str, Any], task_id: str | None = None, c
     return out, ds
 
 
-def load_evidence(root: Path, config: dict[str, Any], task_id: str | None = None) -> list[dict[str, Any]]:
+def _validate_evidence_record(root: Path, value: Any) -> None:
+    if not isinstance(value, dict):
+        raise ValueError("Evidence 顶层必须为对象")
+    # Older records may not have captured the environment. Keep them readable
+    # so validity can conservatively become ``unknown`` instead of hiding the
+    # historical result behind a parse failure.
+    schema_value = dict(value)
+    schema_value.setdefault("environment", {})
+    try:
+        import jsonschema
+        schema_path = root / "engineering/schemas/evidence.schema.json"
+        try:
+            schema = json.loads(schema_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            schema = json.loads(files("epe.data.schemas").joinpath("evidence.schema.json").read_text(encoding="utf-8"))
+        errors = sorted(jsonschema.Draft202012Validator(schema).iter_errors(schema_value), key=lambda error: (tuple(str(p) for p in error.absolute_path), error.message))
+    except (ImportError, OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"Evidence Schema 不可用: {exc}") from exc
+    if errors:
+        error = errors[0]
+        location = ".".join(str(part) for part in error.absolute_path) or "<root>"
+        raise ValueError(f"Evidence 字段 {location} 无效: {error.message}")
+
+
+def load_evidence(root: Path, config: dict[str, Any], task_id: str | None = None) -> tuple[list[dict[str, Any]], list[Diagnostic]]:
     base = root / config.get("storage", {}).get("evidence", "engineering/evidence")
     found: list[dict[str, Any]] = []
-    if not base.exists(): return found
-    for path in sorted(base.glob("*/evidence.json")):
+    diagnostics: list[Diagnostic] = []
+    if not base.exists(): return found, diagnostics
+    for directory in sorted(base.glob("RUN-*")):
+        path = directory / "evidence.json"
         try:
+            if directory.is_symlink() or not directory.is_dir() or path.is_symlink():
+                raise ValueError("运行记录路径不是普通目录或文件")
             value = json.loads(path.read_text(encoding="utf-8"))
+            _validate_evidence_record(root, value)
+            if (not isinstance(value, dict) or value.get("run_id") != directory.name
+                    or not isinstance(value.get("id"), str) or not value["id"].startswith("EVIDENCE-")
+                    or not isinstance(value.get("checker"), str) or not value["checker"]
+                    or not isinstance(value.get("checker_version"), str) or not value["checker_version"]
+                    or not isinstance(value.get("command"), list) or not value["command"]
+                    or any(not isinstance(arg, str) or not arg for arg in value["command"])
+                    or not isinstance(value.get("finished_at"), str)
+                    or value.get("result") not in ("passed", "failed", "error", "not_run")
+                    or "task_id" not in value or "changeset_id" not in value
+                    or (value.get("task_id") is not None and (not isinstance(value.get("task_id"), str) or not value["task_id"]))
+                    or (value.get("changeset_id") is not None and not isinstance(value.get("changeset_id"), str))):
+                raise ValueError("运行记录缺少有效的识别、排序或结果字段")
             if task_id is None or value.get("task_id") == task_id: found.append(value)
-        except (OSError, json.JSONDecodeError): continue
-    return found
+        except (OSError, UnicodeError, ValueError) as exc:
+            diagnostics.append(Diagnostic("EPE-EVIDENCE-READ", Severity.ERROR, f"无法读取完整运行记录: {exc}", path=str(path)))
+    return found, diagnostics
 
 
-def evidence_validity(root: Path, config: dict[str, Any], evidence: dict[str, Any], required_check: dict[str, Any] | None = None) -> str:
+def evidence_validity(root: Path, config: dict[str, Any], evidence: dict[str, Any], required_check: dict[str, Any] | None = None, clock: ClockPort | None = None) -> str:
     manifest_roots = config.get("managed", {}).get("design_roots", []) + config.get("managed", {}).get("code_roots", []) + config.get("managed", {}).get("test_roots", []) + config.get("managed", {}).get("contract_roots", []) + ["engineering/epe.yaml", "engineering/policies"]
     artifacts = evidence.get("artifacts")
     if not isinstance(artifacts, list) or not artifacts:
@@ -258,6 +323,14 @@ def evidence_validity(root: Path, config: dict[str, Any], evidence: dict[str, An
         try: digest = sha256_bytes(path.read_bytes())
         except OSError: return "invalid"
         if digest != artifact.get("sha256"): return "invalid"
+    policy_fingerprint = evidence.get("provenance", {}).get("verification_policy_sha256") if isinstance(evidence.get("provenance"), dict) else None
+    if not isinstance(policy_fingerprint, str) or not re.fullmatch(r"[0-9a-f]{64}", policy_fingerprint):
+        return "unknown"
+    try:
+        if _verification_policy_fingerprint(root, config) != policy_fingerprint:
+            return "stale"
+    except (OSError, ValueError, TypeError):
+        return "unknown"
     if required_check and required_check.get("kind") == "test" and evidence.get("result") == "passed":
         provenance = evidence.get("provenance")
         run_id = evidence.get("run_id")
@@ -292,5 +365,21 @@ def evidence_validity(root: Path, config: dict[str, Any], evidence: dict[str, An
         return "unknown"
     if environment["python"] != sys.version.split()[0] or environment["os"] != platform.platform():
         return "unknown"
+    max_age = required_check.get("max_age_seconds") if required_check is not None else None
+    if max_age is not None:
+        if type(max_age) is not int or max_age < 1:
+            return "unknown"
+        try:
+            finished = datetime.fromisoformat(evidence["finished_at"].replace("Z", "+00:00"))
+            current_time = datetime.fromisoformat(now(clock).replace("Z", "+00:00"))
+            if finished.utcoffset() is None or current_time.utcoffset() is None:
+                return "unknown"
+            elapsed = (current_time.astimezone(timezone.utc) - finished.astimezone(timezone.utc)).total_seconds()
+        except (KeyError, TypeError, ValueError, OverflowError, AttributeError, OSError):
+            return "unknown"
+        if elapsed < 0:
+            return "unknown"
+        if elapsed > max_age:
+            return "stale"
     current = build_manifest(root, manifest_roots, tuple(config.get("exclude", []))).digest
     return "valid" if current == evidence.get("input_manifest", {}).get("digest") else "stale"

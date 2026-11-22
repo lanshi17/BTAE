@@ -144,3 +144,97 @@ def test_ac12_changed_input_cannot_finalize(tmp_path):
                for d in result["diagnostics"])
     stored = json.loads((tmp_path / "engineering/tasks/TASK-001.json").read_text(encoding="utf-8"))
     assert stored["status"] == "active"
+
+
+def test_ac12_corrupt_latest_evidence_cannot_reveal_older_pass(tmp_path):
+    run = _project(tmp_path)
+    (tmp_path / "tests/test_sample.py").write_text(
+        "from pathlib import Path\ndef test_sample_contract():\n    assert not Path('fail-marker').exists()\n",
+        encoding="utf-8",
+    )
+    run("task", "create", "--file", "task.yaml")
+    run("task", "transition", "TASK-001", "activate")
+    run("changeset", "create", "--file", "change.yaml")
+    run("changeset", "transition", "CHANGE-001", "activate")
+    run("graph", "build")
+    run("verify", "TASK-001")
+    run("check", "--task", "TASK-001")
+    audit_path = tmp_path / "engineering/audit/events.jsonl"
+    audit_bytes = audit_path.read_bytes()
+    audit_path.unlink()
+    unanchored = run("check", "--task", "TASK-001", expected=1)
+    assert unanchored["data"]["evidence"][0]["validity"] == "unknown"
+    audit_path.write_bytes(audit_bytes)
+    (tmp_path / "fail-marker").write_text("fail", encoding="utf-8")
+    failed = run("verify", "TASK-001", expected=1)
+    failed_id = failed["data"]["results"][0]["run_id"]
+    assert failed["data"]["results"][0]["result"] == "failed"
+    (tmp_path / "fail-marker").unlink()
+    blocked = run("check", "--task", "TASK-001", expected=1)
+    assert any(d["code"] == "EPE-GATE-TEST" for d in blocked["diagnostics"])
+    record = tmp_path / "engineering/evidence" / failed_id / "evidence.json"
+    for corrupt in ('{', '{}', None):
+        if corrupt is None:
+            record.unlink()
+        else:
+            record.write_text(corrupt, encoding="utf-8")
+        checked = run("check", "--task", "TASK-001", expected=3)
+        assert any(d["code"] == "EPE-EVIDENCE-READ" for d in checked["diagnostics"])
+        assert checked["status"] == "error"
+    import shutil
+    shutil.rmtree(record.parent)
+    checked = run("check", "--task", "TASK-001", expected=3)
+    assert any(d["code"] == "EPE-EVIDENCE-AUDIT" for d in checked["diagnostics"])
+
+
+def test_ac12_expired_evidence_cannot_complete_task(tmp_path):
+    import time
+
+    run = _project(tmp_path)
+    policy_path = tmp_path / "engineering/policies/verification.yaml"
+    policy = yaml.safe_load(policy_path.read_text(encoding="utf-8"))
+    policy["checks"][0]["max_age_seconds"] = 3
+    policy_path.write_text(yaml.safe_dump(policy, sort_keys=False), encoding="utf-8")
+    run("task", "create", "--file", "task.yaml")
+    run("task", "transition", "TASK-001", "activate")
+    run("changeset", "create", "--file", "change.yaml")
+    run("changeset", "transition", "CHANGE-001", "activate")
+    run("graph", "build")
+    run("verify", "TASK-001")
+    initial = run("context", "resolve", "TASK-001")
+    assert initial["data"]["cache"] == "miss"
+    assert {item["validity"] for item in initial["data"]["source_assessments"]["evidence"].values()} == {"valid"}
+    cached = run("context", "resolve", "TASK-001")
+    assert cached["data"]["cache"] == "hit"
+    time.sleep(3.1)
+    expired = run("context", "resolve", "TASK-001")
+    assert expired["data"]["cache"] == "miss"
+    assert {item["validity"] for item in expired["data"]["source_assessments"]["evidence"].values()} == {"stale"}
+    checked = run("check", "--task", "TASK-001", expected=1)
+    assert checked["data"]["evidence"][0]["validity"] == "stale"
+    assert any(d["code"] == "EPE-GATE-TEST" for d in checked["diagnostics"])
+    completed = run("task", "transition", "TASK-001", "complete", expected=1)
+    assert completed["status"] == "blocked"
+
+
+def test_context_does_not_report_audit_failed_evidence_as_current(tmp_path):
+    run = _project(tmp_path)
+    run("task", "create", "--file", "task.yaml")
+    run("task", "transition", "TASK-001", "activate")
+    run("changeset", "create", "--file", "change.yaml")
+    run("changeset", "transition", "CHANGE-001", "activate")
+    run("graph", "build")
+    verified = run("verify", "TASK-001")
+    run_id = verified["data"]["results"][0]["run_id"]
+    relative = f"engineering/evidence/{run_id}/evidence.json"
+    record_path = tmp_path / relative
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    record["target_entities"] = []
+    record_path.write_text(json.dumps(record), encoding="utf-8")
+    context = run("context", "resolve", "TASK-001", expected=3)
+    assert any(d["code"] == "EPE-EVIDENCE-AUDIT" for d in context["diagnostics"])
+    assert context["data"]["source_assessments"]["evidence"][relative]["validity"] == "unknown"
+    assert all(item["freshness"] != "current" for item in context["data"]["items"] if item["path"] == relative)
+    record_path.write_text("[]", encoding="utf-8")
+    context = run("context", "resolve", "TASK-001", expected=3)
+    assert any(d["code"] == "EPE-EVIDENCE-READ" for d in context["diagnostics"])

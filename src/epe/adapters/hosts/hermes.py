@@ -37,7 +37,14 @@ class HermesHostAdapter:
         if value.get("protocol_version", "1") != "1":
             self.capabilities = HostCapabilities("hermes", str(value.get("protocol_version")), False, False, False, False, (), "handshake-failed")
             return self.capabilities
-        operations = tuple(x for x in value.get("operations", []) if isinstance(x, str))
+        flags = ("trusted_identity", "write_isolation", "process_group_control", "cancellation")
+        operations_value = value.get("operations", [])
+        if (not isinstance(operations_value, list)
+                or any(not isinstance(item, str) or not item for item in operations_value)
+                or any(type(value.get(name, False)) is not bool for name in flags)):
+            self.capabilities = HostCapabilities("hermes", "1", False, False, False, False, (), "handshake-failed")
+            return self.capabilities
+        operations = tuple(operations_value)
         status = "handshaken" if self.trusted_capabilities else "handshaken-untrusted"
         self.capabilities = HostCapabilities("hermes", str(value.get("protocol_version", "1")), bool(value.get("trusted_identity", False)) and self.trusted_capabilities, bool(value.get("write_isolation", False)) and self.trusted_capabilities, bool(value.get("process_group_control", False)), bool(value.get("cancellation", False)), operations, status)
         return self.capabilities
@@ -54,8 +61,13 @@ class HermesHostAdapter:
             diagnostic = Diagnostic("EPE-HOST-RESPONSE", Severity.ERROR, "Hermes 返回无效或失败响应")
             return AgentResponse("error", [diagnostic.message], [diagnostic])
         value = response.get("response")
-        if not isinstance(value, dict) or value.get("decision") not in {"accepted", "blocked", "unsupported", "error"}:
+        if not isinstance(value, dict) or not isinstance(value.get("decision"), str) or value["decision"] not in {"accepted", "blocked", "unsupported", "error"}:
             diagnostic = Diagnostic("EPE-HOST-RESPONSE", Severity.ERROR, "Hermes 响应缺少有效 decision")
+            return AgentResponse("error", [diagnostic.message], [diagnostic])
+        if any(not isinstance(value.get(name, []), list)
+               or any(not isinstance(item, str) for item in value.get(name, []))
+               for name in ("reasons", "evidence_ids", "next_steps")):
+            diagnostic = Diagnostic("EPE-HOST-RESPONSE", Severity.ERROR, "Hermes 响应字段必须为字符串数组")
             return AgentResponse("error", [diagnostic.message], [diagnostic])
         return AgentResponse(str(value["decision"]), list(value.get("reasons", [])), [], list(value.get("evidence_ids", [])), list(value.get("next_steps", [])))
 

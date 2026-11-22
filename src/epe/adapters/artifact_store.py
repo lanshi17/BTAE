@@ -1,11 +1,29 @@
 from __future__ import annotations
 
 import errno
+import ctypes
 import hashlib
 import os
 import secrets
 import shutil
+import sys
 from pathlib import Path, PurePosixPath
+
+
+def _rename_directory_noreplace(parent_fd: int, source: str, destination: str) -> None:
+    """Atomically publish a directory without replacing any existing name."""
+    if sys.platform != "linux":
+        raise NotImplementedError("atomic directory publication requires Linux renameat2(RENAME_NOREPLACE)")
+    libc = ctypes.CDLL(None, use_errno=True)
+    try:
+        renameat2 = libc.renameat2
+    except AttributeError as exc:
+        raise NotImplementedError("libc does not provide renameat2") from exc
+    renameat2.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint]
+    renameat2.restype = ctypes.c_int
+    if renameat2(parent_fd, os.fsencode(source), parent_fd, os.fsencode(destination), 1) != 0:
+        error = ctypes.get_errno()
+        raise OSError(error, os.strerror(error), destination)
 
 
 class ArtifactStore:
@@ -135,13 +153,7 @@ class ArtifactStore:
                     os.fsync(staging_fd)
                 finally:
                     os.close(staging_fd)
-                try:
-                    os.stat(final_name, dir_fd=parent_fd, follow_symlinks=False)
-                except FileNotFoundError:
-                    pass
-                else:
-                    raise FileExistsError(final_name)
-                os.rename(staging_name, final_name, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
+                _rename_directory_noreplace(parent_fd, staging_name, final_name)
                 published = True
                 os.fsync(parent_fd)
                 return digests

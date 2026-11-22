@@ -150,7 +150,8 @@ def resolve_context(root: Path, config: dict[str, Any], task: Any, registry: Reg
     if evidence_root.exists():
         for path in sorted(evidence_root.glob("*/evidence.json")):
             try: evidence = json.loads(path.read_text(encoding="utf-8"))
-            except (OSError, json.JSONDecodeError): continue
+            except (OSError, UnicodeError, json.JSONDecodeError): continue
+            if not isinstance(evidence, dict): continue
             if getattr(task, "id", None) and evidence.get("task_id") == task.id:
                 evidence_path = path.relative_to(root).as_posix()
                 validity = (source_assessments or {}).get("evidence", {}).get(evidence_path, {}).get("validity", "unknown")

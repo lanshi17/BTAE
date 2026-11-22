@@ -28,6 +28,37 @@ def test_change_during_real_check_remains_stale(tmp_path):
     assert evidence_validity(tmp_path, config(), evidence[0]) == "stale"
 
 
+def test_custom_policy_changes_invalidate_evidence_even_when_excluded(tmp_path):
+    cfg = config()
+    cfg["policies"]["verification"] = "custom/verification.json"
+    cfg["exclude"] = ["custom"]
+    policy = tmp_path / "custom/verification.json"
+    policy.parent.mkdir()
+    check = {"id": "check", "command": [sys.executable, "-c", "pass"]}
+    policy.write_text(json.dumps({"checks": [check]}))
+    evidence, diagnostics = run_checks(tmp_path, cfg, "TASK-001")
+    assert not diagnostics
+    assert evidence_validity(tmp_path, cfg, evidence[0], check) == "valid"
+    policy.write_text(policy.read_text() + "\n")
+    assert evidence_validity(tmp_path, cfg, evidence[0], check) == "stale"
+    policy.unlink()
+    assert evidence_validity(tmp_path, cfg, evidence[0], check) == "unknown"
+
+
+def test_custom_policy_modified_by_check_marks_run_stale(tmp_path):
+    cfg = config()
+    cfg["policies"]["verification"] = "custom/verification.json"
+    policy = tmp_path / "custom/verification.json"
+    policy.parent.mkdir()
+    command = [sys.executable, "-c", "from pathlib import Path; p=Path('custom/verification.json'); p.write_text(p.read_text()+'\\n')"]
+    policy.write_text(json.dumps({"checks": [{"id": "change-policy", "command": command}]}))
+    evidence, diagnostics = run_checks(tmp_path, cfg, "TASK-001")
+    assert not diagnostics
+    assert evidence[0]["result"] == "passed"
+    assert evidence[0]["validity"] == "stale"
+    assert evidence_validity(tmp_path, cfg, evidence[0]) == "stale"
+
+
 def test_graph_rejects_changed_inputs_and_tampering(tmp_path):
     (tmp_path / "src").mkdir()
     source = tmp_path / "src/a.py"
@@ -62,6 +93,55 @@ def test_environment_mismatch_is_unknown(tmp_path):
     assert evidence_validity(tmp_path, config(), evidence[0]) == "valid"
     evidence[0]["environment"]["python"] = "0.0.0"
     assert evidence_validity(tmp_path, config(), evidence[0]) == "unknown"
+
+
+def test_evidence_expiration_and_clock_uncertainty(tmp_path):
+    class Clock:
+        def __init__(self, value): self.value = value
+        def now_utc(self): return self.value
+        def monotonic(self): return 0
+
+    policy = tmp_path / "engineering/policies/verification.yaml"
+    policy.parent.mkdir(parents=True)
+    check = {"id": "ok", "command": [sys.executable, "-c", "pass"], "max_age_seconds": 60}
+    policy.write_text(json.dumps({"checks": [check]}))
+    evidence, diagnostics = run_checks(tmp_path, config(), "TASK-001", clock=Clock("2026-01-01T00:00:00Z"))
+    assert not diagnostics
+    record = evidence[0]
+    assess = lambda time: evidence_validity(tmp_path, config(), record, check, Clock(time))
+    assert assess("2026-01-01T00:01:00Z") == "valid"
+    assert assess("2026-01-01T00:01:01Z") == "stale"
+    assert assess("2025-12-31T23:59:59Z") == "unknown"
+    assert assess("2026-01-01T00:00:00") == "unknown"
+    record["finished_at"] = "invalid"
+    assert assess("2026-01-01T00:00:00Z") == "unknown"
+    assert evidence_validity(tmp_path, config(), record, {"id": "ok"}, Clock("2030-01-01T00:00:00Z")) == "valid"
+
+
+def test_invalid_evidence_expiration_is_rejected_by_policy(tmp_path):
+    policy = tmp_path / "engineering/policies/verification.yaml"
+    policy.parent.mkdir(parents=True)
+    for age in (0, -1, True, 1.5, "60"):
+        check = {"id": "invalid", "command": [sys.executable, "-c", "pass"], "max_age_seconds": age}
+        policy.write_text(json.dumps({"checks": [check]}))
+        evidence, diagnostics = run_checks(tmp_path, config(), "TASK-001")
+        assert not evidence and diagnostics, age
+
+
+def test_evidence_schema_rejects_extra_fields_but_legacy_environment_is_unknown(tmp_path):
+    policy = tmp_path / "engineering/policies/verification.yaml"
+    policy.parent.mkdir(parents=True)
+    policy.write_text(json.dumps({"checks": [{"id": "ok", "command": [sys.executable, "-c", "pass"]}]}))
+    evidence, diagnostics = run_checks(tmp_path, config(), "TASK-001")
+    assert not diagnostics
+    record = evidence[0]
+    record.pop("environment")
+    assert evidence_validity(tmp_path, config(), record) == "unknown"
+    record["unexpected"] = True
+    record_path = tmp_path / "engineering/evidence" / record["run_id"] / "evidence.json"
+    record_path.write_text(json.dumps(record), encoding="utf-8")
+    loaded, diagnostics = __import__("epe.verification.runner", fromlist=["load_evidence"]).load_evidence(tmp_path, config(), "TASK-001")
+    assert not loaded and any(item.code == "EPE-EVIDENCE-READ" for item in diagnostics)
 
 
 def test_real_pytest_requires_executed_tests(tmp_path):

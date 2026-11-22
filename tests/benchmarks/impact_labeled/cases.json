@@ -1,0 +1,32 @@
+{
+  "description": "人工构造的传播场景，用于回归；并非真实项目的独立召回率基准。",
+  "cases": [
+    {
+      "name": "dependency_consumer_and_verification",
+      "nodes": ["CLASS-A", "CLASS-B", "TEST-B"],
+      "edges": [
+        {"from": "CLASS-B", "to": "CLASS-A", "relation": "depends_on", "origin": {"type": "explicit"}, "confidence": 1.0},
+        {"from": "CLASS-B", "to": "TEST-B", "relation": "verified_by", "origin": {"type": "explicit"}, "confidence": 1.0}
+      ],
+      "changed": ["CLASS-A"], "expected": {"CLASS-B": "determined", "TEST-B": "determined"}
+    },
+    {
+      "name": "uncertain_dependency_propagation",
+      "nodes": ["CLASS-A", "CLASS-B", "TEST-B"],
+      "edges": [
+        {"from": "CLASS-B", "to": "CLASS-A", "relation": "depends_on", "origin": {"type": "static"}, "confidence": 0.5},
+        {"from": "CLASS-B", "to": "TEST-B", "relation": "verified_by", "origin": {"type": "explicit"}, "confidence": 1.0}
+      ],
+      "changed": ["CLASS-A"], "expected": {"CLASS-B": "candidate", "TEST-B": "candidate"}
+    },
+    {
+      "name": "inferred_relation_and_reverse_nonconsumer",
+      "nodes": ["CLASS-A", "CLASS-B", "CLASS-C"],
+      "edges": [
+        {"from": "CLASS-A", "to": "CLASS-B", "relation": "depends_on", "origin": {"type": "explicit"}, "confidence": 1.0},
+        {"from": "CLASS-A", "to": "CLASS-C", "relation": "affects", "origin": {"type": "inferred"}, "confidence": 1.0}
+      ],
+      "changed": ["CLASS-A"], "expected": {"CLASS-C": "candidate"}
+    }
+  ]
+}
