@@ -33,6 +33,8 @@ def score_bundle(expected_paths: Iterable[str], actual_items: Iterable[Mapping[s
     expected = set(expected_paths)
     actual = {str(item["path"]) for item in items if item.get("path")}
     required = set(required_paths)
+    omission_list = sorted(set(omissions))
+    truncated_list = sorted(set(truncated_paths))
     selected_required = {
         str(item["path"])
         for item in items
@@ -47,9 +49,9 @@ def score_bundle(expected_paths: Iterable[str], actual_items: Iterable[Mapping[s
         "overall": _metrics(expected, actual),
         "required_c0_retention": (len(selected_required) / len(required)) if required else None,
         "required_missing": sorted(required - selected_required),
-        "omissions": sorted(set(omissions)),
-        "truncated_paths": sorted(set(truncated_paths)),
-        "incomplete": bool(incomplete or omissions or truncated_paths),
+        "omissions": omission_list,
+        "truncated_paths": truncated_list,
+        "incomplete": bool(incomplete or omission_list or truncated_list),
     }
 
 
