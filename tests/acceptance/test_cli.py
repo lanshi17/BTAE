@@ -81,6 +81,18 @@ def test_init_rejects_symlinked_derived_directory(tmp_path, capsys):
     assert not (outside / ".write.lock").exists()
 
 
+def test_cli_safe_input_rejects_symlinked_parent_for_task_file(tmp_path, capsys):
+    outside = tmp_path.parent / f"{tmp_path.name}-task-outside"; outside.mkdir()
+    (tmp_path / "linked").symlink_to(outside, target_is_directory=True)
+    task = tmp_path / "task.yaml"
+    task.write_text("id: TASK-001\ntype: feature\nobjective: x\nacceptance: [ok]\nrisk: low\ntarget_entities: [CLASS-001]\n", encoding="utf-8")
+    assert main(["--root", str(tmp_path), "--format", "json", "init"]) == 0; capsys.readouterr()
+    assert main(["--root", str(tmp_path), "--format", "json", "task", "create", "--file", "linked/task.yaml"]) == 2
+    result = json.loads(capsys.readouterr().out)
+    assert result["diagnostics"][0]["code"] == "EPE-PATH-OUTSIDE"
+    assert not (outside / "task.yaml").exists()
+
+
 def test_parameter_and_path_errors_use_exit_code_two(tmp_path, capsys):
     outside = tmp_path.parent / f"{tmp_path.name}-outside-exit"; outside.mkdir()
     (tmp_path / "engineering").symlink_to(outside, target_is_directory=True)

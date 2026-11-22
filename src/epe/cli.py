@@ -52,7 +52,13 @@ def _root(value: str | None) -> Path:
 
 
 def _safe_input(root: Path, relative: str) -> Path:
-    candidate = (root / relative).resolve()
+    raw = root / relative
+    current = root
+    for component in Path(relative).parts:
+        current = current / component
+        if current.is_symlink():
+            raise ValueError(f"路径不能经过符号链接: {relative}")
+    candidate = raw.resolve()
     try:
         candidate.relative_to(root)
     except ValueError as exc:
