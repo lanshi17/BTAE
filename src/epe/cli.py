@@ -23,7 +23,7 @@ from epe.graph.builder import analyze_impact, trace_path
 from epe.context.resolver import resolve_context, load_cached_context, store_cached_context
 from epe.governance.gates import finalize_gate
 from epe.governance.tasks import load_task, save_task, create_task, validate_task, transition_task, check_scope
-from epe.governance.policies import validate_policy_files
+from epe.governance.policies import validate_policy_files, load_workflow_requirements
 from epe.core.policy import validate_policy_document
 from epe.governance.baseline import capture_baseline, changeset_paths, compare_baseline, validate_changeset, transition_changeset, changeset_declaration, baseline_binding_version
 from epe.parsers.documents import discover_documents, parse_yaml_bytes
@@ -165,9 +165,9 @@ def cmd_init(args) -> CommandResult:
         "engineering/policies/architecture.yaml": {"schema_version": 1, "forbidden_dependencies": []},
         "engineering/policies/verification.yaml": {"schema_version": 1, "checks": []},
         "engineering/workflows/feature.yaml": {"schema_version": 1, "type": "feature", "required": ["objective", "acceptance", "target_entities"]},
-        "engineering/workflows/bugfix.yaml": {"schema_version": 1, "type": "bugfix", "required": ["objective", "acceptance", "target_entities"]},
-        "engineering/workflows/refactor.yaml": {"schema_version": 1, "type": "refactor", "required": ["objective", "acceptance", "target_entities"]},
-        "engineering/workflows/exploration.yaml": {"schema_version": 1, "type": "exploration", "required": ["objective", "acceptance", "target_entities"]},
+        "engineering/workflows/bugfix.yaml": {"schema_version": 1, "type": "bugfix", "required": ["objective", "acceptance", "target_entities", "reproduction"]},
+        "engineering/workflows/refactor.yaml": {"schema_version": 1, "type": "refactor", "required": ["objective", "acceptance", "target_entities", "baseline_manifest"]},
+        "engineering/workflows/exploration.yaml": {"schema_version": 1, "type": "exploration", "required": ["objective", "acceptance", "target_entities", "hypothesis"]},
     }
     template_defaults = {
         "engineering/templates/task.yaml": "schema_version: 1\nid: TASK-001\ntype: feature\nobjective: \"\"\nacceptance: []\nrisk: low\ntarget_entities: []\nstatus: planned\n",
@@ -338,6 +338,9 @@ def cmd_task_transition(args) -> CommandResult:
         with acquire_write_lock(lock):
             task, diagnostics = load_task(root, config, args.task_id)
             if task is None: return _result("task transition", "error", diagnostics)
+            workflow_requirements, workflow_diagnostics = load_workflow_requirements(root, task.type)
+            if workflow_diagnostics:
+                return _result("task transition", "error", workflow_diagnostics, {"task_id": task.id, "status": task.status})
             if args.expected_revision is not None and task.revision != args.expected_revision:
                 return _result("task transition", "blocked", [Diagnostic("EPE-TASK-REVISION", Severity.ERROR, f"任务 revision 冲突，当前为 {task.revision}")])
             gate_status = None
@@ -358,7 +361,7 @@ def cmd_task_transition(args) -> CommandResult:
                 if current is None or sha256_json(current.to_dict()) != original:
                     return _result("task transition", "blocked", diagnostics + [Diagnostic("EPE-TASK-REVISION", Severity.ERROR, "写入前任务已变化")])
                 gate_status = "passed"
-            updated, transition_diagnostics = transition_task(task, args.event, gate_status, args.expected_revision)
+            updated, transition_diagnostics = transition_task(task, args.event, gate_status, args.expected_revision, workflow_requirements)
             if transition_diagnostics: return _result("task transition", "blocked", transition_diagnostics, {"task_id": task.id, "status": task.status})
             assert updated is not None
             save_task(root, config, updated)

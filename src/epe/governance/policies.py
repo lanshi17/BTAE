@@ -25,6 +25,35 @@ def _safe_policy_path(root: Path, relative: str) -> Path:
     return path
 
 
+def load_workflow_requirements(root: Path, workflow_type: str) -> tuple[tuple[str, ...] | None, list[Diagnostic]]:
+    """Load one workflow's required task fields and fail closed on drift."""
+    relative = f"engineering/workflows/{workflow_type}.yaml"
+    try:
+        path = _safe_policy_path(root, relative)
+        raw, parse_diagnostics = parse_yaml_bytes(path.read_bytes(), relative)
+    except (OSError, ValueError) as exc:
+        return None, [Diagnostic("EPE-WORKFLOW-READ", Severity.ERROR, str(exc), path=relative)]
+    if parse_diagnostics:
+        return None, parse_diagnostics
+    if not isinstance(raw, dict):
+        return None, [Diagnostic("EPE-WORKFLOW-TYPE", Severity.ERROR, "Workflow 必须为对象", path=relative)]
+    try:
+        import jsonschema
+        schema = json.loads(files("epe.data.schemas").joinpath("workflow.schema.json").read_text(encoding="utf-8"))
+    except (ImportError, OSError, json.JSONDecodeError) as exc:
+        return None, [Diagnostic("EPE-WORKFLOW-SCHEMA", Severity.ERROR, f"无法读取 Workflow Schema: {exc}", path=relative)]
+    errors = sorted(jsonschema.Draft202012Validator(schema).iter_errors(raw), key=lambda error: (tuple(str(p) for p in error.path), error.message))
+    diagnostics = [Diagnostic("EPE-WORKFLOW-INVALID", Severity.ERROR, f"Workflow 无效: {error.message}", path=relative) for error in errors]
+    if raw.get("type") != workflow_type:
+        diagnostics.append(Diagnostic("EPE-WORKFLOW-TYPE", Severity.ERROR, f"Workflow type 与任务不匹配: {raw.get('type')} != {workflow_type}", path=relative))
+    required = raw.get("required")
+    if isinstance(required, list) and len(required) != len(set(required)):
+        diagnostics.append(Diagnostic("EPE-WORKFLOW-INVALID", Severity.ERROR, "Workflow required 不得包含重复字段", path=relative))
+    if diagnostics:
+        return None, diagnostics
+    return tuple(required), []
+
+
 def validate_policy_files(root: Path, config: dict[str, Any]) -> tuple[dict[str, Any], list[Diagnostic]]:
     diagnostics: list[Diagnostic] = []
     results: list[dict[str, Any]] = []

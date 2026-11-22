@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 
 from epe.adapters.storage import atomic_write_json
 from epe.core.diagnostics import Diagnostic, Severity
@@ -85,25 +85,31 @@ def check_scope(actual: list[str], write_scope: list[str], protected: list[str])
     return not violations, violations
 
 
-def transition_task(task: Task, event: str, gate_status: str | None = None, expected_revision: int | None = None) -> tuple[Task | None, list[Diagnostic]]:
+def transition_task(task: Task, event: str, gate_status: str | None = None, expected_revision: int | None = None,
+                    required_fields: Sequence[str] | None = None) -> tuple[Task | None, list[Diagnostic]]:
     """Validate task workflow transitions without changing the stored object."""
     diagnostics: list[Diagnostic] = []
     if expected_revision is not None and task.revision != expected_revision:
         return None, [Diagnostic("EPE-TASK-REVISION", Severity.ERROR, f"任务 revision 冲突，当前为 {task.revision}")]
     required_by_type = {
         "feature": ("objective", "acceptance", "target_entities"),
-        "bugfix": ("objective", "acceptance", "target_entities"),
-        "refactor": ("objective", "acceptance", "target_entities"),
-        "exploration": ("objective", "acceptance", "target_entities"),
+        "bugfix": ("objective", "acceptance", "target_entities", "reproduction"),
+        "refactor": ("objective", "acceptance", "target_entities", "baseline_manifest"),
+        "exploration": ("objective", "acceptance", "target_entities", "hypothesis"),
     }
     if event == "activate":
         if task.status != "planned": diagnostics.append(Diagnostic("EPE-TASK-TRANSITION", Severity.ERROR, f"只能从 planned 激活任务: {task.status}"))
-        if task.type == "refactor" and not task.raw.get("baseline_manifest"):
-            diagnostics.append(Diagnostic("EPE-TASK-BASELINE", Severity.ERROR, "refactor 激活需要 baseline_manifest"))
-        if task.type == "bugfix" and not task.raw.get("reproduction"):
-            diagnostics.append(Diagnostic("EPE-TASK-REPRODUCTION", Severity.ERROR, "bugfix 激活需要 reproduction"))
-        if task.type == "exploration" and not task.raw.get("hypothesis"):
-            diagnostics.append(Diagnostic("EPE-TASK-HYPOTHESIS", Severity.ERROR, "exploration 激活需要 hypothesis"))
+        fields = tuple(required_fields) if required_fields is not None else required_by_type.get(task.type, ())
+        special_codes = {
+            "baseline_manifest": ("EPE-TASK-BASELINE", "refactor 激活需要 baseline_manifest"),
+            "reproduction": ("EPE-TASK-REPRODUCTION", "bugfix 激活需要 reproduction"),
+            "hypothesis": ("EPE-TASK-HYPOTHESIS", "exploration 激活需要 hypothesis"),
+        }
+        for field in fields:
+            if task.raw.get(field):
+                continue
+            code, message = special_codes.get(field, ("EPE-TASK-WORKFLOW", f"{task.type} 激活需要 {field}"))
+            diagnostics.append(Diagnostic(code, Severity.ERROR, message))
         new_status = "active"
     elif event == "complete":
         if task.status != "active": diagnostics.append(Diagnostic("EPE-TASK-TRANSITION", Severity.ERROR, f"只能从 active 完成任务: {task.status}"))

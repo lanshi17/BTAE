@@ -39,3 +39,25 @@ def test_special_workflows_require_their_evidence(tmp_path, capsys):
     create(exploration, capsys, "exploration", "hypothesis: test\n")
     assert main(["--root", str(exploration), "--format", "json", "task", "transition", "TASK-001", "activate"]) == 0
     assert json.loads(capsys.readouterr().out)["data"]["status"] == "active"
+
+
+def test_task_activation_consumes_workflow_required_fields(tmp_path, capsys):
+    create(tmp_path, capsys, "bugfix", "reproduction: reproduced\n")
+    workflow = tmp_path / "engineering/workflows/bugfix.yaml"
+    workflow.write_text(workflow.read_text(encoding="utf-8") + "- ticket_reference\n", encoding="utf-8")
+    assert main(["--root", str(tmp_path), "--format", "json", "task", "transition", "TASK-001", "activate"]) == 1
+    result = json.loads(capsys.readouterr().out)
+    assert result["status"] == "blocked"
+    assert any(item["code"] == "EPE-TASK-WORKFLOW" for item in result["diagnostics"])
+    task = json.loads((tmp_path / "engineering/tasks/TASK-001.json").read_text(encoding="utf-8"))
+    assert task["status"] == "planned"
+
+
+def test_invalid_workflow_configuration_blocks_transition(tmp_path, capsys):
+    create(tmp_path, capsys, "feature")
+    workflow = tmp_path / "engineering/workflows/feature.yaml"
+    workflow.write_text("schema_version: 1\ntype: feature\nrequired: nope\n", encoding="utf-8")
+    assert main(["--root", str(tmp_path), "--format", "json", "task", "transition", "TASK-001", "activate"]) == 3
+    result = json.loads(capsys.readouterr().out)
+    assert result["status"] == "error"
+    assert any(item["code"] == "EPE-WORKFLOW-INVALID" for item in result["diagnostics"])
