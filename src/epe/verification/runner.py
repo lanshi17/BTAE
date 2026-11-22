@@ -184,9 +184,8 @@ def run_checks(root: Path, config: dict[str, Any], task_id: str | None = None, c
         expected_artifacts = check.get("artifacts", check.get("expected_artifacts", []))
         artifact_before = {}
         for expected in expected_artifacts:
-            artifact_path = (root / expected).resolve()
             try:
-                artifact_path.relative_to(root.resolve())
+                artifact_path = _safe_verification_path(root, str(expected))
                 artifact_before[expected] = _artifact_state(artifact_path)
             except ValueError:
                 artifact_before[expected] = None
@@ -194,6 +193,11 @@ def run_checks(root: Path, config: dict[str, Any], task_id: str | None = None, c
         evidence_root = config.get("storage", {}).get("evidence", "engineering/evidence")
         if not isinstance(evidence_root, str) or not evidence_root:
             ds.append(Diagnostic("EPE-VERIFY-ARTIFACT", Severity.ERROR, "Evidence 存储路径必须是非空相对路径"))
+            break
+        try:
+            _safe_verification_path(root, evidence_root)
+        except ValueError as exc:
+            ds.append(Diagnostic("EPE-VERIFY-ARTIFACT", Severity.ERROR, str(exc), path=evidence_root))
             break
         run_dir_relative = f"{str(evidence_root).rstrip('/')}/{run_id}"
         staging_dir_relative = f"{str(evidence_root).rstrip('/')}/.staging-{run_id}"
@@ -301,7 +305,11 @@ def _validate_evidence_record(root: Path, value: Any) -> None:
 
 
 def load_evidence(root: Path, config: dict[str, Any], task_id: str | None = None) -> tuple[list[dict[str, Any]], list[Diagnostic]]:
-    base = root / config.get("storage", {}).get("evidence", "engineering/evidence")
+    evidence_relative = config.get("storage", {}).get("evidence", "engineering/evidence")
+    try:
+        base = _safe_verification_path(root, evidence_relative)
+    except ValueError as exc:
+        return [], [Diagnostic("EPE-EVIDENCE-READ", Severity.ERROR, str(exc), path=str(evidence_relative))]
     found: list[dict[str, Any]] = []
     diagnostics: list[Diagnostic] = []
     if not base.exists(): return found, diagnostics
@@ -338,9 +346,10 @@ def evidence_validity(root: Path, config: dict[str, Any], evidence: dict[str, An
     for artifact in artifacts:
         if not isinstance(artifact, dict) or not artifact.get("path") or not artifact.get("sha256"):
             return "invalid"
-        path = (root / str(artifact.get("path", ""))).resolve()
-        try: path.relative_to(root.resolve())
-        except ValueError: return "invalid"
+        try:
+            path = _safe_verification_path(root, str(artifact.get("path", "")))
+        except ValueError:
+            return "invalid"
         if not path.exists(): return "invalid"
         try: digest = sha256_bytes(path.read_bytes())
         except OSError: return "invalid"
