@@ -3,17 +3,18 @@
 - 目标：确认 README 所引用的本地 MVP 检查路径、架构图产物和当前实现可复现。
 - 执行时间：2026-11-22 11:04 UTC 附近。
 - 环境：Linux，Python 3.14.4，pytest 9.1.1。
-- 运行时代码基线：`8695d1a`（收紧 ChangeSet 未知字段、依赖项和基线类型校验）。
+- 运行时代码基线：`e04cccf`（同步 Approval `risk_scope.uniqueItems` 运行时约束）。
 - 文档与契约跟进：`df519e0`（补充 HostPort 机器契约、研究评测计划并修正路线图链接）。
 
 | 实际命令 | 结果 |
 | --- | --- |
-| `PYTHONPATH=src pytest -q` | 通过，254 个测试，退出码 0 |
+| `PYTHONPATH=src pytest -q` | 通过，255 个测试，退出码 0 |
 | `PYTHONPATH=src python -m epe.cli --format json task classify TASK-001`（临时 bugfix 缺 reproduction） | 通过回归；返回缺失字段并阻断分类 |
 | `PYTHONPATH=src python -m epe.cli --format json policy validate` | 通过 |
 | `PYTHONPATH=src python -m epe.cli --format json design validate CONTRACT-HOST-PORT-001` | 通过；HostPort 契约 Schema 可读取 |
 | `cmp engineering/schemas/task.schema.json src/epe/data/schemas/task.schema.json` | 通过；仓库与 wheel Task Schema 一致 |
 | `PYTHONPATH=src pytest -q tests/integration/test_changeset_baseline.py` | 通过；ChangeSet 运行时契约反例覆盖 |
+| `PYTHONPATH=src pytest -q tests/unit/test_approval_schema_runtime.py` | 通过；Approval 风险范围唯一性覆盖 |
 | `PYTHONPATH=src python -m epe.cli --format json host capabilities --host hermes` | 通过；Hermes 保持 `unsupported-unintegrated` |
 | `PYTHONPATH=src python -m epe.cli --format json graph build` | 通过；发布 321 个节点、443 条边 |
 | `PYTHONPATH=src python -m epe.cli --format json architecture validate`（图重建后） | 通过；346 个导入检查，无违规或盲区 |
