@@ -10,6 +10,14 @@ from epe.parsers.documents import parse_yaml_bytes
 from epe.core.policy import validate_policy_document
 
 
+_WORKFLOW_MANDATORY_FIELDS: dict[str, tuple[str, ...]] = {
+    "feature": ("objective", "acceptance", "target_entities"),
+    "bugfix": ("objective", "acceptance", "target_entities", "reproduction"),
+    "refactor": ("objective", "acceptance", "target_entities", "baseline_manifest"),
+    "exploration": ("objective", "acceptance", "target_entities", "hypothesis"),
+}
+
+
 def _safe_policy_path(root: Path, relative: str) -> Path:
     root = root.resolve()
     parsed = Path(relative)
@@ -23,6 +31,22 @@ def _safe_policy_path(root: Path, relative: str) -> Path:
     path = (root / relative).resolve()
     path.relative_to(root)
     return path
+
+
+def _workflow_semantic_diagnostics(raw: dict[str, Any], relative: str, workflow_type: str | None = None) -> list[Diagnostic]:
+    selected = workflow_type or raw.get("type")
+    if selected not in _WORKFLOW_MANDATORY_FIELDS:
+        return []
+    required = raw.get("required")
+    if not isinstance(required, list) or not all(isinstance(item, str) and item for item in required):
+        return []
+    diagnostics: list[Diagnostic] = []
+    if len(required) != len(set(required)):
+        diagnostics.append(Diagnostic("EPE-WORKFLOW-INVALID", Severity.ERROR, "Workflow required 不得包含重复字段", path=relative))
+    missing = [field for field in _WORKFLOW_MANDATORY_FIELDS[selected] if field not in required]
+    if missing:
+        diagnostics.append(Diagnostic("EPE-WORKFLOW-INVALID", Severity.ERROR, f"Workflow 缺少不可删除的必需字段: {', '.join(missing)}", path=relative))
+    return diagnostics
 
 
 def load_workflow_requirements(root: Path, workflow_type: str) -> tuple[tuple[str, ...] | None, list[Diagnostic]]:
@@ -47,8 +71,7 @@ def load_workflow_requirements(root: Path, workflow_type: str) -> tuple[tuple[st
     if raw.get("type") != workflow_type:
         diagnostics.append(Diagnostic("EPE-WORKFLOW-TYPE", Severity.ERROR, f"Workflow type 与任务不匹配: {raw.get('type')} != {workflow_type}", path=relative))
     required = raw.get("required")
-    if isinstance(required, list) and len(required) != len(set(required)):
-        diagnostics.append(Diagnostic("EPE-WORKFLOW-INVALID", Severity.ERROR, "Workflow required 不得包含重复字段", path=relative))
+    diagnostics.extend(_workflow_semantic_diagnostics(raw, relative, workflow_type))
     if diagnostics:
         return None, diagnostics
     return tuple(required), []
@@ -129,5 +152,7 @@ def validate_policy_files(root: Path, config: dict[str, Any]) -> tuple[dict[str,
             for error in errors:
                 location = ".".join(str(item) for item in error.path)
                 diagnostics.append(Diagnostic("EPE-WORKFLOW-INVALID", Severity.ERROR, f"Workflow 无效{('.' + location) if location else ''}: {error.message}", path=relative))
+            if isinstance(raw, dict):
+                diagnostics.extend(_workflow_semantic_diagnostics(raw, relative))
             results.append({"kind": "workflow", "path": relative, "valid": not errors and not parse_diagnostics})
     return {"policies": results, "valid": not any(d.is_error for d in diagnostics)}, diagnostics

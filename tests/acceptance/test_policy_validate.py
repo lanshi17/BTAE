@@ -22,6 +22,16 @@ def test_policy_validate_reports_unknown_fields(tmp_path, capsys):
     assert any(d["code"] == "EPE-POLICY-INVALID" for d in result["diagnostics"])
 
 
+def test_policy_validate_rejects_workflow_without_mandatory_fact(tmp_path, capsys):
+    assert main(["--root", str(tmp_path), "--format", "json", "init"]) == 0
+    capsys.readouterr()
+    path = tmp_path / "engineering/workflows/bugfix.yaml"
+    path.write_text("schema_version: 1\ntype: bugfix\nrequired: [objective, acceptance, target_entities]\n", encoding="utf-8")
+    assert main(["--root", str(tmp_path), "--format", "json", "policy", "validate"]) == 3
+    result = json.loads(capsys.readouterr().out)
+    assert any(d["code"] == "EPE-WORKFLOW-INVALID" for d in result["diagnostics"])
+
+
 def test_policy_validator_rejects_symlinked_policy_parent(tmp_path):
     from epe.governance.policies import validate_policy_files
     outside = tmp_path / "outside-policy"; outside.mkdir()

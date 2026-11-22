@@ -61,3 +61,13 @@ def test_invalid_workflow_configuration_blocks_transition(tmp_path, capsys):
     result = json.loads(capsys.readouterr().out)
     assert result["status"] == "error"
     assert any(item["code"] == "EPE-WORKFLOW-INVALID" for item in result["diagnostics"])
+
+
+def test_workflow_cannot_remove_mandatory_bugfix_reproduction(tmp_path, capsys):
+    create(tmp_path, capsys, "bugfix", "reproduction: reproduced\n")
+    workflow = tmp_path / "engineering/workflows/bugfix.yaml"
+    workflow.write_text("schema_version: 1\ntype: bugfix\nrequired: [objective, acceptance, target_entities]\n", encoding="utf-8")
+    assert main(["--root", str(tmp_path), "--format", "json", "task", "transition", "TASK-001", "activate"]) == 3
+    result = json.loads(capsys.readouterr().out)
+    assert result["status"] == "error"
+    assert any(item["code"] == "EPE-WORKFLOW-INVALID" for item in result["diagnostics"])
