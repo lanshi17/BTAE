@@ -1,0 +1,30 @@
+{
+  "description": "人工构造的上下文选择场景，用于评测器回归；并非真实相关性标注集。",
+  "cases": [
+    {
+      "name": "required_context_retained",
+      "expected_paths": ["AGENTS.md", "docs/index.md", "docs/spec.md"],
+      "required_paths": ["AGENTS.md", "docs/index.md"],
+      "actual_items": [
+        {"path": "AGENTS.md", "level": "C0", "content": "rules"},
+        {"path": "docs/index.md", "level": "C0", "content": "index"},
+        {"path": "docs/spec.md", "level": "C1", "content": "spec"}
+      ],
+      "omissions": [],
+      "truncated_paths": [],
+      "budget": 3
+    },
+    {
+      "name": "budget_omits_optional_context",
+      "expected_paths": ["AGENTS.md", "docs/index.md", "docs/spec.md"],
+      "required_paths": ["AGENTS.md", "docs/index.md"],
+      "actual_items": [
+        {"path": "AGENTS.md", "level": "C0", "content": "rules"},
+        {"path": "docs/index.md", "level": "C0", "content": "index"}
+      ],
+      "omissions": ["docs/spec.md"],
+      "truncated_paths": [],
+      "budget": 2
+    }
+  ]
+}
