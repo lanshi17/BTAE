@@ -41,7 +41,7 @@
 
 评测脚本 [`tests/benchmarks/impact_labeled/evaluate.py`](../../tests/benchmarks/impact_labeled/evaluate.py) 可对同一 JSON 结构输出整体及 `determined` / `candidate` 分层的 precision、recall、F1、精确匹配率和不完整标记。当前输出类型固定为 `synthetic_regression`，在独立真实标注集建立前不得把结果解释为方法效果证据。
 
-上下文选择评测脚本 [`tests/benchmarks/context_labeled/evaluate.py`](../../tests/benchmarks/context_labeled/evaluate.py) 对 `ContextBundle` 的来源路径计算相关性 precision/recall/F1、C0 必需来源保留率、遗漏/截断、分级数量和内容字节量。其合成样例同样只用于接口回归；真实相关性、成本和盲评仍需独立数据。
+上下文选择评测脚本 [`tests/benchmarks/context_labeled/evaluate.py`](../../tests/benchmarks/context_labeled/evaluate.py) 对 `ContextBundle` 的来源路径计算相关性 precision/recall/F1、C0 必需来源保留率、遗漏/截断、分级数量和内容字节量。CLI 同时记录选中条目数、内容字节量、本地耗时和 Token 估算器状态；当前没有可靠估算器时 `estimated_tokens` 保持 `null`。其合成样例同样只用于接口回归；真实相关性、成本和盲评仍需独立数据。
 
 ### 3.2 上下文质量与成本
 

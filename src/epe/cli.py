@@ -36,6 +36,7 @@ from epe.adapters.hosts.base import capability_matrix, LocalHostAdapter
 from epe.adapters.hosts.hermes import HermesHostAdapter
 from epe.adapters.protocol import AgentRequest
 from epe.adapters.audit import append_audit, verify_audit, read_audit_events
+from epe.adapters.clock import SystemClock
 
 
 EXIT_CODES = {"passed": 0, "blocked": 1, "error": 3, "unsupported": 4}
@@ -963,6 +964,8 @@ def cmd_impact_plan(args) -> CommandResult:
 
 
 def cmd_context(args) -> CommandResult:
+    clock = SystemClock()
+    started = clock.monotonic()
     root = _root(args.root); config, failure = _config_or_result(root, "context resolve")
     if failure: return failure
     task, tds = load_task(root, config, args.task_id)
@@ -1005,6 +1008,13 @@ def cmd_context(args) -> CommandResult:
         data = resolve_context(root, config, task, built.registry, snapshot, args.budget, required_sources, omissions, source_assessments)
         store_cached_context(root, config, task, snapshot, args.budget, data, required_sources, source_assessments)
     data["cache"] = "hit" if cached else "miss"
+    data["metrics"] = {
+        "item_count": len(data.get("items", [])),
+        "content_bytes": sum(len(str(item.get("content", "")).encode("utf-8")) for item in data.get("items", [])),
+        "elapsed_seconds": round(clock.monotonic() - started, 6),
+        "estimated_tokens": None,
+        "token_estimator": "unavailable",
+    }
     # Verification policy applicability is provenance input; an absent required
     # check does not make context resolution itself fail.
     all_ds = tds + built.diagnostics + sds + evidence_ds

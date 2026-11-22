@@ -21,12 +21,18 @@ def test_context_cli_reports_cache_hit_and_invalidates(tmp_path, capsys):
     assert main(["--root", str(tmp_path), "--format", "json", "context", "resolve", "TASK-001"]) == 0
     first = json.loads(capsys.readouterr().out)["data"]
     assert first["cache"] == "miss"
+    assert first["metrics"]["item_count"] == len(first["items"])
+    assert first["metrics"]["content_bytes"] > 0
+    assert first["metrics"]["estimated_tokens"] is None
+    assert first["metrics"]["token_estimator"] == "unavailable"
     sources = {item["source_type"]: item for item in first["items"]}
     assert "changeset" in sources and "policy" in sources
     assert sources["changeset"]["freshness"] == "unknown"
     assert "write_scope" in sources["changeset"]["content"]
     assert main(["--root", str(tmp_path), "--format", "json", "context", "resolve", "TASK-001"]) == 0
-    assert json.loads(capsys.readouterr().out)["data"]["cache"] == "hit"
+    cached_data = json.loads(capsys.readouterr().out)["data"]
+    assert cached_data["cache"] == "hit"
+    assert cached_data["metrics"]["elapsed_seconds"] >= 0
     change_path = tmp_path / "engineering/changesets/CHANGE-001.json"
     change = json.loads(change_path.read_text()); change["protected"] = ["src", "engineering"]
     change_path.write_text(json.dumps(change))
