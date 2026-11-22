@@ -207,6 +207,19 @@ def cmd_init(args) -> CommandResult:
             if not matches: conflicts.append(Diagnostic("EPE-INIT-CONFLICT", Severity.ERROR, f"目标文件已存在且内容不同: {rel}", path=rel))
     if conflicts: return _result("init", "blocked", conflicts, {"created": []})
     created: list[str] = []
+    created_files: list[tuple[Path, int, int]] = []
+
+    def rollback_created_files() -> None:
+        for path, device, inode in reversed(created_files):
+            try:
+                stat = path.lstat()
+                if (stat.st_dev, stat.st_ino) == (device, inode):
+                    path.unlink()
+            except FileNotFoundError:
+                pass
+            except OSError:
+                pass
+
     try:
         lock = _safe_input(root, ".engineering/.write.lock")
         with acquire_write_lock(lock):
@@ -216,6 +229,8 @@ def cmd_init(args) -> CommandResult:
                     path.parent.mkdir(parents=True, exist_ok=True)
                     with path.open("x", encoding="utf-8") as handle:
                         handle.write(yaml_dump(value)); handle.flush(); os.fsync(handle.fileno())
+                        stat = os.fstat(handle.fileno())
+                    created_files.append((path, stat.st_dev, stat.st_ino))
                     created.append(rel)
             for rel, value in template_defaults.items():
                 path = root / rel
@@ -223,16 +238,22 @@ def cmd_init(args) -> CommandResult:
                     path.parent.mkdir(parents=True, exist_ok=True)
                     with path.open("x", encoding="utf-8") as handle:
                         handle.write(value); handle.flush(); os.fsync(handle.fileno())
+                        stat = os.fstat(handle.fileno())
+                    created_files.append((path, stat.st_dev, stat.st_ino))
                     created.append(rel)
             for rel in ["engineering/tasks", "engineering/changesets", "engineering/approvals", "engineering/evidence", "engineering/audit", ".engineering"]:
                 if _init_path_has_symlink(root, rel):
+                    rollback_created_files()
                     return _result("init", "blocked", [Diagnostic("EPE-PATH-SYMLINK", Severity.ERROR, f"初始化目录不能包含符号链接: {rel}", path=rel)], {"created": []})
                 (root / rel).mkdir(parents=True, exist_ok=True)
     except WriteConflict as exc:
+        rollback_created_files()
         return _result("init", "blocked", [Diagnostic("EPE-WRITE-CONFLICT", Severity.ERROR, str(exc))], {"created": []})
     except FileExistsError as exc:
+        rollback_created_files()
         return _result("init", "blocked", [Diagnostic("EPE-WRITE-CONFLICT", Severity.ERROR, f"初始化并发冲突: {exc}")], {"created": []})
     except OSError as exc:
+        rollback_created_files()
         return _result("init", "error", [Diagnostic("EPE-INIT-STORE", Severity.ERROR, str(exc))], {"created": created})
     return _result("init", "passed", data={"created": created})
 
