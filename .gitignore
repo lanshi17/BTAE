@@ -10,3 +10,6 @@ reports/architecture/
 reports/evaluations/
 build/
 .coverage
+.env
+.env.*
+!.env.example
