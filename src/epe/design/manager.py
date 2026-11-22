@@ -5,6 +5,7 @@ import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import unquote, urlsplit
 
 from epe.core.diagnostics import Diagnostic, Severity
 from epe.core.fingerprint import sha256_bytes, sha256_json
@@ -84,11 +85,90 @@ def validate_contract(entity: Entity, root: Path) -> tuple[dict[str, Any], list[
         if raw.get("id") != entity.id:
             return {}, [Diagnostic("EPE-CONTRACT-FIELDS", Severity.ERROR, "契约 ID 与实体 ID 不一致", entity_id=entity.id, path=entity.source.path)]
         jsonschema.Draft202012Validator.check_schema(raw["schema"])
+        reference_error = _first_schema_reference_error(raw["schema"], path, root)
+        if reference_error is not None:
+            return {}, [Diagnostic("EPE-CONTRACT-REF", Severity.ERROR, reference_error, entity_id=entity.id, path=entity.source.path)]
     except ImportError:
         return {"supported": False, "contract_id": entity.id}, [Diagnostic("EPE-CONTRACT-UNSUPPORTED", Severity.WARNING, "未安装 jsonschema，契约仅完成基础结构检查", entity_id=entity.id, path=entity.source.path)]
     except jsonschema.SchemaError as exc:
         return {}, [Diagnostic("EPE-CONTRACT-SCHEMA", Severity.ERROR, f"JSON Schema 无效: {exc.message}", entity_id=entity.id, path=entity.source.path)]
     return {"supported": True, "contract_id": entity.id, "version": raw["version"]}, []
+
+
+def _schema_pointer(value: Any, fragment: str) -> Any:
+    """Resolve a JSON Pointer fragment without evaluating a schema."""
+    if fragment in ("", "#"):
+        return value
+    if not fragment.startswith("#/"):
+        raise ValueError("Schema $ref fragment 必须是 JSON Pointer")
+    current = value
+    for token in fragment[2:].split("/"):
+        token = unquote(token).replace("~1", "/").replace("~0", "~")
+        if isinstance(current, dict) and token in current:
+            current = current[token]
+        elif isinstance(current, list) and token.isdigit() and int(token) < len(current):
+            current = current[int(token)]
+        else:
+            raise ValueError(f"Schema $ref 指向不存在的片段: {fragment}")
+    return current
+
+
+def _first_schema_reference_error(schema: Any, source_path: Path, root: Path) -> str | None:
+    """Check local, repository-relative JSON Schema references fail closed.
+
+    ``jsonschema.Draft202012Validator.check_schema`` validates the shape of a
+    schema but deliberately does not load external ``$ref`` targets. Contracts
+    are repository authority, so unresolved or remote references must be
+    rejected before a design can be considered valid.
+    """
+    visited: set[tuple[str, str]] = set()
+
+    def visit(value: Any, document: Any, document_path: Path) -> str | None:
+        if isinstance(value, dict):
+            ref = value.get("$ref")
+            if ref is not None:
+                if not isinstance(ref, str) or not ref:
+                    return "$ref 必须是非空字符串"
+                parts = urlsplit(ref)
+                if parts.scheme or parts.netloc or parts.query:
+                    return f"Schema $ref 只能引用仓库内文件，拒绝: {ref}"
+                target_text, _, fragment = ref.partition("#")
+                target_path = document_path
+                if target_text:
+                    candidate = (document_path.parent / unquote(target_text)).resolve()
+                    try:
+                        relative = candidate.relative_to(root.resolve()).as_posix()
+                        target_path = _design_source_path(root, relative)
+                    except (OSError, ValueError) as exc:
+                        return f"Schema $ref 路径无效: {ref} ({exc})"
+                    if not target_path.is_file():
+                        return f"Schema $ref 目标不存在: {ref}"
+                    try:
+                        document = json.loads(target_path.read_text(encoding="utf-8"))
+                    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+                        return f"Schema $ref 目标不是有效 JSON: {ref} ({exc})"
+                key = (str(target_path), "#" + fragment if fragment else "#")
+                if key not in visited:
+                    visited.add(key)
+                    try:
+                        target = _schema_pointer(document, "#" + fragment if fragment else "#")
+                    except ValueError as exc:
+                        return str(exc)
+                    error = visit(target, document, target_path)
+                    if error is not None:
+                        return error
+            for child in value.values():
+                error = visit(child, document, document_path)
+                if error is not None:
+                    return error
+        elif isinstance(value, list):
+            for child in value:
+                error = visit(child, document, document_path)
+                if error is not None:
+                    return error
+        return None
+
+    return visit(schema, schema, source_path.resolve())
 
 
 def validate_approval_record(record: dict[str, Any]) -> list[Diagnostic]:
