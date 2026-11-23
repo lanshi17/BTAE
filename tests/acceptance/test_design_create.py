@@ -15,7 +15,7 @@ def test_design_create_is_typed_safe_and_idempotent(tmp_path, capsys):
     assert main(["--root", str(tmp_path), "--format", "json", "design", "create", "CLASS-NEW-001"]) == 1
     assert path.read_bytes() == original
     capsys.readouterr()
-    assert main(["--root", str(tmp_path), "--format", "json", "design", "create", "UNKNOWN-001"]) == 3
+    assert main(["--root", str(tmp_path), "--format", "json", "design", "create", "UNKNOWN-001"]) == 2
     assert json.loads(capsys.readouterr().out)["status"] == "error"
 
 

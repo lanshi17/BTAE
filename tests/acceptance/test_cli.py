@@ -105,3 +105,25 @@ def test_parameter_and_path_errors_use_exit_code_two(tmp_path, capsys):
     assert main(["--root", str(valid), "--format", "json", "task", "classify", "BAD-ID"]) == 2
     result = json.loads(capsys.readouterr().out)
     assert result["diagnostics"][0]["code"] == "EPE-TASK-ID"
+
+
+def test_policy_and_task_schema_errors_use_exit_code_two(tmp_path, capsys):
+    assert main(["--root", str(tmp_path), "--format", "json", "init"]) == 0
+    capsys.readouterr()
+    policy = tmp_path / "engineering/policies/architecture.yaml"
+    policy.write_text("schema_version: 1\nforbidden_dependencies: []\nunknown: true\n", encoding="utf-8")
+    assert main(["--root", str(tmp_path), "--format", "json", "policy", "validate"]) == 2
+    result = json.loads(capsys.readouterr().out)
+    assert result["status"] == "error"
+    assert any(item["code"] == "EPE-POLICY-INVALID" for item in result["diagnostics"])
+
+    task = tmp_path / "bad-task.yaml"
+    task.write_text(
+        "schema_version: 1\nid: TASK-001\ntype: feature\nobjective: test\nacceptance: [ok]\n"
+        "risk: low\ntarget_entities: [CLASS-001]\nunknown: true\n",
+        encoding="utf-8",
+    )
+    assert main(["--root", str(tmp_path), "--format", "json", "task", "create", "--file", "bad-task.yaml"]) == 2
+    result = json.loads(capsys.readouterr().out)
+    assert result["status"] == "error"
+    assert any(item["code"] == "EPE-TASK-UNKNOWN-FIELD" for item in result["diagnostics"])

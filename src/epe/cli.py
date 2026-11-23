@@ -101,7 +101,13 @@ def _print(result: CommandResult, fmt: str) -> int:
     codes = {d.get("code") for d in obj["diagnostics"]}
     if "EPE-WRITE-CONFLICT" in codes:
         return 5
-    parameter_prefixes = ("EPE-CONFIG", "EPE-POLICY-CONFIG", "EPE-TASK-TYPE", "EPE-TASK-ID", "EPE-TASK-STATUS", "EPE-TASK-REQUIRED", "EPE-TASK-RISK", "EPE-TASK-ACCEPTANCE", "EPE-TASK-OBJECTIVE", "EPE-TASK-TARGET", "EPE-TASK-CHANGESET", "EPE-TASK-REVISION", "EPE-TASK-WORKFLOW", "EPE-PATH-OUTSIDE", "EPE-PATH-SYMLINK", "EPE-ENTITY-ID")
+    parameter_prefixes = (
+        "EPE-CONFIG", "EPE-POLICY-CONFIG", "EPE-POLICY-INVALID", "EPE-POLICY-TYPE", "EPE-POLICY-READ",
+        "EPE-POLICY-SCHEMA", "EPE-TASK-TYPE", "EPE-TASK-ID", "EPE-TASK-STATUS", "EPE-TASK-REQUIRED",
+        "EPE-TASK-RISK", "EPE-TASK-ACCEPTANCE", "EPE-TASK-OBJECTIVE", "EPE-TASK-TARGET",
+        "EPE-TASK-CHANGESET", "EPE-TASK-REVISION", "EPE-TASK-WORKFLOW", "EPE-TASK-UNKNOWN-FIELD",
+        "EPE-PATH-OUTSIDE", "EPE-PATH-SYMLINK", "EPE-ENTITY-ID", "EPE-DESIGN-ID",
+    )
     if obj["status"] == "error" and any(str(code).startswith(parameter_prefixes) for code in codes):
         return 2
     return EXIT_CODES.get(obj["status"], 3)
