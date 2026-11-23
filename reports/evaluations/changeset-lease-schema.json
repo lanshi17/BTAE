@@ -1,0 +1,50 @@
+{
+  "time_utc": "2026-11-23T17:30:14.362043+00:00",
+  "task_id": "TASK-changeset-lease-schema",
+  "git_head": "d8826ce96b3a3b94deb0a25ef73531e37f94fdb9",
+  "working_tree_dirty": true,
+  "environment": {
+    "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+    "platform": "Linux-7.0.0-43-generic-x86_64-with-glibc2.43"
+  },
+  "file_sha256": {
+    "engineering/schemas/lease.schema.json": "7185b6fdbd9a947a117eba45b746d97e09bbb24cd49d8177c0ecd141169e2ce9",
+    "src/epe/data/schemas/lease.schema.json": "7185b6fdbd9a947a117eba45b746d97e09bbb24cd49d8177c0ecd141169e2ce9",
+    "src/epe/governance/leases.py": "3661b3013854fd9bd42bd53b2bded20c4f7704a373b00ad2018c3c7539de771a",
+    "tests/unit/test_changeset_leases.py": "ac1c2296f5a7434a7a64e2e8acdf4b8b4cf78f40f9479581a0fde847900cb89f"
+  },
+  "commands": [
+    {
+      "command": "PYTHONPATH=src pytest -q tests/unit/test_changeset_leases.py tests/integration/test_changeset_lease_concurrency.py",
+      "result": "passed",
+      "details": "7 passed"
+    },
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts=''",
+      "result": "passed",
+      "details": "327 passed in 49.34s"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json policy validate",
+      "result": "passed"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json graph build",
+      "result": "passed",
+      "details": "376 nodes, 496 edges, digest 16140f26eccfa93cc2d5689375dc89b1556b418cbe4a21c401f3ac84841dc5ec"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json architecture validate",
+      "result": "passed",
+      "details": "392 imports, no violations or unknowns"
+    },
+    {
+      "command": "git diff --check",
+      "result": "passed"
+    }
+  ],
+  "contract_fact": "lease records are validated against packaged lease.schema.json before semantic time and binding checks",
+  "limitations": [
+    "Schema validation does not provide external writer protection or host isolation."
+  ]
+}
