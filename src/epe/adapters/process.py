@@ -69,7 +69,14 @@ def run_process(
     if timeout is not None and (not math.isfinite(timeout) or timeout <= 0):
         raise ValueError("timeout must be a finite positive number or None")
 
-    command = list(argv)
+    try:
+        command = list(argv)
+    except TypeError as exc:
+        raise TypeError("argv must be a sequence of strings") from exc
+    if not command or any(not isinstance(arg, str) or not arg for arg in command):
+        raise ValueError("argv must be a non-empty sequence of non-empty strings")
+    if input_data is not None and not isinstance(input_data, bytes):
+        raise TypeError("input_data must be bytes or None")
     clock = SystemClock()
     started = clock.monotonic()
     try:
@@ -84,13 +91,9 @@ def run_process(
             start_new_session=os.name == "posix",
             env=dict(env) if env is not None else None,
         )
-    except OSError as exc:
+    except (OSError, TypeError, ValueError) as exc:
         return ProcessResult(command, None, "", str(exc), clock.monotonic() - started, termination_reason="start_error")
 
-    if input_data is not None and not isinstance(input_data, bytes):
-        _signal_process_tree(proc, signal.SIGKILL)
-        proc.wait()
-        raise TypeError("input_data must be bytes or None")
     input_state = {"sent": 0, "failed": False}
     writer: threading.Thread | None = None
     if input_data is not None:

@@ -6,4 +6,8 @@
 - 验收：超过输出上限时内存保留受限且两条流均完整排空；超时/取消杀掉孙进程；正常退出与命令启动失败保持明确；Evidence 记录 stdout/stderr 截断。
 - 限制：不合作进程可通过新 session 逃逸；操作系统不可中断状态可能延迟终止；限额只限制保留内容，不限制子进程输出总字节。设计状态 draft。
 
+## 后续边界补充
+
+受控入口现在在创建子进程前拒绝空命令、空参数和非 `bytes` 的标准输入；`cwd` 不存在或 `Popen` 参数类型错误会映射为 `start_error` 事实，不再把原始启动异常冒泡到 CLI。此补充只强化本地进程端口的结构化失败语义，不扩大 POSIX 进程组或宿主隔离承诺。
+
 - 本地验证：目标测试 `PYTHONPATH=src pytest -q -o addopts='' --cov=epe.adapters.process --cov-report=term-missing tests/unit/test_process.py tests/integration/test_process_lifecycle.py tests/integration/test_evidence_snapshot_integrity.py`，20 passed，process.py 覆盖率 84%；全套 `PYTHONPATH=src pytest -q -o addopts=''`，120 passed；`git diff --check` 通过。执行记录见 `reports/evaluations/process-output-boundaries.json`。
