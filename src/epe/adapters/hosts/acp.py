@@ -8,6 +8,7 @@ import os
 import selectors
 import signal
 import subprocess
+import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -31,6 +32,7 @@ class HermesACPSession:
         self._pending = b""
         self._consumed = 0
         self._next_id = 3
+        self._write_lock = threading.Lock()
         self.session_id = ""
         self._closed = False
 
@@ -65,12 +67,23 @@ class HermesACPSession:
             raise ACPProtocolError("ACP session/prompt response is not an object")
         return result
 
+    def cancel(self) -> None:
+        """Send ACP's session/cancel notification for the current operation."""
+        if self._closed or not self.session_id:
+            raise ValueError("session is closed or has no session ID")
+        payload = {"jsonrpc": "2.0", "method": "session/cancel",
+                   "params": {"sessionId": self.session_id}}
+        with self._write_lock:
+            self._process.stdin.write((json.dumps(payload, separators=(",", ":")) + "\n").encode("utf-8"))
+            self._process.stdin.flush()
+
     def _request(self, method: str, params: dict[str, Any]) -> Any:
         request_id = self._next_id
         self._next_id += 1
         payload = {"jsonrpc": "2.0", "id": request_id, "method": method, "params": params}
-        self._process.stdin.write((json.dumps(payload, separators=(",", ":")) + "\n").encode("utf-8"))
-        self._process.stdin.flush()
+        with self._write_lock:
+            self._process.stdin.write((json.dumps(payload, separators=(",", ":")) + "\n").encode("utf-8"))
+            self._process.stdin.flush()
         while True:
             message = self._read_message()
             if "id" not in message and isinstance(message.get("method"), str):

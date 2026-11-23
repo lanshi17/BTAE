@@ -1,6 +1,7 @@
 import json
 import sys
 import time
+import threading
 from pathlib import Path
 
 import pytest
@@ -72,3 +73,24 @@ def test_prompt_is_explicit_text_only_and_returns_transport_result(tmp_path: Pat
         assert session.prompt("hello") == {"stopReason": "end_turn"}
         with pytest.raises(ValueError, match="empty"):
             session.prompt(" ")
+
+
+def test_cancel_sends_notification_and_unblocks_prompt(tmp_path: Path):
+    script = r'''
+import json,sys
+for line in sys.stdin:
+    req=json.loads(line)
+    if req["method"] == "initialize":
+        print(json.dumps({"jsonrpc":"2.0","id":req["id"],"result":{"protocolVersion":1,"agentInfo":{"name":"fixture"}}}),flush=True)
+    elif req["method"] == "session/new":
+        print(json.dumps({"jsonrpc":"2.0","id":req["id"],"result":{"sessionId":"SESSION-1"}}),flush=True)
+    elif req["method"] == "session/prompt":
+        continue
+    elif req["method"] == "session/cancel":
+        print(json.dumps({"jsonrpc":"2.0","id":3,"result":{"stopReason":"cancelled"}}),flush=True)
+'''
+    with HermesACPAdapter([sys.executable, "-c", script], tmp_path, timeout=2).open_session() as session:
+        result = []
+        worker = threading.Thread(target=lambda: result.append(session.prompt("slow")))
+        worker.start(); time.sleep(0.1); session.cancel(); worker.join(timeout=2)
+        assert result == [{"stopReason": "cancelled"}]
