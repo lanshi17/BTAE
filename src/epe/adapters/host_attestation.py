@@ -36,6 +36,11 @@ def verify_capability_attestation(capabilities: dict[str, Any], nonce: str,
         return None, "能力证明身份格式非法"
     if attestation.get("nonce") != nonce:
         return None, "能力证明 nonce 不匹配"
+    operations = capabilities.get("operations")
+    if (not isinstance(operations, list)
+            or any(not isinstance(operation, str) or not operation for operation in operations)
+            or len(set(operations)) != len(operations)):
+        return None, "能力证明操作字段无效"
     signature = attestation.get("signature")
     if (not isinstance(signature, str)
             or not signature.startswith("-----BEGIN SSH SIGNATURE-----\n")
@@ -53,6 +58,8 @@ def verify_capability_attestation(capabilities: dict[str, Any], nonce: str,
     if (not isinstance(allowed_operations, list) or not allowed_operations
             or any(not isinstance(operation, str) or not operation for operation in allowed_operations)):
         return None, "能力证明身份缺少允许操作配置"
+    if not set(operations).issubset(set(allowed_operations)):
+        return None, "能力证明操作超出受信范围"
     try:
         with tempfile.TemporaryDirectory(prefix="epe-host-attestation-") as directory:
             allowed = Path(directory) / "allowed_signers"
