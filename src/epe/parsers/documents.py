@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -46,6 +47,37 @@ def _construct_mapping(loader: StrictLoader, node: yaml.nodes.MappingNode, deep:
 
 
 StrictLoader.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _construct_mapping)
+
+
+class _DuplicateJSONKey(ValueError):
+    pass
+
+
+def _json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    value: dict[str, Any] = {}
+    for key, item in pairs:
+        if key in value:
+            raise _DuplicateJSONKey(f"duplicate JSON object key: {key}")
+        value[key] = item
+    return value
+
+
+def _reject_json_constant(value: str):
+    raise ValueError(f"non-standard JSON numeric constant: {value}")
+
+
+def parse_json_bytes(data: bytes, path: str = "<memory>") -> tuple[Any | None, list[Diagnostic]]:
+    """Parse strict UTF-8 JSON, rejecting duplicate keys and NaN/Infinity."""
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        return None, [Diagnostic("EPE-JSON-ENCODING", Severity.ERROR, f"JSON 必须为 UTF-8: {exc}", path=path)]
+    try:
+        return json.loads(text, object_pairs_hook=_json_object, parse_constant=_reject_json_constant), []
+    except json.JSONDecodeError as exc:
+        return None, [Diagnostic("EPE-JSON-PARSE", Severity.ERROR, str(exc), path=path, line=exc.lineno)]
+    except (ValueError, TypeError) as exc:
+        return None, [Diagnostic("EPE-JSON-PARSE", Severity.ERROR, str(exc), path=path)]
 
 
 def parse_yaml_bytes(data: bytes, path: str = "<memory>") -> tuple[Any | None, list[Diagnostic]]:
@@ -124,6 +156,7 @@ def discover_documents(root: Path, roots: Iterable[str] = ("docs",), extensions:
             if path.suffix.lower() in {".md", ".markdown"}:
                 results.append(parse_markdown(data, rel))
             else:
-                value, ds = parse_yaml_bytes(data, rel)
+                value, ds = (parse_json_bytes(data, rel) if path.suffix.lower() == ".json"
+                             else parse_yaml_bytes(data, rel))
                 results.append(DocumentParseResult(rel, value if isinstance(value, dict) else None, "", ds, isinstance(value, dict) and "id" in value))
     return results
