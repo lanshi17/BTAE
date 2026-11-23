@@ -30,6 +30,8 @@ PYTHONPATH=src pytest -q
 
 多 Agent 开始修改前可运行 `epe changeset conflicts` 查询 planned/active ChangeSet 的潜在范围重叠；该命令只报告保守候选，不提供锁或宿主隔离。
 
+遵守 EPE 协议的参与者可用 `epe changeset lease acquire|renew|release|inspect` 管理短期本地租约；租约过期可恢复，但不构成操作系统或宿主写入隔离。
+
 缺少设计时可运行 `epe design create CLASS-001`（或其他已支持实体前缀）生成草案模板；命令不会覆盖已有文件。契约设计使用 `CONTRACT-` 前缀和 YAML Schema 字段，审批必须使用配置的受信 SSH 公钥签名。
 
 任务可用 `epe task transition TASK-001 activate|complete|abort` 进行受约束的生命周期迁移；bugfix/refactor/exploration 分别需要复现、基线或假设字段。完成时系统重新执行只读综合门禁，不接受调用者自报通过结果。

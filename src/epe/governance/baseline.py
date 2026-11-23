@@ -31,7 +31,8 @@ def changeset_declaration(changeset: dict[str, Any]) -> dict[str, Any]:
 
 def _audit_exclusions(root: Path, config: dict[str, Any], changeset_id: str) -> set[str]:
     change, baseline = changeset_paths(root, config, changeset_id)
-    paths = {change.relative_to(root).as_posix(), baseline.relative_to(root).as_posix(), "reports"}
+    lease = change.with_name(change.stem + ".lease.json")
+    paths = {change.relative_to(root).as_posix(), baseline.relative_to(root).as_posix(), lease.relative_to(root).as_posix(), "reports"}
     evidence = (root / config.get("storage", {}).get("evidence", "engineering/evidence")).resolve()
     paths.add(evidence.relative_to(root.resolve()).as_posix())
     audit = (root / config.get("storage", {}).get("audit", "engineering/audit/events.jsonl")).resolve()

@@ -1,0 +1,66 @@
+{
+  "time_utc": "2026-11-23T16:10:16.211646+00:00",
+  "task_id": "TASK-changeset-lease",
+  "git_head": "845a4b17c8ef7e14ad047eb9f5a2ef5759866462",
+  "working_tree_dirty": true,
+  "environment": {
+    "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+    "platform": "Linux-7.0.0-43-generic-x86_64-with-glibc2.43"
+  },
+  "file_sha256": {
+    "src/epe/governance/leases.py": "aecce6f92e7077415c2987994a1b9226e97015d0a8ffb8a459821343a5310d40",
+    "src/epe/governance/baseline.py": "4460bd83e60143d83326c850a847821394cf66a92ead27e164a8a5609de29041",
+    "src/epe/cli.py": "051e90dd34d98bc2e7af9e5cf4240fff28607c38d4edc5a500a7e07ff8fc0388",
+    "tests/unit/test_changeset_leases.py": "bb0affbe8bb8bebc3ff98e6162bd786dd236214201e7af548c310c6164af9d87",
+    "tests/acceptance/test_changeset_lease_cli.py": "43acf311d38a0d811f7b3cf576419ce48a0066e348005dc3289e418c5c05fc63",
+    "tests/integration/test_changeset_baseline.py": "a91327f137f5006f1416284b81ceb00e9f33bddeb339eea29807d3186f5db468",
+    "plans/active/TASK-changeset-lease.md": "6f44136430704f9d6b41f90a150452bf0c20cd7112102a9adda1db32354d4edc",
+    "docs/modules/governance/README.md": "73b04c41c9be52b5b87487415b54c511c304edca81c57f8643da3739843814c6",
+    "README.md": "5da776b23e9b2c779b17caba372c90243c56725811a21c63deacef0184ba43e7"
+  },
+  "commands": [
+    {
+      "command": "PYTHONPATH=src pytest -q tests/unit/test_changeset_leases.py tests/acceptance/test_changeset_lease_cli.py tests/integration/test_changeset_baseline.py",
+      "result": "passed",
+      "details": "17 passed"
+    },
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts=''",
+      "result": "passed",
+      "details": "323 passed in 48.08s"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json policy validate",
+      "result": "passed"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json graph build",
+      "result": "passed",
+      "details": "376 nodes, 490 edges, digest f8eab68f22bd63b9c9fc3a4b37e8e1d871e122db6a45f091695e74e89aab5f96"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json architecture validate",
+      "result": "passed",
+      "details": "388 imports, no violations or unknowns"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json changeset conflicts",
+      "result": "passed",
+      "details": "0 current changesets, no conflicts"
+    },
+    {
+      "command": "git diff --check",
+      "result": "passed"
+    }
+  ],
+  "security_properties": [
+    "lease acquisition uses EPE write lock plus exclusive file creation",
+    "renew/release bind owner, lease ID and ChangeSet revision",
+    "expired lease recovery is explicit and TTL bounded",
+    "lease records are excluded from their own ChangeSet baseline"
+  ],
+  "limitations": [
+    "External writers can ignore or alter lease records; no OS write isolation or identity authentication.",
+    "Wall-clock anomalies, machine restarts and cross-machine coordination are not solved."
+  ]
+}

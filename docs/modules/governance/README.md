@@ -69,6 +69,8 @@ ChangeSet 生命周期通过 `changeset transition` 迁移：planned → active 
 
 范围检查包含新增、修改、删除、移动前后路径和符号链接解析结果。`epe changeset conflicts` 只读扫描 `planned/active` ChangeSet 的 `write_scope` 与 `protected` glob，报告潜在 write/write 和 write/protected 重叠，供多 Agent 在开始修改前协调。重叠声明只产生保守冲突事实，MVP 不声称给多个 Agent 上了实体锁；结果不能证明实际写入、身份、租约或宿主隔离。V1.0 引入锁时再定义租约、续期、恢复和依赖契约版本协调。
 
+`epe changeset lease acquire|renew|release|inspect` 提供 EPE 参与者之间的短期本地租约。获取要求 active ChangeSet 和 owner 匹配；TTL 到期后可回收，revision 变化或身份不匹配时续期/释放阻断。租约只约束遵守 EPE 文件的进程，不限制外部编辑器、宿主或操作系统写入。
+
 `epe changeset create --file PATH` 将当前仓库内容登记为基线并写入审计目录；完成门禁将当前路径和摘要与该基线比较，保护范围优先。基线摘要覆盖 ChangeSet 声明以及排序后的路径、内容摘要与类型，声明变化须重新建立基线。Git 内部、虚拟环境、缓存、派生索引、报告和 Evidence 目录不纳入此比较；目录链接或越界链接产生故障，文件链接的目标内容也参与摘要。这是检查能力，不是防止并发写入的锁或完整的宿主隔离。
 
 配置的审计事件文件也排除在范围比较之外，以免正常记录验证事件造成自触发的越界；对于旧基线中已记录的该文件，比较时同样排除，基线原始摘要保持不变。审计文件的完整性由审计校验承担。

@@ -236,3 +236,14 @@ def test_aborted_changeset_cannot_satisfy_task_check(tmp_path, capsys):
     assert main(base + ["changeset", "transition", "CHANGE-001", "abort"]) == 0; capsys.readouterr()
     assert main(base + ["check", "--task", "TASK-001"]) != 0
     assert any(d["code"] == "EPE-SCOPE-BASELINE" for d in json.loads(capsys.readouterr().out)["diagnostics"])
+
+
+def test_active_lease_record_is_excluded_from_changeset_scope(tmp_path, capsys):
+    setup_project(tmp_path, capsys)
+    base = ["--root", str(tmp_path), "--format", "json"]
+    assert main(base + ["changeset", "create", "--file", "change.yaml"]) == 0
+    capsys.readouterr()
+    lease = tmp_path / "engineering/changesets/CHANGE-001.lease.json"
+    lease.write_text(json.dumps({"schema_version": 1, "lease_id": "fixture"}))
+    changeset = json.loads((tmp_path / "engineering/changesets/CHANGE-001.json").read_text())
+    assert compare_baseline(tmp_path, {}, changeset) == []
