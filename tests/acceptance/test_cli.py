@@ -127,3 +127,21 @@ def test_policy_and_task_schema_errors_use_exit_code_two(tmp_path, capsys):
     result = json.loads(capsys.readouterr().out)
     assert result["status"] == "error"
     assert any(item["code"] == "EPE-TASK-UNKNOWN-FIELD" for item in result["diagnostics"])
+
+    task = tmp_path / "valid-task.yaml"
+    task.write_text(
+        "schema_version: 1\nid: TASK-VERIFY\ntype: feature\nobjective: test\nacceptance: [ok]\n"
+        "risk: low\ntarget_entities: [CLASS-001]\n",
+        encoding="utf-8",
+    )
+    assert main(["--root", str(tmp_path), "--format", "json", "task", "create", "--file", "valid-task.yaml"]) == 0
+    capsys.readouterr()
+    verification = tmp_path / "engineering/policies/verification.yaml"
+    verification.write_text(
+        "schema_version: 1\nchecks:\n  - id: bad-timeout\n    command: [python, -c, pass]\n    timeout: invalid\n",
+        encoding="utf-8",
+    )
+    assert main(["--root", str(tmp_path), "--format", "json", "verify", "TASK-VERIFY"]) == 2
+    result = json.loads(capsys.readouterr().out)
+    assert result["status"] == "error"
+    assert any(item["code"] == "EPE-VERIFY-CONFIG" for item in result["diagnostics"])

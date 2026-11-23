@@ -106,6 +106,7 @@ def _print(result: CommandResult, fmt: str) -> int:
         "EPE-POLICY-SCHEMA", "EPE-TASK-TYPE", "EPE-TASK-ID", "EPE-TASK-STATUS", "EPE-TASK-REQUIRED",
         "EPE-TASK-RISK", "EPE-TASK-ACCEPTANCE", "EPE-TASK-OBJECTIVE", "EPE-TASK-TARGET",
         "EPE-TASK-CHANGESET", "EPE-TASK-REVISION", "EPE-TASK-WORKFLOW", "EPE-TASK-UNKNOWN-FIELD",
+        "EPE-VERIFY-CONFIG", "EPE-VERIFY-NO-CHECKS",
         "EPE-PATH-OUTSIDE", "EPE-PATH-SYMLINK", "EPE-ENTITY-ID", "EPE-DESIGN-ID",
     )
     if obj["status"] == "error" and any(str(code).startswith(parameter_prefixes) for code in codes):
