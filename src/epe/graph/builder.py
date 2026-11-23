@@ -13,6 +13,7 @@ from typing import Any, Iterable
 from epe.adapters.storage import atomic_write_json, acquire_write_lock, WriteConflict
 from epe.core.diagnostics import Diagnostic, Severity
 from epe.core.fingerprint import sha256_json, build_manifest
+from epe.core.json_codec import strict_json_loads
 from epe.core.models import Relation
 from epe.core.registry import Registry
 from epe.parsers.python import CodeParseResult, SymbolRecord, ImportFact, parse_python, parse_python_tree
@@ -215,8 +216,8 @@ def build_graph(root: Path, registry: Registry, code_results: Iterable[CodeParse
             atomic_write_json(temporary / "graph.json", content)
             if final.exists():
                 try:
-                    existing_graph = json.loads((final / "graph.json").read_text(encoding="utf-8"))
-                    existing_entities = json.loads((final / "entities.json").read_text(encoding="utf-8"))
+                    existing_graph = strict_json_loads((final / "graph.json").read_text(encoding="utf-8"))
+                    existing_entities = strict_json_loads((final / "entities.json").read_text(encoding="utf-8"))
                 except (OSError, ValueError) as exc:
                     raise ValueError("已有 generation 无法读取") from exc
                 if existing_graph != content or existing_entities != registry.to_dict():
@@ -359,7 +360,7 @@ def load_graph(root: Path, config: dict[str, Any]) -> tuple[dict[str, Any] | Non
     generation = None
     if pointer.exists():
         try:
-            marker = json.loads(pointer.read_text(encoding="utf-8"))
+            marker = strict_json_loads(pointer.read_text(encoding="utf-8"))
             generation = marker.get("generation")
             if marker.get("schema_version") != 1 or not isinstance(generation, str) or re.fullmatch(r"[0-9a-f]{64}", generation) is None or generation != marker.get("content_digest"):
                 return None, [Diagnostic("EPE-GRAPH-POINTER", Severity.ERROR, "当前图指针无效", path=str(pointer.relative_to(root)))]
@@ -368,7 +369,7 @@ def load_graph(root: Path, config: dict[str, Any]) -> tuple[dict[str, Any] | Non
             return None, [Diagnostic("EPE-GRAPH-POINTER", Severity.ERROR, str(exc), path=str(pointer.relative_to(root)))]
     if not path.exists(): return None, [Diagnostic("EPE-GRAPH-MISSING", Severity.ERROR, "图快照不存在，请运行 epe graph build", path=str(path.relative_to(root)))]
     try:
-        snapshot = json.loads(path.read_text(encoding="utf-8"))
+        snapshot = strict_json_loads(path.read_text(encoding="utf-8"))
         if not isinstance(snapshot, dict) or snapshot.get("complete") is not True:
             return None, [Diagnostic("EPE-GRAPH-INCOMPLETE", Severity.ERROR, "图快照不完整", path=str(path.relative_to(root)))]
         content = {k: v for k, v in snapshot.items() if k != "content_digest"}
@@ -394,7 +395,7 @@ def load_historical_graph(root: Path, config: dict[str, Any], generation: str) -
     path = base / generation / "graph.json"
     try:
         path.resolve().relative_to(base)
-        snapshot = json.loads(path.read_text(encoding="utf-8"))
+        snapshot = strict_json_loads(path.read_text(encoding="utf-8"))
         if (not isinstance(snapshot, dict) or snapshot.get("schema_version") != 1
                 or snapshot.get("complete") is not True or not isinstance(snapshot.get("nodes"), list)
                 or not isinstance(snapshot.get("edges"), list) or not isinstance(snapshot.get("diagnostics"), list)

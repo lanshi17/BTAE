@@ -110,7 +110,7 @@ def _normalize_result(result: CommandResult) -> dict[str, Any]:
     try:
         obj = result.to_dict()
         import jsonschema
-        schema = json.loads(files("epe.data.schemas").joinpath("command-result.schema.json").read_text(encoding="utf-8"))
+        schema = strict_json_loads(files("epe.data.schemas").joinpath("command-result.schema.json").read_text(encoding="utf-8"))
         jsonschema.Draft202012Validator(schema).validate(obj)
         json.dumps(obj, ensure_ascii=False, sort_keys=True)
         return obj

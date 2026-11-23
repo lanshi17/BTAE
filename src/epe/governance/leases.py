@@ -97,7 +97,7 @@ def _read(path: Path) -> dict[str, Any]:
         raise LeaseError("租约记录不可读或 JSON 无效") from exc
     try:
         import jsonschema
-        schema = json.loads(files("epe.data.schemas").joinpath("lease.schema.json").read_text(encoding="utf-8"))
+        schema = strict_json_loads(files("epe.data.schemas").joinpath("lease.schema.json").read_text(encoding="utf-8"))
         errors = list(jsonschema.Draft202012Validator(schema).iter_errors(value))
     except (OSError, ValueError, ImportError) as exc:
         raise LeaseError("租约 Schema 不可用") from exc

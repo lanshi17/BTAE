@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from .diagnostics import Diagnostic, Severity
+from .json_codec import strict_json_loads
 
 
 def validate_policy_document(root: Path, raw: Any, kind: str, path: str) -> list[Diagnostic]:
@@ -14,9 +15,9 @@ def validate_policy_document(root: Path, raw: Any, kind: str, path: str) -> list
         import jsonschema
         schema_path = root / "engineering/schemas/policy.schema.json"
         try:
-            schema = json.loads(schema_path.read_text(encoding="utf-8"))
+            schema = strict_json_loads(schema_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
-            schema = json.loads(files("epe.data.schemas").joinpath("policy.schema.json").read_text(encoding="utf-8"))
+            schema = strict_json_loads(files("epe.data.schemas").joinpath("policy.schema.json").read_text(encoding="utf-8"))
     except (ImportError, OSError, json.JSONDecodeError) as exc:
         return [Diagnostic("EPE-POLICY-SCHEMA", Severity.ERROR, f"策略 Schema 不可用: {exc}", path=path)]
     if not isinstance(raw, dict):

@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from epe.core.diagnostics import Diagnostic, Severity
+from epe.core.json_codec import strict_json_loads
 from epe.parsers.documents import parse_yaml_bytes
 from epe.core.policy import validate_policy_document
 
@@ -63,7 +64,7 @@ def load_workflow_requirements(root: Path, workflow_type: str) -> tuple[tuple[st
         return None, [Diagnostic("EPE-WORKFLOW-TYPE", Severity.ERROR, "Workflow 必须为对象", path=relative)]
     try:
         import jsonschema
-        schema = json.loads(files("epe.data.schemas").joinpath("workflow.schema.json").read_text(encoding="utf-8"))
+        schema = strict_json_loads(files("epe.data.schemas").joinpath("workflow.schema.json").read_text(encoding="utf-8"))
     except (ImportError, OSError, json.JSONDecodeError) as exc:
         return None, [Diagnostic("EPE-WORKFLOW-SCHEMA", Severity.ERROR, f"无法读取 Workflow Schema: {exc}", path=relative)]
     errors = sorted(jsonschema.Draft202012Validator(schema).iter_errors(raw), key=lambda error: (tuple(str(p) for p in error.path), error.message))
@@ -90,9 +91,9 @@ def validate_policy_files(root: Path, config: dict[str, Any]) -> tuple[dict[str,
         if package_schema_dir.exists(): schema_dir = package_schema_dir
     def load_schema(name: str) -> dict[str, Any] | None:
         schema_path = schema_dir / name
-        try: return json.loads(schema_path.read_text(encoding="utf-8"))
+        try: return strict_json_loads(schema_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
-            try: return json.loads(files("epe.data.schemas").joinpath(name).read_text(encoding="utf-8"))
+            try: return strict_json_loads(files("epe.data.schemas").joinpath(name).read_text(encoding="utf-8"))
             except (OSError, json.JSONDecodeError, ModuleNotFoundError):
                 diagnostics.append(Diagnostic("EPE-POLICY-SCHEMA", Severity.ERROR, f"无法读取 Schema: {name}", path=str(schema_path)))
                 return None
