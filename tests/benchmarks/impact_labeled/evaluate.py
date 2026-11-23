@@ -19,14 +19,21 @@ CLASSIFICATIONS = ("determined", "candidate")
 
 
 def _metrics(expected: set[str], actual: set[str]) -> dict[str, Any]:
-    true_positive = len(expected & actual)
-    false_positive = len(actual - expected)
-    false_negative = len(expected - actual)
+    return _from_counts({"true_positive": len(expected & actual),
+                         "false_positive": len(actual - expected),
+                         "false_negative": len(expected - actual)})
+
+
+def _from_counts(counts: Mapping[str, int]) -> dict[str, Any]:
+    true_positive = counts["true_positive"]
+    false_positive = counts["false_positive"]
+    false_negative = counts["false_negative"]
     precision_denominator = true_positive + false_positive
     recall_denominator = true_positive + false_negative
     precision = (true_positive / precision_denominator) if precision_denominator else None
     recall = (true_positive / recall_denominator) if recall_denominator else None
-    f1 = (2 * precision * recall / (precision + recall)) if precision is not None and recall is not None and precision + recall else None
+    f1_denominator = 2 * true_positive + false_positive + false_negative
+    f1 = 2 * true_positive / f1_denominator if f1_denominator else None
     return {
         "true_positive": true_positive,
         "false_positive": false_positive,
@@ -55,13 +62,6 @@ def score_case(expected: Mapping[str, str], actual: Mapping[str, str]) -> dict[s
 def _add_counts(target: dict[str, int], metrics: Mapping[str, Any]) -> None:
     for field in ("true_positive", "false_positive", "false_negative"):
         target[field] += int(metrics[field])
-
-
-def _from_counts(counts: Mapping[str, int]) -> dict[str, Any]:
-    return _metrics(
-        set(range(counts["true_positive"] + counts["false_negative"])),
-        set(range(counts["true_positive"] + counts["false_positive"])),
-    ) | {field: counts[field] for field in ("true_positive", "false_positive", "false_negative")}
 
 
 def evaluate_cases(cases: Iterable[Mapping[str, Any]], analyzer: Callable[..., Mapping[str, Any]] = analyze_impact) -> dict[str, Any]:

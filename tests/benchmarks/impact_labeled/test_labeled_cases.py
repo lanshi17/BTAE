@@ -39,3 +39,16 @@ def test_score_case_exposes_false_positive_and_negative_counts():
         "f1": 2 / 3,
     }
     assert result["by_classification"]["determined"]["recall"] == 0.0
+
+
+def test_aggregate_counts_do_not_turn_false_positives_and_negatives_into_hits():
+    cases = [{"name": "mismatch", "nodes": [], "edges": [], "changed": [],
+              "expected": {"CLASS-A": "determined"}}]
+    result = evaluate_cases(cases, analyzer=lambda graph, changed: {
+        "impacts": [{"entity_id": "CLASS-B", "classification": "determined"}],
+        "incomplete": False,
+    })
+    overall = result["aggregate"]["overall"]
+    assert (overall["true_positive"], overall["false_positive"], overall["false_negative"]) == (0, 1, 1)
+    assert (overall["precision"], overall["recall"], overall["f1"]) == (0.0, 0.0, 0.0)
+    assert result["aggregate"]["by_classification"]["determined"] == overall
