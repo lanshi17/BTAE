@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "task_id": "TASK-architecture-adr-exceptions",
-  "time_utc": "2026-11-23T22:49:26.063931Z",
-  "git_head": "10718706330f49dce5ec99100a1e76b0b0648d39",
+  "time_utc": "2026-11-23T22:54:10.894450Z",
+  "git_head": "487324df754df72d9af426143d8da2460e159b48",
   "spec_approval": "not obtained (autonomous run)",
   "environment": {
     "python": "3.14.4",
@@ -12,7 +12,7 @@
     "README.md": "1dc37eb34f9ab4ea48cbc7e205343d77a72baba5d1350df1c92919b2d2795b9b",
     "docs/modules/verification/README.md": "77343ab1803dffcb926ce37023100051870674155a4019cdc957d067618ede9b",
     "plans/active/TASK-architecture-adr-exceptions.md": "ed1383fb9a6f51e654213845464c077c611ddead32bc979ec8f9636c9908be8e",
-    "plans/active/TASK-cli-exit-mapping.md": "1de4f113ed7172b8ccd3265e6e71fb00ba38fd6d26c7c2ac63dd5802b2a6edce",
+    "plans/active/TASK-cli-exit-mapping.md": "3a9214f5b6187f33ca5d671efae75ffec1f4dba714d2772f0ff178a208fd4a7f",
     "plans/active/TASK-host-capability-attestation.md": "09488b2e5adcb7250183eeb57ea57946badd0d7e727aae177db07c20068ac4b2",
     "src/epe/cli.py": "5539a9aadaa19eecf13a10cf13b21bd3d0444f897a0bfd2060f5b395d7803e0f",
     "src/epe/verification/architecture.py": "7f95372a2b07fcbb381b3127392da6c37818d3e009fb486d5f82368989aea83b",
@@ -78,6 +78,11 @@
     {
       "behavior": "invalid ChangeSet IDs in transition and lease commands return exit code 2",
       "test": "tests/acceptance/test_cli.py::test_policy_and_task_schema_errors_use_exit_code_two",
+      "result": "passed"
+    },
+    {
+      "behavior": "init symlink safety remains an explicit blocked/1 conflict while direct parameter/configuration errors use 2",
+      "test": "tests/acceptance/test_cli.py::test_init_rejects_target_and_parent_symlinks_without_writing",
       "result": "passed"
     }
   ],
