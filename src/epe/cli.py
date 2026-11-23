@@ -7,6 +7,7 @@ import re
 import subprocess
 import sys
 from datetime import datetime, timezone
+from fnmatch import fnmatch
 from importlib.resources import files
 from pathlib import Path
 from typing import Any, Callable
@@ -743,7 +744,7 @@ def cmd_architecture(args) -> CommandResult:
     snap, sds = load_graph(root, config)
     if snap is None: return _result("architecture validate", "error", sds)
     data, ds = _check_architecture_policy(root, config, snap)
-    return _result("architecture validate", "error" if any(d.code.startswith(("EPE-ARCH-POLICY", "EPE-YAML")) for d in ds) else ("blocked" if any(d.is_error for d in ds) else "passed"), sds + ds, data)
+    return _result("architecture validate", "error" if any(d.code.startswith(("EPE-ARCH-POLICY", "EPE-ARCH-EXCEPTION", "EPE-YAML")) for d in ds) else ("blocked" if any(d.is_error for d in ds) else "passed"), sds + ds, data)
 
 
 def cmd_architecture_diff(args) -> CommandResult:
@@ -762,6 +763,7 @@ def cmd_architecture_diff(args) -> CommandResult:
         "violations": expected_report.get("violations", []),
         "unknowns": expected_report.get("unknowns", []),
         "module_coverage": expected_report.get("module_coverage"),
+        "exceptions_applied": expected_report.get("exceptions_applied", []),
     }
     diagnostics = previous_diagnostics + policy_diagnostics
     if any(d.is_error for d in policy_diagnostics):
@@ -788,7 +790,7 @@ def _check_architecture_policy(root: Path, config: dict[str, Any], snap: dict) -
             or any(not isinstance(rule, dict) or not isinstance(rule.get("from"), str) or not rule["from"].strip()
                    or not isinstance(rule.get("to"), str) or not rule["to"].strip() for rule in policy.get("forbidden_dependencies", []))):
         return {}, [Diagnostic("EPE-ARCH-POLICY", Severity.ERROR, "架构策略缺少有效 forbidden_dependencies 规则")]
-    valid_exceptions, exception_diagnostics = _effective_architecture_exceptions(root, config, policy)
+    valid_exceptions, exception_diagnostics = _effective_architecture_exceptions(root, config, policy, snap)
     if any(d.is_error for d in exception_diagnostics):
         return {}, exception_diagnostics
     report, diagnostics = validate_architecture(snap, policy, valid_exceptions)
@@ -800,7 +802,7 @@ def _check_architecture_policy(root: Path, config: dict[str, Any], snap: dict) -
     return report, diagnostics
 
 
-def _effective_architecture_exceptions(root: Path, config: dict[str, Any], policy: dict[str, Any]) -> tuple[list[dict[str, Any]], list[Diagnostic]]:
+def _effective_architecture_exceptions(root: Path, config: dict[str, Any], policy: dict[str, Any], snapshot: dict[str, Any]) -> tuple[list[dict[str, Any]], list[Diagnostic]]:
     """Resolve only current, approved ADR-backed architecture exceptions."""
     exceptions = policy.get("exceptions", []) or []
     if not exceptions:
@@ -834,6 +836,21 @@ def _effective_architecture_exceptions(root: Path, config: dict[str, Any], polic
             continue
         if expires <= now:
             diagnostics.append(Diagnostic("EPE-ARCH-EXCEPTION", Severity.ERROR, f"例外已过期: {exception.get('id')}"))
+            continue
+        rule = next((candidate for candidate in policy.get("forbidden_dependencies", [])
+                     if isinstance(candidate, dict)
+                     and candidate.get("id", "ARCH-FORBIDDEN") == rule_id), None)
+        if rule is None:
+            continue
+        if not any(
+            edge.get("relation") == "depends_on"
+            and fnmatch(str(edge.get("from", "")), str(rule.get("from", "")))
+            and fnmatch(str(edge.get("to", "")), str(rule.get("to", "")))
+            and fnmatch(str(edge.get("from", "")), str(exception.get("from", "")))
+            and fnmatch(str(edge.get("to", "")), str(exception.get("to", "")))
+            for edge in snapshot.get("edges", [])
+            if isinstance(edge, dict)
+        ):
             continue
         valid.append(exception)
     return valid, diagnostics
@@ -997,7 +1014,12 @@ def cmd_check(args) -> CommandResult:
     evidence_ds += _check_evidence_audit(root, config, task_id, evidences)
     status, gate_ds = finalize_gate(task, design_ok, mapping_ok, arch_ok, evidences, scope_ok, required_checks)
     all_ds = tds + built.diagnostics + design_ds + pds + map_ds + gds + arch_ds + scope_ds + policy_ds + evidence_ds + gate_ds
-    if any(d.is_error for d in tds + gds + policy_ds + evidence_ds): status = "error"
+    architecture_configuration_error = any(
+        d.is_error and d.code.startswith(("EPE-ARCH-POLICY", "EPE-ARCH-EXCEPTION", "EPE-YAML"))
+        for d in arch_ds
+    )
+    if any(d.is_error for d in tds + gds + policy_ds + evidence_ds) or architecture_configuration_error:
+        status = "error"
     return _result("check", status, all_ds, {"task_id": task_id, "design_ok": design_ok, "mapping_ok": mapping_ok, "architecture_ok": arch_ok, "evidence": evidences}, [e["id"] for e in evidences])
 
 

@@ -96,6 +96,84 @@ def test_cli_architecture_exception_requires_approved_adr_and_review_deadline(tm
     assert main(["--root", str(tmp_path), "--format", "json", "architecture", "validate"]) == 0
     result = json.loads(capsys.readouterr().out)
     assert result["status"] == "passed"
+    assert [item["id"] for item in result["data"]["exceptions_applied"]] == ["EX-1"]
+
+    policy_data = yaml.safe_load(policy.read_text(encoding="utf-8"))
+    policy_data["exceptions"][0]["review_until"] = "not-a-timestamp"
+    policy.write_text(yaml.safe_dump(policy_data), encoding="utf-8")
+    assert main(["--root", str(tmp_path), "--format", "json", "architecture", "validate"]) == 3
+    invalid = json.loads(capsys.readouterr().out)
+    assert invalid["status"] == "error"
+    assert any(item["code"] == "EPE-ARCH-EXCEPTION" for item in invalid["diagnostics"])
+
+
+def test_cli_architecture_exception_scope_only_reports_exceptions_that_apply(tmp_path, capsys):
+    import json
+    import yaml
+    from epe.cli import main
+
+    assert main(["--root", str(tmp_path), "--format", "json", "init"]) == 0
+    capsys.readouterr()
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src/a.py").write_text("import b\n", encoding="utf-8")
+    (tmp_path / "src/b.py").write_text("value = 1\n", encoding="utf-8")
+    adr_dir = tmp_path / "docs/architecture/decisions"
+    adr_dir.mkdir(parents=True)
+    (adr_dir / "ADR-1.md").write_text(
+        "---\nid: ADR-1\ntype: ADR\nname: exception\ndesign_status: approved\n---\n",
+        encoding="utf-8",
+    )
+    policy = tmp_path / "engineering/policies/architecture.yaml"
+    policy.write_text(yaml.safe_dump({
+        "schema_version": 1,
+        "forbidden_dependencies": [{"id": "R1", "from": "SRC-src/a.py", "to": "SRC-src/b.py"}],
+        "exceptions": [{
+            "id": "EX-1", "rule_id": "R1", "adr": "ADR-1",
+            "from": "SRC-src/other.py", "to": "SRC-src/b.py",
+            "review_until": "2099-01-01T00:00:00Z",
+        }],
+    }), encoding="utf-8")
+    assert main(["--root", str(tmp_path), "--format", "json", "graph", "build"]) == 0
+    capsys.readouterr()
+    assert main(["--root", str(tmp_path), "--format", "json", "architecture", "validate"]) == 1
+    result = json.loads(capsys.readouterr().out)
+    assert result["data"]["status"] == "fail"
+    assert result["data"]["exceptions_applied"] == []
+    assert any(item["rule"] == "R1" for item in result["data"]["violations"])
+
+
+def test_cli_architecture_exception_with_unapproved_adr_is_configuration_error(tmp_path, capsys):
+    import json
+    import yaml
+    from epe.cli import main
+
+    assert main(["--root", str(tmp_path), "--format", "json", "init"]) == 0
+    capsys.readouterr()
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src/a.py").write_text("import b\n", encoding="utf-8")
+    (tmp_path / "src/b.py").write_text("value = 1\n", encoding="utf-8")
+    adr_dir = tmp_path / "docs/architecture/decisions"
+    adr_dir.mkdir(parents=True)
+    (adr_dir / "ADR-1.md").write_text(
+        "---\nid: ADR-1\ntype: ADR\nname: exception\ndesign_status: reviewed\n---\n",
+        encoding="utf-8",
+    )
+    policy = tmp_path / "engineering/policies/architecture.yaml"
+    policy.write_text(yaml.safe_dump({
+        "schema_version": 1,
+        "forbidden_dependencies": [{"id": "R1", "from": "SRC-src/a.py", "to": "SRC-src/b.py"}],
+        "exceptions": [{
+            "id": "EX-1", "rule_id": "R1", "adr": "ADR-1",
+            "from": "SRC-src/a.py", "to": "SRC-src/b.py",
+            "review_until": "2099-01-01T00:00:00Z",
+        }],
+    }), encoding="utf-8")
+    assert main(["--root", str(tmp_path), "--format", "json", "graph", "build"]) == 0
+    capsys.readouterr()
+    assert main(["--root", str(tmp_path), "--format", "json", "architecture", "validate"]) == 3
+    result = json.loads(capsys.readouterr().out)
+    assert result["status"] == "error"
+    assert any(item["code"] == "EPE-ARCH-EXCEPTION" for item in result["diagnostics"])
 
 
 def test_cli_unknown_module_coverage_and_explicit_policy(tmp_path):

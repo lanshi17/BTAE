@@ -45,6 +45,8 @@ PYTHONPATH=src pytest -q
 
 可用 `epe policy validate` 在运行任务前统一检查架构、验证和 Workflow 配置。
 
+架构策略的 `exceptions` 只能引用注册快照中 `design_status: approved` 且仍在复查期限内的 `ADR-*` 实体，并同时匹配规则 ID 与当前依赖边的 `from`/`to` 范围。范围未命中的例外不会出现在 `exceptions_applied`，原规则继续生效；ADR 状态、复查时间或策略结构无效时命令返回 `error`。`epe architecture diff` 会在 `expected_architecture` 中保留同一份应用记录。
+
 也可以在虚拟环境中执行 `pip install -e .`，随后直接使用 `epe` 命令。`epe init` 只创建缺失的治理配置，发现内容冲突会在写入前返回 `blocked`，不会覆盖既有文件。
 
 运行时策略 Schema 已随 wheel 包发布，因此安装后的 `epe policy validate` 不依赖当前源码仓库的 `engineering/schemas` 目录。
