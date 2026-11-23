@@ -1,0 +1,49 @@
+{
+  "time_utc": "2026-11-23T16:48:56.983220+00:00",
+  "task_id": "TASK-changeset-lease",
+  "git_head": "69b2977710276db481d0dc67ce86d07e4db24a8f",
+  "working_tree_dirty": true,
+  "environment": {
+    "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+    "platform": "Linux-7.0.0-43-generic-x86_64-with-glibc2.43"
+  },
+  "file_sha256": {
+    "src/epe/cli.py": "f653241ff00673500ed6f8fef09b003491fa4bc47092ef89083b8aeba96148b2",
+    "tests/integration/test_changeset_lease_concurrency.py": "056f1d98f76d2dde17e4ae78222ae596a1c8b3135c50b11ca771f007f1480142",
+    "plans/active/TASK-changeset-lease.md": "14669894051c534d468a0cb127adb29e7b2b75559129d4095a59162ae393eeb4"
+  },
+  "commands": [
+    {
+      "command": "PYTHONPATH=src pytest -q tests/integration/test_changeset_lease_concurrency.py tests/unit/test_changeset_leases.py tests/acceptance/test_changeset_lease_cli.py",
+      "result": "passed",
+      "details": "5 passed"
+    },
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts=''",
+      "result": "passed",
+      "details": "324 passed in 49.58s"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json policy validate",
+      "result": "passed"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json graph build",
+      "result": "passed",
+      "details": "376 nodes, 494 edges, digest e82b8a2d0b16cd54cb363a6d483e09362dead1375f43826e4e6382151afabf65"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json architecture validate",
+      "result": "passed",
+      "details": "390 imports, no violations or unknowns"
+    },
+    {
+      "command": "git diff --check",
+      "result": "passed"
+    }
+  ],
+  "concurrency_fact": "two independent CLI processes contending for one ChangeSet yielded exactly one passed and one blocked JSON result",
+  "limitations": [
+    "The EPE write lock and lease are cooperative; external writers and OS-level isolation remain outside scope."
+  ]
+}
