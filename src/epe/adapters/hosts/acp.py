@@ -117,7 +117,8 @@ class HermesACPSession:
             "cwd": str((cwd or self._cwd).resolve()),
             "mcpServers": [],
         })
-        if not isinstance(value, dict) or not isinstance(value.get("sessionId"), str) or not value["sessionId"]:
+        if (not isinstance(value, dict) or not isinstance(value.get("sessionId"), str)
+                or not value["sessionId"] or value["sessionId"] == self.session_id):
             self.close()
             raise ACPProtocolError("ACP session/fork response lacks sessionId")
         with self._state_lock:
@@ -149,7 +150,7 @@ class HermesACPSession:
         result = self._request("session/prompt", {
             "sessionId": target,
             "prompt": [{"type": "text", "text": text}],
-        }, updates=updates)
+        }, updates=updates, expected_session_id=target)
         if not isinstance(result, dict):
             self.close()
             raise ACPProtocolError("ACP session/prompt response is not an object")
@@ -170,7 +171,8 @@ class HermesACPSession:
             raise
 
     def _request(self, method: str, params: dict[str, Any], *,
-                 updates: list[dict[str, Any]] | None = None) -> Any:
+                 updates: list[dict[str, Any]] | None = None,
+                 expected_session_id: str | None = None) -> Any:
         if not self._request_lock.acquire(blocking=False):
             raise ACPProtocolError("concurrent ACP requests are not supported")
         try:
@@ -186,7 +188,7 @@ class HermesACPSession:
                     if updates is not None and message["method"] == "session/update":
                         notification = message.get("params")
                         if (not isinstance(notification, dict)
-                                or notification.get("sessionId") not in self._session_ids
+                                or notification.get("sessionId") != expected_session_id
                                 or not isinstance(notification.get("update"), dict)):
                             raise ACPProtocolError("invalid ACP session update")
                         updates.append(notification["update"])

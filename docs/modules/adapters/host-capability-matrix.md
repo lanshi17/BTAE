@@ -17,7 +17,7 @@ ACP 请求的发送与响应共用一个期限，通知不会重置期限；超�
 
 `prompt_with_updates(text)` 在最终响应之外按顺序返回当前会话的 `session/update` 数据，用于读取流式回答；接收的总字节仍受会话输出上限约束。更新是未经信任的宿主内容，不构成 EPE 门禁决定。`prompt(text)` 继续返回原始最终响应。
 
-`fork_session()` 可在同一受控传输中创建空 MCP 子会话；返回的 ID 必须先由该句柄登记，之后才能通过 `session_id=` 路由 prompt 或 cancel，未知 ID 会拒绝。父子会话共享一个响应读取器，关闭传输会一起结束；这不构成宿主权限或多 Agent 隔离。
+`fork_session()` 可在同一受控传输中创建空 MCP 子会话；返回的 ID 必须先由该句柄登记，之后才能通过 `session_id=` 路由 prompt 或 cancel，未知 ID 会拒绝。更新通知还必须属于当前请求目标，不能以另一个已登记会话的通知混淆响应。父子会话共享一个响应读取器，关闭传输会一起结束；这不构成宿主权限或多 Agent 隔离。
 
 `HermesHostAdapter` 提供命令数组 + JSON stdin/stdout 的协议桥，先执行 capability handshake，再处理请求。默认 handshake 是 `handshaken-untrusted`：只能用于 verify，不能据此授予写入或可信身份；只有外部配置显式标记 `trusted_capabilities=True` 时，桥才允许声明的写入操作。命令失败、非 JSON 或超时返回明确错误/unsupported。
 

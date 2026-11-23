@@ -322,3 +322,24 @@ for line in sys.stdin:
     with pytest.raises(ACPProtocolError, match="session/fork"):
         session.fork_session()
     assert session._process.poll() is not None
+
+
+def test_updates_must_match_the_requested_fork_session(tmp_path: Path):
+    script = r'''
+import json,sys
+for line in sys.stdin:
+    req=json.loads(line); method=req["method"]
+    if method == "initialize": result={"protocolVersion":1,"agentInfo":{"name":"fixture"}}
+    elif method == "session/new": result={"sessionId":"PARENT"}
+    elif method == "session/fork": result={"sessionId":"CHILD"}
+    elif method == "session/prompt":
+        print(json.dumps({"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"CHILD","update":{"sessionUpdate":"agent_message_chunk"}}}),flush=True)
+        result={"stopReason":"end_turn"}
+    else: continue
+    print(json.dumps({"jsonrpc":"2.0","id":req["id"],"result":result}),flush=True)
+'''
+    with HermesACPAdapter([sys.executable, "-c", script], tmp_path, timeout=2).open_session() as session:
+        child = session.fork_session()
+        assert child == "CHILD"
+        with pytest.raises(ACPProtocolError, match="invalid ACP session update"):
+            session.prompt_with_updates("parent", session_id="PARENT")

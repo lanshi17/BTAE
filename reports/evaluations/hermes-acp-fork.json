@@ -1,28 +1,28 @@
 {
-  "time_utc": "2026-11-23T14:18:09.356667+00:00",
+  "time_utc": "2026-11-23T14:29:05.399858+00:00",
   "task_id": "TASK-hermes-acp-fork",
-  "git_head": "cd09a5e9608e6960e65aba75e6b555a1d54ac3a2",
+  "git_head": "08ac6317dc8a845c45795dd6f7df804c0b2168ab",
   "working_tree_dirty": true,
   "environment": {
     "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
     "platform": "Linux-7.0.0-43-generic-x86_64-with-glibc2.43"
   },
   "file_sha256": {
-    "src/epe/adapters/hosts/acp.py": "57607d6963104162619c3d445c3538c4c395d672db842a4c3f6a06ba0ed12d9f",
-    "tests/integration/test_acp_adapter.py": "67e75f7510dd9f529c74821690addd86515bc3242def67b10269795a3a6aece8",
-    "docs/modules/adapters/host-capability-matrix.md": "347d9f7b58e1ba4deaba21997ac6cbbc7b056e0c26e897b464366bc95cb7ff29",
-    "plans/active/TASK-hermes-acp-fork.md": "dedb17c8a87adddfa0d34a7b39934410c924bc71c5aa5e0d1476cd707c273354"
+    "src/epe/adapters/hosts/acp.py": "0fd4a84124bb5d5248f86b52174d415272c3835602462a212bf5b771035c5025",
+    "tests/integration/test_acp_adapter.py": "fcb2998f50f5ed811b169fc9a303eb71ff3f830ea106aef50da7532262b376f5",
+    "docs/modules/adapters/host-capability-matrix.md": "c1e911abe4a7c7bdb8262487e16da2d6be2aeaaf260c8e3158601d0320071781",
+    "plans/active/TASK-hermes-acp-fork.md": "0633a465b20b74450eba317c874d11de1e648b62843bb6ba7ea2670fd372b7a5"
   },
   "commands": [
     {
       "command": "PYTHONPATH=src pytest -q tests/integration/test_acp_adapter.py",
       "result": "passed",
-      "details": "21 passed"
+      "details": "22 passed"
     },
     {
       "command": "PYTHONPATH=src pytest -q -o addopts=''",
       "result": "passed",
-      "details": "306 passed in 49.20s"
+      "details": "307 passed in 47.80s"
     },
     {
       "command": "PYTHONPATH=src python -m epe.cli --format json policy validate",
@@ -31,7 +31,7 @@
     {
       "command": "PYTHONPATH=src python -m epe.cli --format json graph build",
       "result": "passed",
-      "details": "349 nodes, 460 edges, digest adbe6a5647582bf9bb0151cd497e3400464603923d7733a6d641ae63b08b9758"
+      "details": "349 nodes, 460 edges, digest 2b1aea14e755ad4aa474656974e9a76f02b9dfd4c68a256b93780570cc39b936"
     },
     {
       "command": "PYTHONPATH=src python -m epe.cli --format json architecture validate",
