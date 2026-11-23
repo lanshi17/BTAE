@@ -197,16 +197,21 @@ def renew_lease(root: Path, config: dict[str, Any], changeset: dict[str, Any], o
 
 
 def release_lease(root: Path, config: dict[str, Any], changeset_id: str, owner: str, lease_id: str) -> bool:
+    released, _ = release_lease_with_record(root, config, changeset_id, owner, lease_id)
+    return released
+
+
+def release_lease_with_record(root: Path, config: dict[str, Any], changeset_id: str, owner: str, lease_id: str) -> tuple[bool, dict[str, Any] | None]:
     owner = _validate_owner(owner)
     _validate_lease_id(lease_id)
     path = lease_path(root.resolve(), config, changeset_id)
     with acquire_write_lock(_write_lock_path(root.resolve(), config)):
         if not path.exists():
-            return False
+            return False, None
         current = _read(path)
         if current["changeset_id"] != changeset_id:
             raise LeaseError("租约记录与路径 ChangeSet ID 不匹配")
         if current["lease_id"] != lease_id or current["owner"] != owner:
             raise LeaseConflict("租约身份不匹配")
         path.unlink()
-        return True
+        return True, current

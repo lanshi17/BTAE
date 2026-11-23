@@ -27,7 +27,7 @@ from epe.governance.policies import validate_policy_files, load_workflow_require
 from epe.core.policy import validate_policy_document
 from epe.governance.baseline import capture_baseline, changeset_paths, compare_baseline, validate_changeset, transition_changeset, changeset_declaration, baseline_binding_version
 from epe.governance.conflicts import detect_changeset_conflicts
-from epe.governance.leases import acquire_lease, inspect_lease, renew_lease, release_lease, LeaseConflict, LeaseError, LeaseNotFound
+from epe.governance.leases import acquire_lease, inspect_lease, renew_lease, release_lease_with_record, LeaseConflict, LeaseError, LeaseNotFound
 from epe.parsers.documents import discover_documents, parse_yaml_bytes
 from epe.parsers.python import parse_python_tree
 from epe.verification.architecture import validate_architecture
@@ -571,8 +571,9 @@ def cmd_changeset_lease(args) -> CommandResult:
             from epe.core.fingerprint import sha256_json
             _append_state_audit(root, config, "changeset_lease_renewed", {"changeset_id": args.changeset_id, "owner": args.owner, "lease_id": lease["lease_id"], "revision": lease["revision"], "record_sha256": sha256_json(lease)})
             return _result("changeset lease renew", "passed", data=lease)
-        released = release_lease(root, config, args.changeset_id, args.owner, args.lease_id)
-        _append_state_audit(root, config, "changeset_lease_released", {"changeset_id": args.changeset_id, "owner": args.owner, "lease_id": args.lease_id, "released": released})
+        released, released_record = release_lease_with_record(root, config, args.changeset_id, args.owner, args.lease_id)
+        from epe.core.fingerprint import sha256_json
+        _append_state_audit(root, config, "changeset_lease_released", {"changeset_id": args.changeset_id, "owner": args.owner, "lease_id": args.lease_id, "released": released, "record_sha256": sha256_json(released_record) if released_record else None})
         return _result("changeset lease release", "passed", data={"released": released})
     except LeaseConflict as exc:
         return _result("changeset lease", "blocked", [Diagnostic("EPE-CHANGESET-LEASE", Severity.ERROR, str(exc))])
