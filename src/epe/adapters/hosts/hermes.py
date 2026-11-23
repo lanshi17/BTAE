@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import secrets
 from pathlib import Path
 from dataclasses import asdict
 from typing import Any
@@ -9,6 +10,7 @@ from epe.adapters.protocol import AgentRequest, AgentResponse, validate_request
 from epe.adapters.hosts.base import HostCapabilities
 from epe.core.diagnostics import Diagnostic, Severity
 from epe.adapters.process import run_process
+from epe.adapters.host_attestation import verify_capability_attestation
 
 
 class HermesHostAdapter:
@@ -20,10 +22,12 @@ class HermesHostAdapter:
     """
 
     def __init__(self, command: list[str] | None = None, timeout: float = 10.0,
-                 trusted_capabilities: bool = False, cwd: Path | None = None):
+                 trusted_capabilities: bool = False, cwd: Path | None = None,
+                 attestation_config: dict[str, Any] | None = None):
         self.command = command
         self.timeout = timeout
         self.trusted_capabilities = trusted_capabilities
+        self.attestation_config = attestation_config or {}
         self.cwd = (cwd or Path.cwd()).resolve()
         self.capabilities = HostCapabilities("hermes", "1", False, False, False, False, (), "unsupported-unintegrated")
 
@@ -31,7 +35,8 @@ class HermesHostAdapter:
         if not self.command:
             self.capabilities = HostCapabilities("hermes", "1", False, False, False, False, (), "unsupported-unintegrated")
             return self.capabilities
-        response = self._call({"protocol_version": "1", "operation": "capabilities"})
+        nonce = secrets.token_hex(32)
+        response = self._call({"protocol_version": "1", "operation": "capabilities", "nonce": nonce})
         if response is None or response.get("status") != "ok" or not isinstance(response.get("capabilities"), dict):
             self.capabilities = HostCapabilities("hermes", "1", False, False, False, False, (), "handshake-failed")
             return self.capabilities
@@ -47,15 +52,27 @@ class HermesHostAdapter:
             self.capabilities = HostCapabilities("hermes", "1", False, False, False, False, (), "handshake-failed")
             return self.capabilities
         operations = tuple(operations_value)
-        status = "handshaken" if self.trusted_capabilities else "handshaken-untrusted"
-        self.capabilities = HostCapabilities("hermes", str(value.get("protocol_version", "1")), bool(value.get("trusted_identity", False)) and self.trusted_capabilities, bool(value.get("write_isolation", False)) and self.trusted_capabilities, bool(value.get("process_group_control", False)), bool(value.get("cancellation", False)), operations, status)
+        attestation = value.get("attestation")
+        trusted = False
+        if attestation is not None:
+            fact, error = verify_capability_attestation(value, nonce, self.attestation_config)
+            if error:
+                self.capabilities = HostCapabilities("hermes", "1", False, False, False, False, (), "handshake-failed")
+                return self.capabilities
+            trusted = bool(fact and fact.get("trusted"))
+            allowed = set(fact.get("operations", ())) if fact else set()
+            if not set(operations).issubset(allowed):
+                self.capabilities = HostCapabilities("hermes", "1", False, False, False, False, (), "handshake-failed")
+                return self.capabilities
+        status = "handshaken" if trusted else "handshaken-untrusted"
+        self.capabilities = HostCapabilities("hermes", str(value.get("protocol_version", "1")), bool(value.get("trusted_identity", False)) and trusted, bool(value.get("write_isolation", False)) and trusted, bool(value.get("process_group_control", False)) and trusted, bool(value.get("cancellation", False)) and trusted, operations if trusted else tuple(op for op in operations if op == "verify"), status)
         return self.capabilities
 
     def dispatch(self, request: AgentRequest) -> AgentResponse:
         shape = validate_request(request)
         if shape.decision == "blocked": return shape
         capabilities = self.handshake()
-        if capabilities.status not in {"handshaken", "handshaken-untrusted"} or request.operation not in capabilities.operations or (not self.trusted_capabilities and request.operation != "verify"):
+        if capabilities.status not in {"handshaken", "handshaken-untrusted"} or request.operation not in capabilities.operations:
             diagnostic = Diagnostic("EPE-HOST-UNSUPPORTED", Severity.INFO, f"Hermes 未声明可执行操作: {request.operation}")
             return AgentResponse("unsupported", [diagnostic.message], [diagnostic], next_steps=["配置并验证 Hermes capability handshake"])
         response = self._call({"protocol_version": "1", "operation": request.operation, "request": asdict(request)})

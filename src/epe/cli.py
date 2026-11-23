@@ -845,6 +845,9 @@ def cmd_unsupported(args) -> CommandResult:
 
 
 def cmd_host_capabilities(args) -> CommandResult:
+    root = _root(args.root)
+    project_config, _ = load_config(root)
+    project_config = project_config or {}
     if getattr(args, "host", None) == "hermes" and getattr(args, "command_json", None) is not None:
         try:
             command = json.loads(args.command_json)
@@ -853,9 +856,9 @@ def cmd_host_capabilities(args) -> CommandResult:
         if not isinstance(command, list) or not command or any(not isinstance(item, str) or not item for item in command):
             return _result("host capabilities", "error", [Diagnostic("EPE-HOST-COMMAND", Severity.ERROR, "command-json 必须是非空字符串数组")])
         if getattr(args, "transport", "bridge") == "acp":
-            capabilities = HermesACPAdapter(command, cwd=_root(args.root)).handshake()
+            capabilities = HermesACPAdapter(command, cwd=root).handshake()
         else:
-            capabilities = HermesHostAdapter(command, cwd=_root(args.root)).handshake()
+            capabilities = HermesHostAdapter(command, cwd=root, attestation_config=project_config).handshake()
         status = "passed" if capabilities.status in {"handshaken", "handshaken-untrusted"} else ("unsupported" if capabilities.status == "unsupported-unintegrated" else "error")
         return _result("host capabilities", status, data={"protocol_version": "1", "hosts": [capabilities.to_dict()]})
     return _result("host capabilities", "passed", data={"protocol_version": "1", "hosts": [item.to_dict() for item in capability_matrix()]})
@@ -863,6 +866,8 @@ def cmd_host_capabilities(args) -> CommandResult:
 
 def cmd_host_request(args) -> CommandResult:
     root = _root(args.root)
+    project_config, _ = load_config(root)
+    project_config = project_config or {}
     try:
         parameters = json.loads(args.parameters)
     except (TypeError, json.JSONDecodeError) as exc:
@@ -887,9 +892,9 @@ def cmd_host_request(args) -> CommandResult:
         response = LocalHostAdapter().dispatch(request)
     elif args.host == "hermes":
         if not command:
-            response = HermesHostAdapter(cwd=root).dispatch(request)
+            response = HermesHostAdapter(cwd=root, attestation_config=project_config).dispatch(request)
         else:
-            response = HermesHostAdapter(command, cwd=root).dispatch(request)
+            response = HermesHostAdapter(command, cwd=root, attestation_config=project_config).dispatch(request)
     else:
         return _result("host request", "unsupported", [Diagnostic("EPE-HOST-UNSUPPORTED", Severity.INFO, f"不支持的宿主: {args.host}")])
     status = {"accepted": "passed", "blocked": "blocked", "unsupported": "unsupported", "error": "error"}.get(response.decision, "error")

@@ -14,7 +14,7 @@ verification_status: passed
 
 实现外部文件、Git、进程、时钟、身份和宿主能力，使领域逻辑不依赖具体执行环境。对应 PRD-001、PRD-007、PRD-008、PRD-012，支撑 AC-01、AC-06、AC-07、AC-08、AC-10。
 
-当前实现包含文件/配置、Git provenance、受控进程、原子存储、严格字段校验和 hash-chain 审计、`AgentRequest`/`AgentResponse` 协议校验和本地宿主能力矩阵。`local-cli` 只提供可测量的 verify 进程边界，写入隔离和可信身份均为 false；Hermes 返回明确 unsupported，直到真实宿主权限通道完成集成验收。详见[宿主能力矩阵](host-capability-matrix.md)。
+当前实现包含文件/配置、Git provenance、受控进程、原子存储、严格字段校验和 hash-chain 审计、`AgentRequest`/`AgentResponse` 协议校验和本地宿主能力矩阵。`local-cli` 只提供可测量的 verify 进程边界，写入隔离和可信身份均为 false；Hermes 的 bridge 能力证明使用 nonce 绑定的 SSH 签名，但真实宿主权限通道仍需独立验收。详见[宿主能力矩阵](host-capability-matrix.md)。
 
 V0.2 交付本地文件/Git/进程/产物和明确受信的身份接入；V1.0 再交付 Hermes 等宿主 adapter。协议请求解析不等于身份认证，范围声明不等于真正锁定文件。
 

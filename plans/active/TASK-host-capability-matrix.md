@@ -8,3 +8,5 @@
 ## 本地验证
 
 同一套测试运行 47 项通过；`epe host capabilities`、`graph build` 和 `architecture validate` 的实际 JSON 输出保存在 [执行记录](../../reports/evaluations/iteration-all-modules-002.json)。
+
+能力自述现在可选地通过 `host_trust` 的 nonce 绑定 SSH attestation 验证；缺少证明仍保持 `handshaken-untrusted`，不改变当前 Hermes 能力矩阵。

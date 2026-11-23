@@ -8,7 +8,7 @@
 
 本地宿主适配器当前只接受 `verify`；实现和完成操作返回 `unsupported`，因为本地 CLI 没有文件写入隔离。Hermes 记录在能力矩阵中，但没有连接、身份或隔离证据前不执行任何操作。
 
-Hermes 桥接协议使用一行 JSON 请求和一行 JSON 响应；capability handshake 的声明默认不受信，除非宿主外部配置提供可信 attestation。仓库内配置的 `trusted_capabilities` 不能替代宿主或 CI 的身份验证。
+Hermes 桥接协议使用一行 JSON 请求和一行 JSON 响应；capability handshake 的声明默认不受信。需要执行非 `verify` 操作时，宿主必须用每次请求的 nonce 对完整 capabilities 载荷签名，EPE 再用受保护 `host_trust.identities` 公钥验签；仓库内旧参数 `trusted_capabilities` 不能替代该证明或宿主/CI 身份验证。没有证明时最多保留未受信的 `verify` 路径。
 
 桥接器保守解析宿主响应：`operations` 必须是字符串数组；能力标志如存在，必须为 JSON 布尔值；操作响应的 `reasons`、`evidence_ids`、`next_steps` 如存在，必须是字符串数组。类型错误导致握手失败或操作返回 error，不将字符串、数字或 null 转换成可信能力或有效响应。握手声明仅为宿主自述，仍须单独验证实际权限边界。
 
