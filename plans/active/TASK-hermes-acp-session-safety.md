@@ -1,0 +1,18 @@
+# TASK-hermes-acp-session-safety：ACP 会话关闭与并发边界
+
+- 类型：Bugfix；风险：high（宿主进程生命周期和取消边界）；涉及 `MOD-009`、`HermesACPSession` 与 ACP 集成测试。
+- 依据：`TASK-hermes-acp-exploration` 的 ACP 生命周期设计，以及 `docs/contracts/host-port.md` 对超时、取消、输出边界和失败关闭的要求。
+- 现状：会话在一个线程等待 `prompt()` 时被另一个线程 `close()`，可能以未处理的 `TimeoutError` 结束；多个并发请求还会共享响应缓冲，无法保证响应 ID 与调用方一一对应。
+- 修复设计：
+  1. 为会话引入受锁保护的关闭状态；关闭时终止进程组、关闭协议流并唤醒等待者，等待者返回明确的 ACP 会话关闭错误，不再伪装成超时。
+  2. 将请求读写串行化；`session/cancel` 仍可在请求等待期间发送，但普通请求在已有请求占用响应流时明确拒绝，避免并发消费同一个响应流。
+  3. 关闭操作幂等且有界；不在仍有读取者使用 selector 时提前关闭 selector，避免跨线程 `ValueError`/未处理异常。
+  4. 保持现有能力矩阵：会话传输结果不授予身份、写入隔离、取消或业务操作能力。
+- 验收：受控子进程覆盖等待中关闭、重复关闭、并发普通请求拒绝/串行、取消回归和异常后进程回收；现有完整测试继续通过。
+- 限制：该修复只约束 EPE 客户端自身的并发和进程清理，不能证明宿主不创建逃逸子进程，也不能提供身份认证、文件隔离或远程审计。设计状态仍为 `draft`。
+
+## 本轮结果
+
+- `HermesACPSession` 增加受保护关闭状态、专用 selector 唤醒管道和幂等有界清理；等待中的 `prompt()` 收到 `ACPSessionClosed`，不再误报超时。
+- 普通 ACP 请求在已有响应读取器时明确拒绝；`session/cancel` 仍可并发发送并唤醒当前 prompt。
+- 定向 ACP 测试 11 项、完整回归 296 项通过；策略、图构建和架构校验顺序执行通过。真实命令、输入摘要和限制见 [`hermes-acp-session-safety.json`](../../reports/evaluations/hermes-acp-session-safety.json)。

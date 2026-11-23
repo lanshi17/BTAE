@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from epe.adapters.hosts.acp import HermesACPAdapter
+from epe.adapters.hosts.acp import ACPProtocolError, ACPSessionClosed, HermesACPAdapter
 
 
 def command(body: str) -> list[str]:
@@ -94,3 +94,62 @@ for line in sys.stdin:
         worker = threading.Thread(target=lambda: result.append(session.prompt("slow")))
         worker.start(); time.sleep(0.1); session.cancel(); worker.join(timeout=2)
         assert result == [{"stopReason": "cancelled"}]
+
+
+def test_close_wakes_pending_prompt_and_is_idempotent(tmp_path: Path):
+    script = r'''
+import json,sys,time
+for line in sys.stdin:
+    req=json.loads(line)
+    if req["method"] == "initialize":
+        print(json.dumps({"jsonrpc":"2.0","id":req["id"],"result":{"protocolVersion":1,"agentInfo":{"name":"fixture"}}}),flush=True)
+    elif req["method"] == "session/new":
+        print(json.dumps({"jsonrpc":"2.0","id":req["id"],"result":{"sessionId":"SESSION-1"}}),flush=True)
+    elif req["method"] == "session/prompt":
+        time.sleep(30)
+'''
+    with HermesACPAdapter([sys.executable, "-c", script], tmp_path, timeout=30).open_session() as session:
+        errors = []
+
+        def wait_for_prompt():
+            try:
+                session.prompt("slow")
+            except BaseException as exc:  # assert the exact protocol error below
+                errors.append(exc)
+
+        worker = threading.Thread(target=wait_for_prompt)
+        worker.start()
+        time.sleep(0.1)
+        session.close()
+        session.close()
+        worker.join(timeout=2)
+        assert not worker.is_alive()
+        assert len(errors) == 1 and isinstance(errors[0], ACPSessionClosed)
+
+
+def test_concurrent_prompts_fail_before_sharing_response_reader(tmp_path: Path):
+    marker = tmp_path / "prompt-started"
+    script = f'''
+import json,sys,time
+for line in sys.stdin:
+    req=json.loads(line)
+    if req["method"] == "initialize":
+        print(json.dumps({{"jsonrpc":"2.0","id":req["id"],"result":{{"protocolVersion":1,"agentInfo":{{"name":"fixture"}}}}}}),flush=True)
+    elif req["method"] == "session/new":
+        print(json.dumps({{"jsonrpc":"2.0","id":req["id"],"result":{{"sessionId":"SESSION-1"}}}}),flush=True)
+    elif req["method"] == "session/prompt":
+        open({str(marker)!r}, "w").close()
+        time.sleep(0.4)
+        print(json.dumps({{"jsonrpc":"2.0","id":req["id"],"result":{{"stopReason":"end_turn"}}}}),flush=True)
+'''
+    with HermesACPAdapter([sys.executable, "-c", script], tmp_path, timeout=2).open_session() as session:
+        result = []
+        worker = threading.Thread(target=lambda: result.append(session.prompt("first")))
+        worker.start()
+        deadline = time.monotonic() + 1
+        while not marker.exists() and time.monotonic() < deadline:
+            time.sleep(0.01)
+        with pytest.raises(ACPProtocolError, match="concurrent"):
+            session.prompt("second")
+        worker.join(timeout=2)
+        assert not worker.is_alive() and result == [{"stopReason": "end_turn"}]
