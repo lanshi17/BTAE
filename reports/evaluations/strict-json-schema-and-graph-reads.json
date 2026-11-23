@@ -1,8 +1,8 @@
 {
-  "time_utc": "2026-11-23T20:45:38Z",
+  "time_utc": "2026-11-23T20:52:15Z",
   "task_id": "TASK-strict-json-schema-and-graph-reads",
-  "git_head": "d62a3f5ddd4941713f20cf62aa0b2617901d194f",
-  "working_tree_before_report": "clean",
+  "git_head": "44c12de2aaa3ec213ff2bfd47853ef98f1e18584",
+  "working_tree_before_report": " M plans/active/TASK-strict-json-authority-records.md\n",
   "environment": {
     "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
     "platform": "Linux-7.0.0-43-generic-x86_64-with-glibc2.43"
@@ -16,7 +16,7 @@
     "src/epe/governance/policies.py": "f8a4c037347343a524458aa1ae4df08984e4a14ba1392a2738ba8b85105894e2",
     "src/epe/design/manager.py": "6491682a2636ac07f2db6c74f19e188384885611ace531d1ac52004c14ef3000",
     "src/epe/cli.py": "d6d9c53e54b54b8c4c661d7f8a76070cf8b897b93d8ed43966102d4f629f2192",
-    "plans/active/TASK-strict-json-authority-records.md": "e83497dbc8d8c26f63868ce9118a1fd40c7cce5db387c21deb4cfe75903a7902"
+    "plans/active/TASK-strict-json-authority-records.md": "3366b14303ff843370d4b1d9b85f8d4a81cbbc90b7e9026a0c8ab0f1cc98842a"
   },
   "commands": [
     {
