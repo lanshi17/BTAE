@@ -1,7 +1,7 @@
 {
-  "time_utc": "2026-11-23T13:49:07.248625+00:00",
+  "time_utc": "2026-11-23T13:58:55.492228+00:00",
   "task_id": "TASK-hermes-acp-updates",
-  "git_head": "0615dac9f9946ded5089a86d220adf85a4b0d134",
+  "git_head": "2a0eb4421fc18022b5556a045701103e32509387",
   "working_tree_dirty": true,
   "environment": {
     "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
@@ -11,7 +11,9 @@
     "src/epe/adapters/hosts/acp.py": "7e91f35526ad4bc2b6a6aa4e25b6f56ada070df4282ca23973132f8bf6a8db8b",
     "tests/integration/test_acp_adapter.py": "9318043a9188fc8abd6b740809fc1b867b449b15e714f7cba13af10fb04f2087",
     "docs/modules/adapters/host-capability-matrix.md": "dea22d8119798630c5713f63d14587c07a5bface1eb1a4424ded6d211d08ddcd",
-    "plans/active/TASK-hermes-acp-updates.md": "52a0a9c9289d1d8efbf004104c316008e51574e416246f4bc2e59b7da56307fd"
+    "docs/standards/user-guide-mvp.md": "3cd0dfed51e09310e73a99b8902bae8f17472128028db7aa3f70e8efa0d6ec4a",
+    "plans/active/TASK-hermes-acp-updates.md": "61555c130e620c326982271e3e108f6e226215fdeebc0e13a20843c309190eae",
+    "experiments/hermes_acp_session_probe.py": "6e196c52f87bd2d61b243b48cbd5717c636d37a552f7b2d56065356d78ee8593"
   },
   "commands": [
     {
@@ -41,6 +43,11 @@
     {
       "command": "git diff --check",
       "result": "passed"
+    },
+    {
+      "command": "python experiments/hermes_acp_session_probe.py --prompt hello -- <controlled fixture argv>",
+      "result": "passed",
+      "details": "session_opened=true; stop_reason=end_turn; update_count=0; no model text emitted"
     }
   ],
   "hermes_experiment": {
