@@ -1,0 +1,45 @@
+{
+  "time_utc": "2026-11-23T18:20:02.153410+00:00",
+  "task_id": "TASK-changeset-conflict-coordination",
+  "git_head": "d88eeb69efd2012395051ab57932ca9f113aa7d1",
+  "working_tree_dirty": true,
+  "environment": {
+    "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+    "platform": "Linux-7.0.0-43-generic-x86_64-with-glibc2.43"
+  },
+  "file_sha256": {
+    "src/epe/cli.py": "e94e8747822fd1d1a58ec1a0ec33bd4f56b3d034c5bed550174518a617516273",
+    "tests/acceptance/test_changeset_conflicts_cli.py": "8ba8c2305418c174103a5701eb7d687b5cb26c22fdd606f480943e17cbe2a055"
+  },
+  "commands": [
+    {
+      "command": "PYTHONPATH=src pytest -q tests/acceptance/test_changeset_conflicts_cli.py",
+      "result": "passed",
+      "details": "3 passed"
+    },
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts=''",
+      "result": "passed",
+      "details": "329 passed in 50.77s"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json policy validate",
+      "result": "passed"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json graph build",
+      "result": "passed",
+      "details": "378 nodes, 498 edges, digest 4d03e37c0f8394810feb1793151ba51cacd96503dc3a9277b4909564bb0d9c73"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json architecture validate",
+      "result": "passed",
+      "details": "393 imports, no violations or unknowns"
+    },
+    {
+      "command": "git diff --check",
+      "result": "passed"
+    }
+  ],
+  "boundary": "changeset conflicts scans authoritative ChangeSet JSON records only; baseline and lease files are derived and excluded"
+}
