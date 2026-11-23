@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+import epe.adapters.hosts.acp as acp_module
 from epe.adapters.hosts.acp import ACPProtocolError, ACPSessionClosed, HermesACPAdapter
 
 
@@ -197,3 +198,48 @@ for line in sys.stdin:
         session.prompt("hello")
     assert time.monotonic() - started < 2
     assert session._process.poll() is not None
+
+
+@pytest.mark.parametrize("failure_point", ["selector", "session"])
+def test_open_session_reaps_child_when_resource_setup_fails(tmp_path: Path, monkeypatch, failure_point):
+    processes = []
+    original_popen = acp_module.subprocess.Popen
+
+    def start_process(*args, **kwargs):
+        process = original_popen(*args, **kwargs)
+        processes.append(process)
+        return process
+
+    def fail(*args, **kwargs):
+        raise OSError("resource allocation failed")
+
+    monkeypatch.setattr(acp_module.subprocess, "Popen", start_process)
+    if failure_point == "selector":
+        monkeypatch.setattr(acp_module.selectors, "DefaultSelector", fail)
+    else:
+        monkeypatch.setattr(acp_module, "HermesACPSession", fail)
+    with pytest.raises(OSError, match="resource allocation"):
+        HermesACPAdapter([sys.executable, "-c", "import time; time.sleep(30)"], tmp_path).open_session()
+    assert len(processes) == 1 and processes[0].poll() is not None
+    assert processes[0].stdin.closed and processes[0].stdout.closed
+
+
+def test_invalid_prompt_result_closes_session(tmp_path: Path):
+    script = r'''
+import json,sys
+for line in sys.stdin:
+    req=json.loads(line)
+    if req["method"] == "initialize":
+        result={"protocolVersion":1,"agentInfo":{"name":"fixture"}}
+    elif req["method"] == "session/new":
+        result={"sessionId":"SESSION-1"}
+    else:
+        result=[]
+    print(json.dumps({"jsonrpc":"2.0","id":req["id"],"result":result}),flush=True)
+'''
+    session = HermesACPAdapter([sys.executable, "-c", script], tmp_path, timeout=2).open_session()
+    with pytest.raises(ACPProtocolError, match="not an object"):
+        session.prompt("hello")
+    assert session._process.poll() is not None
+    with pytest.raises(ACPSessionClosed):
+        session.prompt("again")

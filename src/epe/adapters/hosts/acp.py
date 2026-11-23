@@ -117,6 +117,7 @@ class HermesACPSession:
             "prompt": [{"type": "text", "text": text}],
         })
         if not isinstance(result, dict):
+            self.close()
             raise ACPProtocolError("ACP session/prompt response is not an object")
         return result
 
@@ -321,9 +322,11 @@ class HermesACPAdapter:
             self.command, cwd=self.cwd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL, bufsize=0, start_new_session=os.name == "posix",
         )
-        selector = selectors.DefaultSelector()
-        session = HermesACPSession(process, selector, self.timeout, self.output_limit)
+        selector = None
+        session = None
         try:
+            selector = selectors.DefaultSelector()
+            session = HermesACPSession(process, selector, self.timeout, self.output_limit)
             os.set_blocking(process.stdin.fileno(), False)
             selector.register(process.stdout, selectors.EVENT_READ)
             selector.register(session._wakeup_read, selectors.EVENT_READ)
@@ -343,7 +346,19 @@ class HermesACPAdapter:
             session.session_id = value["sessionId"]
             return session
         except BaseException:
-            session.close()
+            if session is not None:
+                session.close()
+            else:
+                if selector is not None:
+                    selector.close()
+                _terminate_process(process, force=True)
+                for stream in (process.stdin, process.stdout):
+                    if stream is not None:
+                        stream.close()
+                try:
+                    process.wait(timeout=max(1.0, min(self.timeout, 5.0)))
+                except subprocess.TimeoutExpired:
+                    pass
             raise
 
     def _request(self, session: HermesACPSession, method: str, params: dict[str, Any], request_id: int) -> Any:
