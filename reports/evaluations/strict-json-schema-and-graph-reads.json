@@ -1,0 +1,55 @@
+{
+  "time_utc": "2026-11-23T20:45:38Z",
+  "task_id": "TASK-strict-json-schema-and-graph-reads",
+  "git_head": "d62a3f5ddd4941713f20cf62aa0b2617901d194f",
+  "working_tree_before_report": "clean",
+  "environment": {
+    "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+    "platform": "Linux-7.0.0-43-generic-x86_64-with-glibc2.43"
+  },
+  "file_sha256": {
+    "src/epe/graph/builder.py": "450164fa883ea952506b01ea1c1cf331116558a9c1054c3364f4c6523ff885ba",
+    "src/epe/adapters/repository.py": "3feded14ac0c40cd8fa1016c4727a7a8a920e94ae1bca72766c868429999a0bc",
+    "src/epe/core/policy.py": "9d0dfa1f566236d04bb9b8dd644fdf09d86f3a492e5861b76ef352e2e3fbddd6",
+    "src/epe/governance/leases.py": "25211fcd4c428d5026ab29be52f5102a2d598dbdcea100f263d7292d3cd01eac",
+    "src/epe/verification/runner.py": "d3cc89f780ee58c842a0110832ed8558ac1a905cb7101f08379a876f151584f3",
+    "src/epe/governance/policies.py": "f8a4c037347343a524458aa1ae4df08984e4a14ba1392a2738ba8b85105894e2",
+    "src/epe/design/manager.py": "6491682a2636ac07f2db6c74f19e188384885611ace531d1ac52004c14ef3000",
+    "src/epe/cli.py": "d6d9c53e54b54b8c4c661d7f8a76070cf8b897b93d8ed43966102d4f629f2192",
+    "plans/active/TASK-strict-json-authority-records.md": "e83497dbc8d8c26f63868ce9118a1fd40c7cce5db387c21deb4cfe75903a7902"
+  },
+  "commands": [
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts='' tests/acceptance/test_policy_validate.py tests/integration/test_graph_generations.py tests/integration/test_approval_signatures.py tests/integration/test_project_config_contract.py",
+      "result": "passed",
+      "details": "22 passed"
+    },
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts=''",
+      "result": "passed",
+      "details": "346 passed in 52.76s"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json graph build",
+      "result": "passed",
+      "details": "387 nodes, 527 edges, digest 40c5e7fba0deed907a1040232e02d9ae694a7a5a04fad2cdaedbfd32b418b970"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json policy validate",
+      "result": "passed"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json architecture validate",
+      "result": "passed",
+      "details": "410 imports, no violations or unknowns"
+    },
+    {
+      "command": "git diff --check && python -m compileall -q src",
+      "result": "passed"
+    }
+  ],
+  "change": "Repository-local graph snapshots, schema documents, policy/workflow schemas, contract references, evidence schemas and result normalization now use shared strict JSON decoding. ACP/host protocol streams remain separate.",
+  "limitations": [
+    "Strict decoding does not authenticate or make derived JSON immutable; protocol streams retain their own framing/error handling."
+  ]
+}
