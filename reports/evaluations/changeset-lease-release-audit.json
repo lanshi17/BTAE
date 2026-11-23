@@ -1,0 +1,49 @@
+{
+  "time_utc": "2026-11-23T17:50:34.185570+00:00",
+  "task_id": "TASK-changeset-lease-audit",
+  "git_head": "c4fb9214c89fc7bba6f6f7d1faac911ca838d840",
+  "working_tree_dirty": true,
+  "environment": {
+    "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+    "platform": "Linux-7.0.0-43-generic-x86_64-with-glibc2.43"
+  },
+  "file_sha256": {
+    "src/epe/governance/leases.py": "4945fb634830e0fbc78aeb2eba2c3809cb4478435c715d6271cec18668588f54",
+    "src/epe/cli.py": "8069324f6d0f824f9c614f30fc44ef6721377114a0037579b487aa6d4c77bde2",
+    "tests/acceptance/test_changeset_lease_cli.py": "39bbf3913adb3d6bed9909582db23984b5943d0e222acde8a09be8516ac0cf7b"
+  },
+  "commands": [
+    {
+      "command": "PYTHONPATH=src pytest -q tests/unit/test_changeset_leases.py tests/acceptance/test_changeset_lease_cli.py",
+      "result": "passed",
+      "details": "6 passed"
+    },
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts=''",
+      "result": "passed",
+      "details": "327 passed in 49.23s"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json policy validate",
+      "result": "passed"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json graph build",
+      "result": "passed",
+      "details": "378 nodes, 498 edges, digest ed4b71316aedaa5e88022ff31f707b7856d8f739c68e35b494da8b38772130c5"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json architecture validate",
+      "result": "passed",
+      "details": "393 imports, no violations or unknowns"
+    },
+    {
+      "command": "git diff --check",
+      "result": "passed"
+    }
+  ],
+  "audit_fact": "lease release audit contains the canonical SHA-256 of the exact record removed under the write lock",
+  "limitations": [
+    "State deletion and audit append remain separate operations; external writers and host isolation are not covered."
+  ]
+}
