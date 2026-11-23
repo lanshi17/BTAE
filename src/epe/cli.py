@@ -107,7 +107,7 @@ def _print(result: CommandResult, fmt: str) -> int:
         "EPE-TASK-RISK", "EPE-TASK-ACCEPTANCE", "EPE-TASK-OBJECTIVE", "EPE-TASK-TARGET",
         "EPE-TASK-CHANGESET", "EPE-TASK-REVISION", "EPE-TASK-WORKFLOW", "EPE-TASK-UNKNOWN-FIELD",
         "EPE-VERIFY-CONFIG", "EPE-VERIFY-NO-CHECKS",
-        "EPE-PATH-OUTSIDE", "EPE-PATH-SYMLINK", "EPE-ENTITY-ID", "EPE-DESIGN-ID",
+        "EPE-CHANGESET-ID", "EPE-PATH-OUTSIDE", "EPE-PATH-SYMLINK", "EPE-ENTITY-ID", "EPE-DESIGN-ID",
     )
     if obj["status"] == "error" and any(str(code).startswith(parameter_prefixes) for code in codes):
         return 2
@@ -396,6 +396,8 @@ def cmd_task_transition(args) -> CommandResult:
 def cmd_changeset_transition(args) -> CommandResult:
     root = _root(args.root); config, failure = _config_or_result(root, "changeset transition")
     if failure: return failure
+    if not re.fullmatch(r"CHANGE-[A-Z0-9][A-Z0-9_-]*", args.changeset_id):
+        return _result("changeset transition", "error", [Diagnostic("EPE-CHANGESET-ID", Severity.ERROR, "ChangeSet ID 格式非法", entity_id=args.changeset_id)])
     try:
         change_path, _ = changeset_paths(root, config, args.changeset_id)
         lock = _safe_input(root, config.get("storage", {}).get("derived", ".engineering") + "/.write.lock")
@@ -561,6 +563,8 @@ def cmd_changeset_lease(args) -> CommandResult:
     config, failure = _config_or_result(root, "changeset lease")
     if failure:
         return failure
+    if not re.fullmatch(r"CHANGE-[A-Z0-9][A-Z0-9_-]*", args.changeset_id):
+        return _result("changeset lease", "error", [Diagnostic("EPE-CHANGESET-ID", Severity.ERROR, "ChangeSet ID 格式非法", entity_id=args.changeset_id)])
     try:
         path, _ = changeset_paths(root, config, args.changeset_id)
         if path.is_symlink() or not path.exists():

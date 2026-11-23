@@ -145,3 +145,12 @@ def test_policy_and_task_schema_errors_use_exit_code_two(tmp_path, capsys):
     result = json.loads(capsys.readouterr().out)
     assert result["status"] == "error"
     assert any(item["code"] == "EPE-VERIFY-CONFIG" for item in result["diagnostics"])
+
+    assert main(["--root", str(tmp_path), "--format", "json", "changeset", "transition", "BAD-ID", "activate"]) == 2
+    result = json.loads(capsys.readouterr().out)
+    assert result["status"] == "error"
+    assert result["diagnostics"][0]["code"] == "EPE-CHANGESET-ID"
+    assert main(["--root", str(tmp_path), "--format", "json", "changeset", "lease", "inspect", "BAD-ID"]) == 2
+    result = json.loads(capsys.readouterr().out)
+    assert result["status"] == "error"
+    assert result["diagnostics"][0]["code"] == "EPE-CHANGESET-ID"
