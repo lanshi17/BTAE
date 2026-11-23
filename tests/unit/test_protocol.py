@@ -31,6 +31,25 @@ def test_agent_request_schema_requires_protocol_and_trusted_identity():
     value.pop("protocol_version")
     with __import__("pytest").raises(jsonschema.ValidationError):
         jsonschema.Draft202012Validator(schema).validate(value)
+
+
+def test_agent_request_schema_matches_runtime_identifier_and_scope_constraints():
+    schema = json.loads(Path("engineering/schemas/agent-request.schema.json").read_text())
+    base = asdict(AgentRequest("REQ-1", "verify", "TASK-1", "CHANGE-1", ("CLASS-1",),
+                               "a" * 64, ("src/**",), trusted_identity={"source": "host"}))
+    invalid_values = [
+        ("task_id", "TASK-lowercase"),
+        ("changeset_id", "CHANGE-bad"),
+        ("expected_design_revision", "short"),
+        ("write_scope", ["/absolute"]),
+        ("write_scope", ["src/../outside"]),
+        ("target_entities", [""]),
+    ]
+    for field, invalid in invalid_values:
+        value = json.loads(json.dumps(base))
+        value[field] = invalid
+        with __import__("pytest").raises(jsonschema.ValidationError):
+            jsonschema.Draft202012Validator(schema).validate(value)
     value["protocol_version"] = "1"
     value.pop("trusted_identity")
     with __import__("pytest").raises(jsonschema.ValidationError):
