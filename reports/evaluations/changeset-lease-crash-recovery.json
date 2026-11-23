@@ -1,0 +1,51 @@
+{
+  "time_utc": "2026-11-23T17:03:39.934025+00:00",
+  "task_id": "TASK-changeset-lease",
+  "git_head": "943d10714d9368ce50f37a1f5e279f0442104ac3",
+  "working_tree_dirty": true,
+  "environment": {
+    "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+    "platform": "Linux-7.0.0-43-generic-x86_64-with-glibc2.43"
+  },
+  "file_sha256": {
+    "tests/integration/test_changeset_lease_concurrency.py": "798797a31066dffd1c9c626485b737b25e8bd5a7845cd7ca406e25a91faf3ef3",
+    "plans/active/TASK-changeset-lease.md": "14669894051c534d468a0cb127adb29e7b2b75559129d4095a59162ae393eeb4"
+  },
+  "commands": [
+    {
+      "command": "PYTHONPATH=src pytest -q tests/integration/test_changeset_lease_concurrency.py",
+      "result": "passed",
+      "details": "2 passed; independent CLI contention and SIGKILL recovery"
+    },
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts=''",
+      "result": "passed",
+      "details": "325 passed in 49.31s"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json policy validate",
+      "result": "passed"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json graph build",
+      "result": "passed",
+      "details": "376 nodes, 494 edges, digest a5c3f4970b2935c18dd594b0bb2617ef8424cb548042225e14ddca7c9fc38d14"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json architecture validate",
+      "result": "passed",
+      "details": "390 imports, no violations or unknowns"
+    },
+    {
+      "command": "git diff --check",
+      "result": "passed"
+    }
+  ],
+  "facts": [
+    "two independent CLI processes yielded one passed and one blocked JSON result",
+    "a lease owner terminated by SIGKILL left a lease that was recovered after TTL expiry"
+  ],
+  "limitations": [
+    "TTL recovery does not provide external writer protection, identity authentication, cross-machine consistency or OS-level isolation."
+  ]
+}
