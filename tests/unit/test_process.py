@@ -18,6 +18,18 @@ def test_process_keeps_small_output_and_reports_start_error(tmp_path):
     assert result.stdout == "hello\n" and result.returncode == 0
     missing = run_process([str(tmp_path / "missing-executable")], tmp_path)
     assert missing.termination_reason == "start_error" and missing.returncode is None
+    bad_cwd = run_process([sys.executable, "-c", "pass"], tmp_path / "missing-cwd")
+    assert bad_cwd.termination_reason == "start_error" and bad_cwd.returncode is None
+
+
+def test_process_rejects_invalid_argv_and_input_before_spawning(tmp_path):
+    import pytest
+    with pytest.raises(ValueError):
+        run_process([], tmp_path)
+    with pytest.raises(ValueError):
+        run_process([sys.executable, ""], tmp_path)
+    with pytest.raises(TypeError):
+        run_process([sys.executable, "-c", "pass"], tmp_path, input_data="text")
 
 
 def test_process_rejects_invalid_bounds(tmp_path):

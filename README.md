@@ -22,7 +22,10 @@ MVP 上手和故障恢复步骤见 [使用指南](docs/standards/user-guide-mvp.
 PYTHONPATH=src python -m epe.cli --format json init
 PYTHONPATH=src python -m epe.cli inspect
 PYTHONPATH=src python -m epe.cli graph build
+PYTHONPATH=src python -m epe.cli --format json graph path SRC-src/epe/cli.py SRC-src/epe/core/models.py --direction out --budget 100
 PYTHONPATH=src python -m epe.cli --format json changeset conflicts
+PYTHONPATH=src python -m epe.cli --format json changeset lease inspect CHANGE-001
+PYTHONPATH=src python -m epe.cli --format json audit verify
 PYTHONPATH=src pytest -q
 ```
 
@@ -31,6 +34,8 @@ PYTHONPATH=src pytest -q
 多 Agent 开始修改前可运行 `epe changeset conflicts` 查询 planned/active ChangeSet 的潜在范围重叠；该命令只报告保守候选，不提供锁或宿主隔离。
 
 遵守 EPE 协议的参与者可用 `epe changeset lease acquire|renew|release|inspect` 管理短期本地租约；租约过期可恢复，但不构成操作系统或宿主写入隔离。
+
+`epe graph path` 在新鲜图快照上返回带原始边证据的最短路径；`--direction`、`--relation` 和 `--budget` 控制搜索范围。路径中的推断、低置信度或未知来源会标记为 `candidate`，找不到路径不等于证明工程中不存在依赖。
 
 缺少设计时可运行 `epe design create CLASS-001`（或其他已支持实体前缀）生成草案模板；命令不会覆盖已有文件。契约设计使用 `CONTRACT-` 前缀和 YAML Schema 字段，审批必须使用配置的受信 SSH 公钥签名。
 
@@ -46,6 +51,10 @@ PYTHONPATH=src pytest -q
 
 当前 MVP 支持实体/关系解析、Python AST 与映射、基础依赖图、架构校验、任务登记、ChangeSet 基线、设计生成/契约校验、签名审批、授权检查运行、Evidence 新鲜度和综合 `check`；同时提供基于图的可解释 `impact analyze`、增量计划和带失效缓存的无外部语义服务 C0–C2 `context resolve`。Hermes ACP 目前仅提供受限探索会话：普通请求单线程读取响应，可接收流式 `session/update`、创建空 MCP 子会话并在已登记的父/子会话间路由请求，关闭会话会唤醒等待者；bridge transport 还支持 nonce 绑定的 SSH capability attestation，但真实 Hermes ACP 不自动提供该证明。这些能力不授予宿主身份、写入隔离、工具权限或 EPE 操作能力。尚未配置宿主文件系统隔离。
 
+能力状态和边界见[宿主能力矩阵](docs/modules/adapters/host-capability-matrix.md)。`local-cli` 只接受只读 `verify` 请求；Hermes bridge 必须显式提供 argv 并完成 capability handshake，未受签名证明的声明保持 `handshaken-untrusted`。ACP 仅提供 POSIX 下的受限会话传输，真实宿主身份、工具权限、写入隔离、跨平台语义和远程不可变审计仍未完成。
+
 CLI 的 JSON 输出遵循 `engineering/schemas/command-result.schema.json`，退出码为：0 成功、1 门禁阻断、2 参数/配置错误、3 执行或存储故障、4 未支持命令、5 写入冲突。
 
 本项目没有将实现状态等同于方法效果验证。PRD 中的收益、召回率和成本指标仍需独立试点与验收记录。
+
+完整本地回归使用 `PYTHONPATH=src pytest -q -o addopts=''`；wheel 脱离源码树的安装验证、CI 运行和分支治理证据分别见[发布回归记录](reports/acceptance/wheel-regression-20261123.md)、[远程 CI 复核](reports/acceptance/remote-ci-20261123.md)和[远程治理复核](reports/acceptance/remote-governance-20261123.md)。测试和 fixture 只证明记录的本地场景，不替代真实宿主权限、独立影响标注集或长期试点。
