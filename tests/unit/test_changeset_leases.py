@@ -11,6 +11,13 @@ def config():
     return {"storage": {"changesets": "engineering/changesets", "derived": ".engineering"}}
 
 
+def test_lease_schema_is_published_in_runtime_package():
+    from importlib.resources import files
+    schema = json.loads(files("epe.data.schemas").joinpath("lease.schema.json").read_text())
+    assert schema["$id"].endswith("/lease/v1")
+    assert set(schema["required"]) == {"schema_version", "changeset_id", "lease_id", "owner", "pid", "revision", "acquired_at", "expires_at"}
+
+
 def change(revision=1, status="active"):
     return {"id": "CHANGE-001", "task": "TASK-001", "owner": "alice", "affected_entities": ["MOD-001"],
             "write_scope": ["src/**"], "protected": [], "dependencies": [], "status": status, "revision": revision}

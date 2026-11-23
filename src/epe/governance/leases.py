@@ -8,6 +8,7 @@ import os
 import re
 import uuid
 from datetime import datetime, timedelta, timezone
+from importlib.resources import files
 from pathlib import Path
 from typing import Any
 
@@ -81,6 +82,14 @@ def _read(path: Path) -> dict[str, Any]:
         value = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
         raise LeaseError("租约记录不可读或 JSON 无效") from exc
+    try:
+        import jsonschema
+        schema = json.loads(files("epe.data.schemas").joinpath("lease.schema.json").read_text(encoding="utf-8"))
+        errors = list(jsonschema.Draft202012Validator(schema).iter_errors(value))
+    except (OSError, ValueError, ImportError) as exc:
+        raise LeaseError("租约 Schema 不可用") from exc
+    if errors:
+        raise LeaseError("租约记录不符合 Schema: " + errors[0].message)
     required = {"schema_version", "changeset_id", "lease_id", "owner", "pid", "revision", "acquired_at", "expires_at"}
     if (not isinstance(value, dict) or set(value) != required or value.get("schema_version") != 1
             or not isinstance(value.get("changeset_id"), str) or not isinstance(value.get("lease_id"), str)

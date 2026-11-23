@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://btae.local/schema/lease/v1",
+  "title": "BTAE ChangeSet Lease",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "changeset_id", "lease_id", "owner", "pid", "revision", "acquired_at", "expires_at"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "changeset_id": {"type": "string", "pattern": "^CHANGE-[A-Z0-9][A-Z0-9_-]*$"},
+    "lease_id": {"type": "string", "format": "uuid"},
+    "owner": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.@-]{0,127}$"},
+    "pid": {"type": "integer", "minimum": 1},
+    "revision": {"type": "integer", "minimum": 1},
+    "acquired_at": {"type": "string", "format": "date-time"},
+    "expires_at": {"type": "string", "format": "date-time"}
+  }
+}
