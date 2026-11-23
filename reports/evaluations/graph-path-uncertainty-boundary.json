@@ -1,0 +1,50 @@
+{
+  "time_utc": "2026-11-23T18:57:31Z",
+  "task_id": "TASK-graph-path-uncertainty-boundary",
+  "git_head": "c62634ed45f5242f4523b5af884568de0d7a0303",
+  "working_tree_before_report": "clean",
+  "environment": {
+    "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+    "platform": "Linux-7.0.0-43-generic-x86_64-with-glibc2.43"
+  },
+  "file_sha256": {
+    "src/epe/graph/builder.py": "0d5e798419d135ae1ad4350dd115a2a00411f41234404feadd702b1a3eea25ee",
+    "tests/unit/test_graph_path.py": "b604bd5d2b41f7a67e9f9c2e0fe33de42c8ae0dce8cfa62003cb1bc5e168cde3",
+    "plans/active/TASK-graph-path-query.md": "63da2490776af7814a3c4e282fbee14db52365f201f2bd6ee96c349466358053"
+  },
+  "commands": [
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts='' tests/unit/test_graph_path.py tests/integration/test_graph_provenance.py tests/integration/test_graph_path_cli.py",
+      "result": "passed",
+      "details": "9 passed"
+    },
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts=''",
+      "result": "passed",
+      "details": "335 passed in 49.36s"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json graph build",
+      "result": "passed",
+      "details": "379 nodes, 499 edges, digest 169c0a58a5fbcd29e875fbcb0def0a777f92c7022dd2e96e14aa2af332398267"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json policy validate",
+      "result": "passed"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json architecture validate",
+      "result": "passed",
+      "details": "394 imports, no violations or unknowns"
+    },
+    {
+      "command": "git diff --check",
+      "result": "passed"
+    }
+  ],
+  "change": "trace_path treats malformed origin, missing/non-finite confidence, boolean confidence, and confidence other than exactly 1.0 as candidate metadata instead of raising or claiming a determined path.",
+  "limitations": [
+    "Path selection still returns one deterministic shortest path; complete alternative provenance remains available through graph_neighbors.",
+    "A candidate classification is a conservative transport fact, not an independent proof of impact or dependency completeness."
+  ]
+}

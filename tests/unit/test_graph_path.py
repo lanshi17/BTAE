@@ -35,3 +35,14 @@ def test_search_budget_absence_and_uncertainty_are_distinct():
     assert not missing["found"] and not missing["truncated"]
     with pytest.raises(ValueError): trace_path(snapshot, "A", "absent")
     with pytest.raises(ValueError): trace_path(snapshot, "A", "C", budget=0)
+
+
+@pytest.mark.parametrize("confidence", [None, True, float("nan"), 0.5])
+def test_malformed_or_uncertain_edge_metadata_is_candidate(confidence):
+    snapshot = {
+        "nodes": [{"id": "A"}, {"id": "B"}],
+        "edges": [{"from": "A", "to": "B", "relation": "depends_on",
+                   "origin": "untrusted-shape", "confidence": confidence}],
+    }
+    result = trace_path(snapshot, "A", "B")
+    assert result["found"] and result["classification"] == "candidate"
