@@ -39,7 +39,7 @@ PYTHONPATH=src pytest -q
 
 运行时策略 Schema 已随 wheel 包发布，因此安装后的 `epe policy validate` 不依赖当前源码仓库的 `engineering/schemas` 目录。
 
-当前 MVP 支持实体/关系解析、Python AST 与映射、基础依赖图、架构校验、任务登记、ChangeSet 基线、设计生成/契约校验、签名审批、授权检查运行、Evidence 新鲜度和综合 `check`；同时提供基于图的可解释 `impact analyze`、增量计划和带失效缓存的无外部语义服务 C0–C2 `context resolve`。Hermes ACP 目前仅提供受限探索会话：普通请求单线程读取响应，可接收流式 `session/update`、创建空 MCP 子会话并在已登记的父/子会话间路由请求，关闭会话会唤醒等待者；这些能力不授予宿主身份、写入隔离、工具权限或 EPE 操作能力。尚未配置宿主文件系统隔离。
+当前 MVP 支持实体/关系解析、Python AST 与映射、基础依赖图、架构校验、任务登记、ChangeSet 基线、设计生成/契约校验、签名审批、授权检查运行、Evidence 新鲜度和综合 `check`；同时提供基于图的可解释 `impact analyze`、增量计划和带失效缓存的无外部语义服务 C0–C2 `context resolve`。Hermes ACP 目前仅提供受限探索会话：普通请求单线程读取响应，可接收流式 `session/update`、创建空 MCP 子会话并在已登记的父/子会话间路由请求，关闭会话会唤醒等待者；bridge transport 还支持 nonce 绑定的 SSH capability attestation，但真实 Hermes ACP 不自动提供该证明。这些能力不授予宿主身份、写入隔离、工具权限或 EPE 操作能力。尚未配置宿主文件系统隔离。
 
 CLI 的 JSON 输出遵循 `engineering/schemas/command-result.schema.json`，退出码为：0 成功、1 门禁阻断、2 参数/配置错误、3 执行或存储故障、4 未支持命令、5 写入冲突。
 
