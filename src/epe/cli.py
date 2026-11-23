@@ -563,11 +563,16 @@ def cmd_changeset_lease(args) -> CommandResult:
         validate_changeset(value, task.id)
         if args.lease_event == "acquire":
             lease = acquire_lease(root, config, value, args.owner, args.ttl)
+            from epe.core.fingerprint import sha256_json
+            _append_state_audit(root, config, "changeset_lease_acquired", {"changeset_id": args.changeset_id, "owner": args.owner, "lease_id": lease["lease_id"], "revision": lease["revision"], "record_sha256": sha256_json(lease)})
             return _result("changeset lease acquire", "passed", data=lease)
         if args.lease_event == "renew":
             lease = renew_lease(root, config, value, args.owner, args.lease_id, args.ttl)
+            from epe.core.fingerprint import sha256_json
+            _append_state_audit(root, config, "changeset_lease_renewed", {"changeset_id": args.changeset_id, "owner": args.owner, "lease_id": lease["lease_id"], "revision": lease["revision"], "record_sha256": sha256_json(lease)})
             return _result("changeset lease renew", "passed", data=lease)
         released = release_lease(root, config, args.changeset_id, args.owner, args.lease_id)
+        _append_state_audit(root, config, "changeset_lease_released", {"changeset_id": args.changeset_id, "owner": args.owner, "lease_id": args.lease_id, "released": released})
         return _result("changeset lease release", "passed", data={"released": released})
     except LeaseConflict as exc:
         return _result("changeset lease", "blocked", [Diagnostic("EPE-CHANGESET-LEASE", Severity.ERROR, str(exc))])
