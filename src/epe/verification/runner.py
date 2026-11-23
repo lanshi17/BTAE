@@ -293,9 +293,9 @@ def _validate_evidence_record(root: Path, value: Any) -> None:
         import jsonschema
         schema_path = root / "engineering/schemas/evidence.schema.json"
         try:
-            schema = json.loads(schema_path.read_text(encoding="utf-8"))
+            schema = strict_json_loads(schema_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
-            schema = json.loads(files("epe.data.schemas").joinpath("evidence.schema.json").read_text(encoding="utf-8"))
+            schema = strict_json_loads(files("epe.data.schemas").joinpath("evidence.schema.json").read_text(encoding="utf-8"))
         errors = sorted(jsonschema.Draft202012Validator(schema).iter_errors(schema_value), key=lambda error: (tuple(str(p) for p in error.absolute_path), error.message))
     except (ImportError, OSError, json.JSONDecodeError) as exc:
         raise ValueError(f"Evidence Schema 不可用: {exc}") from exc

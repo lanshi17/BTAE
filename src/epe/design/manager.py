@@ -10,6 +10,7 @@ from urllib.parse import unquote, urlsplit
 from epe.core.diagnostics import Diagnostic, Severity
 from epe.core.fingerprint import sha256_bytes, sha256_json
 from epe.core.models import Approval, Entity
+from epe.core.json_codec import strict_json_loads
 from epe.core.registry import Registry
 from epe.parsers.documents import parse_yaml_bytes
 
@@ -78,7 +79,7 @@ def validate_contract(entity: Entity, root: Path) -> tuple[dict[str, Any], list[
     try:
         import jsonschema
         from importlib.resources import files
-        contract_schema = json.loads(files("epe.data.schemas").joinpath("contract.schema.json").read_text(encoding="utf-8"))
+        contract_schema = strict_json_loads(files("epe.data.schemas").joinpath("contract.schema.json").read_text(encoding="utf-8"))
         errors = sorted(jsonschema.Draft202012Validator(contract_schema).iter_errors(raw), key=lambda error: (tuple(str(part) for part in error.path), error.message))
         if errors:
             return {}, [Diagnostic("EPE-CONTRACT-FIELDS", Severity.ERROR, f"契约字段无效: {errors[0].message}", entity_id=entity.id, path=entity.source.path)]
@@ -144,7 +145,7 @@ def _first_schema_reference_error(schema: Any, source_path: Path, root: Path) ->
                     if not target_path.is_file():
                         return f"Schema $ref 目标不存在: {ref}"
                     try:
-                        document = json.loads(target_path.read_text(encoding="utf-8"))
+                        document = strict_json_loads(target_path.read_text(encoding="utf-8"))
                     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
                         return f"Schema $ref 目标不是有效 JSON: {ref} ({exc})"
                     try:

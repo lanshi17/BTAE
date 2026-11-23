@@ -9,6 +9,7 @@ from typing import Any
 import yaml
 
 from epe.core.diagnostics import Diagnostic, Severity
+from epe.core.json_codec import strict_json_loads
 
 
 def default_config() -> dict[str, Any]:
@@ -74,7 +75,7 @@ class Repository:
 
     def load_json(self, path: Path) -> tuple[Any | None, list[Diagnostic]]:
         try:
-            return json.loads(path.read_text(encoding="utf-8")), []
+            return strict_json_loads(path.read_text(encoding="utf-8")), []
         except (OSError, json.JSONDecodeError) as exc:
             return None, [Diagnostic("EPE-JSON-PARSE", Severity.ERROR, str(exc), path=self.rel(path))]
 
@@ -116,7 +117,7 @@ def load_config(root: Path) -> tuple[dict[str, Any] | None, list[Diagnostic]]:
         return None, [Diagnostic("EPE-CONFIG-INVALID", Severity.ERROR, "配置必须为无递归、字符串键且有限数值的 JSON 数据", path="engineering/epe.yaml")]
     try:
         import jsonschema
-        schema = json.loads(files("epe.data.schemas").joinpath("project-config.schema.json").read_text(encoding="utf-8"))
+        schema = strict_json_loads(files("epe.data.schemas").joinpath("project-config.schema.json").read_text(encoding="utf-8"))
         errors = sorted(jsonschema.Draft202012Validator(schema).iter_errors(value), key=lambda error: (tuple(str(p) for p in error.absolute_path), error.message))
     except (ImportError, OSError, ValueError) as exc:
         return None, [Diagnostic("EPE-CONFIG-SCHEMA", Severity.ERROR, f"配置 Schema 不可用: {exc}", path="engineering/epe.yaml")]
