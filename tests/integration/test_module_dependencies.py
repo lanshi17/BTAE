@@ -106,6 +106,21 @@ def test_cli_architecture_exception_requires_approved_adr_and_review_deadline(tm
     assert invalid["status"] == "error"
     assert any(item["code"] == "EPE-ARCH-EXCEPTION" for item in invalid["diagnostics"])
 
+    policy_data["exceptions"][0]["review_until"] = "2099-01-01T08:00:00+08:00"
+    policy.write_text(yaml.safe_dump(policy_data), encoding="utf-8")
+    assert main(["--root", str(tmp_path), "--format", "json", "architecture", "validate"]) == 3
+    non_utc = json.loads(capsys.readouterr().out)
+    assert non_utc["status"] == "error"
+    assert any(item["code"] == "EPE-ARCH-EXCEPTION" for item in non_utc["diagnostics"])
+
+    policy_data["exceptions"][0]["review_until"] = "2099-01-01T00:00:00Z"
+    policy_data["exceptions"].append(dict(policy_data["exceptions"][0], **{"from": "SRC-src/a.py"}))
+    policy.write_text(yaml.safe_dump(policy_data), encoding="utf-8")
+    assert main(["--root", str(tmp_path), "--format", "json", "architecture", "validate"]) == 3
+    duplicate = json.loads(capsys.readouterr().out)
+    assert duplicate["status"] == "error"
+    assert any(item["code"] == "EPE-ARCH-EXCEPTION" for item in duplicate["diagnostics"])
+
 
 def test_cli_architecture_exception_scope_only_reports_exceptions_that_apply(tmp_path, capsys):
     import json

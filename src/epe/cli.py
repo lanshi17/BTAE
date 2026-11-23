@@ -6,7 +6,7 @@ import os
 import re
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from fnmatch import fnmatch
 from importlib.resources import files
 from pathlib import Path
@@ -813,12 +813,19 @@ def _effective_architecture_exceptions(root: Path, config: dict[str, Any], polic
     rule_ids = {str(rule.get("id", "ARCH-FORBIDDEN")) for rule in policy.get("forbidden_dependencies", []) if isinstance(rule, dict)}
     now = datetime.now(timezone.utc)
     valid: list[dict[str, Any]] = []
+    seen_exception_ids: set[str] = set()
     for exception in exceptions:
         if not isinstance(exception, dict):
             diagnostics.append(Diagnostic("EPE-ARCH-EXCEPTION", Severity.ERROR, "架构例外必须为对象"))
             continue
         rule_id = exception.get("rule_id")
         adr_id = exception.get("adr")
+        exception_id = exception.get("id")
+        if isinstance(exception_id, str) and exception_id in seen_exception_ids:
+            diagnostics.append(Diagnostic("EPE-ARCH-EXCEPTION", Severity.ERROR, f"例外 ID 重复: {exception_id}"))
+            continue
+        if isinstance(exception_id, str):
+            seen_exception_ids.add(exception_id)
         if rule_id not in rule_ids:
             diagnostics.append(Diagnostic("EPE-ARCH-EXCEPTION", Severity.ERROR, f"例外引用未知规则: {rule_id}"))
             continue
@@ -828,8 +835,8 @@ def _effective_architecture_exceptions(root: Path, config: dict[str, Any], polic
             continue
         try:
             expires = datetime.fromisoformat(str(exception.get("review_until")).replace("Z", "+00:00"))
-            if expires.tzinfo is None or expires.utcoffset() is None:
-                raise ValueError("review_until 必须带时区")
+            if expires.tzinfo is None or expires.utcoffset() != timedelta(0):
+                raise ValueError("review_until 必须为 UTC 时区")
             expires = expires.astimezone(timezone.utc)
         except (TypeError, ValueError):
             diagnostics.append(Diagnostic("EPE-ARCH-EXCEPTION", Severity.ERROR, f"例外复查期限无效: {exception.get('review_until')}"))
