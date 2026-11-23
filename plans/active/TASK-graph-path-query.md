@@ -5,4 +5,4 @@
 - 设计：`graph path SOURCE TARGET [--direction out|in|both] [--relation TYPE ...] [--budget N]` 只读加载校验过的新鲜图；BFS 返回稳定的最短路径及原始边和行进方向；预算限制展开节点数，耗尽返回 truncated；找不到路径与预算耗尽分开。端点必须为实际节点，路径中的 inferred、未知来源或低置信度标记 candidate。动态依赖等盲区保留原诊断，未找到路径不代表真实工程中不存在依赖。快照摘要随结果返回。
 - 验收：测试有向/反向、多关系过滤、环、确定性、无路径、预算、候选路径和缺失端点；真实 CLI 测试查询及过期快照拒绝。设计状态 draft，不构成批准或完整召回证明。
 
-- 本轮验证：定向 3 项、全量 157 项通过，真实 CLI 覆盖过期快照拒绝；证据 `reports/evaluations/graph-path-query.json`。图构建目前对相同端点及关系的多来源边有合并限制，路径只能展示现有快照保留的边；多来源保真仍待修复。
+- 本轮验证：定向 3 项、全量 157 项通过，真实 CLI 覆盖过期快照拒绝；证据 `reports/evaluations/graph-path-query.json`。当前 Registry 与 Graph Builder 按完整关系记录去重，保留相同端点/类型的不同来源；`trace_path` 选择一条确定性最短路径，完整来源可通过邻接查询获得。对未经验证的快照元数据，未知来源、缺失/非有限/非 1 置信度统一标为 `candidate`，不因格式异常冒泡。

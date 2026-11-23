@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 import re
 import sys
@@ -397,7 +398,20 @@ def trace_path(snapshot: dict[str, Any], source: str, target: str, *, direction:
             path.append({"edge": edge, "direction": step_direction})
             node = previous
         path.reverse()
-    candidate = any(step["edge"].get("origin", {}).get("type") not in {"explicit", "static"} or step["edge"].get("confidence", 0) < 1 for step in path)
+    def uncertain(edge: dict[str, Any]) -> bool:
+        origin = edge.get("origin")
+        origin_type = origin.get("type") if isinstance(origin, dict) else None
+        confidence = edge.get("confidence")
+        determined = (
+            origin_type in {"explicit", "static"}
+            and type(confidence) in {int, float}
+            and not isinstance(confidence, bool)
+            and math.isfinite(float(confidence))
+            and float(confidence) == 1.0
+        )
+        return not determined
+
+    candidate = any(uncertain(step["edge"]) for step in path)
     return {"source": source, "target": target, "snapshot_digest": snapshot.get("content_digest"),
             "found": found, "path": path, "classification": ("candidate" if candidate else "determined") if found else None,
             "expanded": expanded, "budget": budget, "truncated": bool(queue and not found),
