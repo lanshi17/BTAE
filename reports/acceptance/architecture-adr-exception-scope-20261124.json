@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "task_id": "TASK-architecture-adr-exceptions",
-  "time_utc": "2026-11-23T22:09:23.391276Z",
-  "git_head": "ee4611665f29d1ddd9e2702b35b0cdc4b0dd7b6c",
+  "time_utc": "2026-11-23T22:17:52.510713Z",
+  "git_head": "f2d0da5d6645f75db7a28df9c75e88566a89886d",
   "spec_approval": "not obtained (autonomous run)",
   "environment": {
     "python": "3.14.4",
@@ -12,10 +12,14 @@
     "README.md": "1dc37eb34f9ab4ea48cbc7e205343d77a72baba5d1350df1c92919b2d2795b9b",
     "docs/modules/verification/README.md": "77343ab1803dffcb926ce37023100051870674155a4019cdc957d067618ede9b",
     "plans/active/TASK-architecture-adr-exceptions.md": "ed1383fb9a6f51e654213845464c077c611ddead32bc979ec8f9636c9908be8e",
-    "src/epe/cli.py": "00aa7e336968f1d7a3a55d7e4316fbd8187e88adc45298cd8e44b5d5d7bb49a0",
+    "plans/active/TASK-cli-exit-mapping.md": "c19cf88afe0c3c320925434c9df2762dae5b7f21682dfb02c2fbc49a8d03337d",
+    "src/epe/cli.py": "4058c53b15d636cb1cd88b606cf4ce592d10d42e664c1d96d4e846b823cf3872",
     "src/epe/verification/architecture.py": "7f95372a2b07fcbb381b3127392da6c37818d3e009fb486d5f82368989aea83b",
     "tests/integration/test_module_dependencies.py": "3aa4c3199d775ff2baa1221a33d7eb0ff6faf3fa93b8f390ac9b9cb9e654d094",
-    "tests/integration/test_architecture_diff_cli.py": "d28841af84f6dd6c797770670a3c4a11ac60516bec6de6d5a77ac805d465cd75"
+    "tests/integration/test_architecture_diff_cli.py": "d28841af84f6dd6c797770670a3c4a11ac60516bec6de6d5a77ac805d465cd75",
+    "tests/acceptance/test_cli.py": "e2055e48de23d312c376f4d17c857ec917812423d8eb04e1c16cb03449bc9f3a",
+    "tests/acceptance/test_design_create.py": "3666502577e1e9e00ecd149df1840e053101101850021e958d08eb9380eee4b9",
+    "tests/acceptance/test_policy_validate.py": "3a250956a3d5bef422585e25167fc0ea899f78ef81cb5d620d232aea9b32f68d"
   },
   "scenarios": [
     {
@@ -43,13 +47,18 @@
       "test": "tests/integration/test_module_dependencies.py::test_cli_architecture_exception_requires_approved_adr_and_review_deadline",
       "result": "passed",
       "mutation_control": "removing the UTC offset check made the test fail"
+    },
+    {
+      "behavior": "policy and task schema diagnostics map to exit code 2 while retaining status=error",
+      "test": "tests/acceptance/test_cli.py::test_policy_and_task_schema_errors_use_exit_code_two",
+      "result": "passed"
     }
   ],
   "commands": [
     {
       "command": "PYTHONPATH=src pytest -q -o addopts=''",
       "result": "passed",
-      "details": "354 passed in 50.65s"
+      "details": "355 passed in 51.60s"
     },
     {
       "command": "git diff --check",
@@ -69,6 +78,7 @@
   "limitations": [
     "The system Python refused editable installation under PEP 668; the exact CI workflow was rerun in an isolated venv.",
     "GitHub does not allow the PR author to approve their own pull request; PR #48 requires an independent reviewer under branch protection.",
-    "Repository-local ADR approval and review deadlines do not provide an external immutable review authority or host isolation."
+    "Repository-local ADR approval and review deadlines do not provide an external immutable review authority or host isolation.",
+    "The remote PR still requires an independent approval because the protected branch disallows author self-approval."
   ]
 }
