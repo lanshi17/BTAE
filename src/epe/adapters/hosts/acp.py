@@ -20,7 +20,7 @@ class ACPProtocolError(ValueError):
 
 
 class HermesACPSession:
-    """An explicitly opened, prompt-free ACP session."""
+    """An explicitly opened ACP session with text-only prompt support."""
 
     def __init__(self, process: subprocess.Popen, selector: selectors.BaseSelector,
                  timeout: float, output_limit: int):
@@ -30,6 +30,7 @@ class HermesACPSession:
         self._output_limit = output_limit
         self._pending = b""
         self._consumed = 0
+        self._next_id = 3
         self.session_id = ""
         self._closed = False
 
@@ -51,6 +52,57 @@ class HermesACPSession:
 
     def __exit__(self, *_: object) -> None:
         self.close()
+
+    def prompt(self, text: str) -> dict[str, Any]:
+        """Send one text prompt; the result is model output, never a gate decision."""
+        if self._closed or not isinstance(text, str) or not text.strip():
+            raise ValueError("session is closed or prompt is empty")
+        result = self._request("session/prompt", {
+            "sessionId": self.session_id,
+            "prompt": [{"type": "text", "text": text}],
+        })
+        if not isinstance(result, dict):
+            raise ACPProtocolError("ACP session/prompt response is not an object")
+        return result
+
+    def _request(self, method: str, params: dict[str, Any]) -> Any:
+        request_id = self._next_id
+        self._next_id += 1
+        payload = {"jsonrpc": "2.0", "id": request_id, "method": method, "params": params}
+        self._process.stdin.write((json.dumps(payload, separators=(",", ":")) + "\n").encode("utf-8"))
+        self._process.stdin.flush()
+        while True:
+            message = self._read_message()
+            if "id" not in message and isinstance(message.get("method"), str):
+                continue
+            if type(message.get("id")) is not int or message["id"] != request_id:
+                raise ACPProtocolError("unexpected ACP response ID")
+            if "error" in message:
+                raise ACPProtocolError("ACP request failed")
+            return message.get("result")
+
+    def _read_message(self) -> dict[str, Any]:
+        deadline = time.monotonic() + self._timeout
+        while True:
+            while b"\n" in self._pending:
+                line, self._pending = self._pending.split(b"\n", 1)
+                try:
+                    message = json.loads(line)
+                except (UnicodeError, json.JSONDecodeError) as exc:
+                    raise ACPProtocolError("invalid ACP JSON") from exc
+                if not isinstance(message, dict) or message.get("jsonrpc") != "2.0":
+                    raise ACPProtocolError("invalid ACP message")
+                return message
+            remaining = deadline - time.monotonic()
+            if remaining <= 0 or not self._selector.select(remaining):
+                raise TimeoutError("ACP request timed out")
+            chunk = os.read(self._process.stdout.fileno(), min(65536, self._output_limit + 1 - self._consumed))
+            if not chunk:
+                raise ACPProtocolError("ACP stream closed before response")
+            self._consumed += len(chunk)
+            if self._consumed > self._output_limit:
+                raise ACPProtocolError("ACP output limit exceeded")
+            self._pending += chunk
 
 
 class HermesACPAdapter:
@@ -113,7 +165,7 @@ class HermesACPAdapter:
         session._process.stdin.write((json.dumps(payload, separators=(",", ":")) + "\n").encode("utf-8"))
         session._process.stdin.flush()
         while True:
-            message = self._read_message(session)
+            message = session._read_message()
             if "id" not in message and isinstance(message.get("method"), str):
                 continue
             if type(message.get("id")) is not int or message["id"] != request_id:
@@ -121,29 +173,6 @@ class HermesACPAdapter:
             if "error" in message:
                 raise ACPProtocolError("ACP request failed")
             return message.get("result")
-
-    def _read_message(self, session: HermesACPSession) -> dict[str, Any]:
-        deadline = time.monotonic() + session._timeout
-        while True:
-            while b"\n" in session._pending:
-                line, session._pending = session._pending.split(b"\n", 1)
-                try:
-                    message = json.loads(line)
-                except (UnicodeError, json.JSONDecodeError) as exc:
-                    raise ACPProtocolError("invalid ACP JSON") from exc
-                if not isinstance(message, dict) or message.get("jsonrpc") != "2.0":
-                    raise ACPProtocolError("invalid ACP message")
-                return message
-            remaining = deadline - time.monotonic()
-            if remaining <= 0 or not session._selector.select(remaining):
-                raise TimeoutError("ACP request timed out")
-            chunk = os.read(session._process.stdout.fileno(), min(65536, session._output_limit + 1 - session._consumed))
-            if not chunk:
-                raise ACPProtocolError("ACP stream closed before response")
-            session._consumed += len(chunk)
-            if session._consumed > session._output_limit:
-                raise ACPProtocolError("ACP output limit exceeded")
-            session._pending += chunk
 
     @staticmethod
     def _validate_initialize(value: Any) -> None:
