@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "task_id": "TASK-architecture-adr-exceptions",
-  "time_utc": "2026-11-23T22:34:39.011957Z",
-  "git_head": "b3c32187105a1b777f1759f50e8ee6ed5654e116",
+  "time_utc": "2026-11-23T22:44:18.124919Z",
+  "git_head": "4f247e67a6e8ac6d0fdacb5ed3993b0f5f368f00",
   "spec_approval": "not obtained (autonomous run)",
   "environment": {
     "python": "3.14.4",
@@ -12,17 +12,18 @@
     "README.md": "1dc37eb34f9ab4ea48cbc7e205343d77a72baba5d1350df1c92919b2d2795b9b",
     "docs/modules/verification/README.md": "77343ab1803dffcb926ce37023100051870674155a4019cdc957d067618ede9b",
     "plans/active/TASK-architecture-adr-exceptions.md": "ed1383fb9a6f51e654213845464c077c611ddead32bc979ec8f9636c9908be8e",
-    "plans/active/TASK-cli-exit-mapping.md": "c19cf88afe0c3c320925434c9df2762dae5b7f21682dfb02c2fbc49a8d03337d",
+    "plans/active/TASK-cli-exit-mapping.md": "559b09a7a1a6d6b08ceb8e8c58ce3226c5f63056966ebed45be1085187ba32fe",
     "plans/active/TASK-host-capability-attestation.md": "09488b2e5adcb7250183eeb57ea57946badd0d7e727aae177db07c20068ac4b2",
-    "src/epe/cli.py": "4058c53b15d636cb1cd88b606cf4ce592d10d42e664c1d96d4e846b823cf3872",
+    "src/epe/cli.py": "578efcb35bd41fdeaea3974da8460ded795ebd27309b2028ac88f8156c10fe22",
     "src/epe/verification/architecture.py": "7f95372a2b07fcbb381b3127392da6c37818d3e009fb486d5f82368989aea83b",
     "src/epe/adapters/host_attestation.py": "2dbeeda3d730fc64849b96fd47226df5aa814e075aca1f540218bc63a9e9899b",
     "tests/integration/test_module_dependencies.py": "3aa4c3199d775ff2baa1221a33d7eb0ff6faf3fa93b8f390ac9b9cb9e654d094",
     "tests/integration/test_architecture_diff_cli.py": "d28841af84f6dd6c797770670a3c4a11ac60516bec6de6d5a77ac805d465cd75",
     "tests/integration/test_host_attestation.py": "2115e9083eb486781473139b3ebf4186337f91694fbc3314d5691173ff0906db",
-    "tests/acceptance/test_cli.py": "e2055e48de23d312c376f4d17c857ec917812423d8eb04e1c16cb03449bc9f3a",
+    "tests/acceptance/test_cli.py": "a082eb50dc944a140882806df31b2a08b4fa970acb98a3a3976f387f77ec7357",
     "tests/acceptance/test_design_create.py": "3666502577e1e9e00ecd149df1840e053101101850021e958d08eb9380eee4b9",
-    "tests/acceptance/test_policy_validate.py": "3a250956a3d5bef422585e25167fc0ea899f78ef81cb5d620d232aea9b32f68d"
+    "tests/acceptance/test_policy_validate.py": "3a250956a3d5bef422585e25167fc0ea899f78ef81cb5d620d232aea9b32f68d",
+    "tests/acceptance/test_mvp_scenarios.py": "186caf05be1b90e0101b254ebc0996754b0d1d25dbaaa0dd192cec00b9addb69"
   },
   "scenarios": [
     {
@@ -67,13 +68,19 @@
       "test": "tests/integration/test_host_attestation.py::test_attestation_rejects_non_finite_capability_payload_without_raising",
       "result": "passed",
       "mutation_control": "allowing NaN in canonical JSON made the test fail"
+    },
+    {
+      "behavior": "verification configuration errors return parameter/configuration exit code 2",
+      "test": "tests/acceptance/test_cli.py::test_policy_and_task_schema_errors_use_exit_code_two",
+      "result": "passed",
+      "mutation_control": "removing the verification prefixes made the test fail"
     }
   ],
   "commands": [
     {
       "command": "PYTHONPATH=src pytest -q -o addopts=''",
       "result": "passed",
-      "details": "357 passed in 50.47s"
+      "details": "357 passed in 51.63s"
     },
     {
       "command": "git diff --check",
