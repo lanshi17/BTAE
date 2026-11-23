@@ -28,31 +28,36 @@
     },
     "task_id": {
       "type": "string",
-      "pattern": "^TASK-"
+      "pattern": "^TASK-[A-Z0-9][A-Z0-9_-]*$"
     },
     "changeset_id": {
       "type": [
         "string",
         "null"
-      ]
+      ],
+      "pattern": "^CHANGE-[A-Z0-9][A-Z0-9_-]*$"
     },
     "target_entities": {
       "type": "array",
       "minItems": 1,
       "items": {
-        "type": "string"
+        "type": "string",
+        "minLength": 1
       }
     },
     "expected_design_revision": {
       "type": [
         "string",
         "null"
-      ]
+      ],
+      "pattern": "^[0-9a-fA-F]{64}$"
     },
     "write_scope": {
       "type": "array",
       "items": {
-        "type": "string"
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
       }
     },
     "parameters": {
