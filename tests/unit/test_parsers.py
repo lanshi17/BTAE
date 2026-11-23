@@ -7,6 +7,16 @@ def test_duplicate_yaml_key_is_diagnostic():
     assert diagnostics and diagnostics[0].code == "EPE-YAML-PARSE"
 
 
+def test_strict_json_parser_rejects_duplicate_keys_nonfinite_and_yaml_syntax():
+    from epe.parsers.documents import parse_json_bytes
+    valid, diagnostics = parse_json_bytes(b'{"id":"CLASS-1","value":[1,true,null]}', "x.json")
+    assert diagnostics == [] and valid == {"id": "CLASS-1", "value": [1, True, None]}
+    for payload in (b'{"id":"first","id":"second"}', b'{"value":NaN}', b'{id: unquoted}'):
+        value, diagnostics = parse_json_bytes(payload, "x.json")
+        assert value is None and diagnostics[0].code == "EPE-JSON-PARSE"
+        assert diagnostics[0].path == "x.json"
+
+
 def test_ast_does_not_execute_module_and_extracts_symbols():
     result = parse_python(b"raise RuntimeError('must not run')\nclass A:\n    async def f(self, x: int = 1):\n        return x\n", "src/a.py")
     assert result.complete
@@ -35,6 +45,15 @@ def test_parse_batch_structured_documents_expose_common_source_field():
     item = result.results[0]
     assert item["path"] == item["source"] == "contract.yaml"
     assert item["digest"]
+
+
+def test_parse_batch_uses_strict_json_syntax():
+    from epe.parsers.coordinator import parse_batch
+    valid = parse_batch([("manifest.json", b'{"id":"CLASS-1"}')])
+    invalid = parse_batch([("manifest.json", b"{id: CLASS-1}")])
+    assert valid.complete and valid.results[0]["value"] == {"id": "CLASS-1"}
+    assert not invalid.complete
+    assert invalid.diagnostics[0].code == "EPE-JSON-PARSE"
 
 
 def test_parse_batch_rejects_duplicates_and_path_escape():

@@ -6,7 +6,7 @@ from typing import Any, Iterable
 
 from epe.core.diagnostics import Diagnostic, Severity
 from epe.core.fingerprint import sha256_bytes, sha256_json
-from epe.parsers.documents import DocumentParseResult, parse_markdown, parse_yaml_bytes
+from epe.parsers.documents import DocumentParseResult, parse_json_bytes, parse_markdown, parse_yaml_bytes
 from epe.parsers.python import CodeParseResult, parse_python
 
 
@@ -82,7 +82,8 @@ def parse_batch(sources: Iterable[Any], options: dict[str, Any] | None = None) -
             else:
                 counts["success"] += 1
         elif suffix in {".yaml", ".yml", ".json"}:
-            value, ds = parse_yaml_bytes(data, path)
+            value, ds = (parse_json_bytes(data, path) if suffix == ".json"
+                         else parse_yaml_bytes(data, path))
             results.append({"path": path, "source": path, "digest": digest, "value": value, "diagnostics": [d.to_dict() for d in ds], "kind": "structured"})
             diagnostics.extend(ds)
             if ds:
