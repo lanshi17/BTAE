@@ -243,3 +243,36 @@ for line in sys.stdin:
     assert session._process.poll() is not None
     with pytest.raises(ACPSessionClosed):
         session.prompt("again")
+
+
+@pytest.mark.parametrize("session_id, update, valid", [
+    ("SESSION-1", {"sessionUpdate": "agent_message_chunk", "content": {"type": "text", "text": "hello"}}, True),
+    ("OTHER", {"sessionUpdate": "agent_message_chunk"}, False),
+    ("SESSION-1", "invalid", False),
+])
+def test_prompt_receives_ordered_session_updates(tmp_path: Path, session_id, update, valid):
+    script = r'''
+import json,sys
+session_id, update = json.loads(sys.argv[1])
+for line in sys.stdin:
+    req=json.loads(line)
+    if req["method"] == "initialize":
+        result={"protocolVersion":1,"agentInfo":{"name":"fixture"}}
+    elif req["method"] == "session/new":
+        result={"sessionId":"SESSION-1"}
+    else:
+        for item in (update, update):
+            print(json.dumps({"jsonrpc":"2.0","method":"session/update","params":{"sessionId":session_id,"update":item}}),flush=True)
+        result={"stopReason":"end_turn"}
+    print(json.dumps({"jsonrpc":"2.0","id":req["id"],"result":result}),flush=True)
+'''
+    session = HermesACPAdapter([sys.executable, "-c", script, json.dumps([session_id, update])], tmp_path, timeout=2).open_session()
+    with session:
+        if valid:
+            result, updates = session.prompt_with_updates("hello")
+            assert result == {"stopReason": "end_turn"}
+            assert updates == [update, update]
+        else:
+            with pytest.raises(ACPProtocolError, match="invalid ACP session update"):
+                session.prompt_with_updates("hello")
+            assert session._process.poll() is not None

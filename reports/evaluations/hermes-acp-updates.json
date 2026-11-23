@@ -1,0 +1,62 @@
+{
+  "time_utc": "2026-11-23T13:49:07.248625+00:00",
+  "task_id": "TASK-hermes-acp-updates",
+  "git_head": "0615dac9f9946ded5089a86d220adf85a4b0d134",
+  "working_tree_dirty": true,
+  "environment": {
+    "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+    "platform": "Linux-7.0.0-43-generic-x86_64-with-glibc2.43"
+  },
+  "file_sha256": {
+    "src/epe/adapters/hosts/acp.py": "7e91f35526ad4bc2b6a6aa4e25b6f56ada070df4282ca23973132f8bf6a8db8b",
+    "tests/integration/test_acp_adapter.py": "9318043a9188fc8abd6b740809fc1b867b449b15e714f7cba13af10fb04f2087",
+    "docs/modules/adapters/host-capability-matrix.md": "dea22d8119798630c5713f63d14587c07a5bface1eb1a4424ded6d211d08ddcd",
+    "plans/active/TASK-hermes-acp-updates.md": "52a0a9c9289d1d8efbf004104c316008e51574e416246f4bc2e59b7da56307fd"
+  },
+  "commands": [
+    {
+      "command": "PYTHONPATH=src pytest -q tests/integration/test_acp_adapter.py",
+      "result": "passed",
+      "details": "19 passed"
+    },
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts=''",
+      "result": "passed",
+      "details": "304 passed in 48.91s"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json policy validate",
+      "result": "passed"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json graph build",
+      "result": "passed",
+      "details": "347 nodes, 460 edges, digest 31a17490c51b4413ae514b64cf88245b9d50369f24c9a99dd0fb56060509ef32"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json architecture validate",
+      "result": "passed",
+      "details": "361 imports, no violations or unknowns"
+    },
+    {
+      "command": "git diff --check",
+      "result": "passed"
+    }
+  ],
+  "hermes_experiment": {
+    "method": "inline Python; EPE HermesACPAdapter.prompt_with_updates, temporary HOME, local HTTP model fixture, MCP empty and tools disabled",
+    "hermes_command": [
+      "/home/lanshi/.hermes/hermes-agent/venv/bin/python",
+      "-m",
+      "acp_adapter"
+    ],
+    "stop_reason": "end_turn",
+    "updates": 5,
+    "expected_fixture_text_received": true,
+    "exit_code": 0
+  },
+  "limitations": [
+    "Local HTTP fixture; no real model, tool permissions, host identity or write isolation verified.",
+    "Inline experiment source was not saved; result is a local observation, not a standalone reproducible acceptance script."
+  ]
+}

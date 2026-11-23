@@ -121,6 +121,21 @@ class HermesACPSession:
             raise ACPProtocolError("ACP session/prompt response is not an object")
         return result
 
+    def prompt_with_updates(self, text: str) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+        """Return the transport result and ordered, untrusted session updates."""
+        if not isinstance(text, str) or not text.strip():
+            raise ValueError("session is closed or prompt is empty")
+        self._ensure_open()
+        updates: list[dict[str, Any]] = []
+        result = self._request("session/prompt", {
+            "sessionId": self.session_id,
+            "prompt": [{"type": "text", "text": text}],
+        }, updates=updates)
+        if not isinstance(result, dict):
+            self.close()
+            raise ACPProtocolError("ACP session/prompt response is not an object")
+        return result, updates
+
     def cancel(self) -> None:
         """Send ACP's session/cancel notification for the current operation."""
         self._ensure_open()
@@ -134,7 +149,8 @@ class HermesACPSession:
             self.close()
             raise
 
-    def _request(self, method: str, params: dict[str, Any]) -> Any:
+    def _request(self, method: str, params: dict[str, Any], *,
+                 updates: list[dict[str, Any]] | None = None) -> Any:
         if not self._request_lock.acquire(blocking=False):
             raise ACPProtocolError("concurrent ACP requests are not supported")
         try:
@@ -147,6 +163,13 @@ class HermesACPSession:
             while True:
                 message = self._read_message(deadline)
                 if "id" not in message and isinstance(message.get("method"), str):
+                    if updates is not None and message["method"] == "session/update":
+                        notification = message.get("params")
+                        if (not isinstance(notification, dict)
+                                or notification.get("sessionId") != self.session_id
+                                or not isinstance(notification.get("update"), dict)):
+                            raise ACPProtocolError("invalid ACP session update")
+                        updates.append(notification["update"])
                     continue
                 if type(message.get("id")) is not int or message["id"] != request_id:
                     raise ACPProtocolError("unexpected ACP response ID")
