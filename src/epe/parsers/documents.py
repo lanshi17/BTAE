@@ -114,9 +114,16 @@ def discover_documents(root: Path, roots: Iterable[str] = ("docs",), extensions:
             except ValueError:
                 results.append(DocumentParseResult(str(path), None, "", [Diagnostic("EPE-PATH-SYMLINK", Severity.ERROR, "文档路径不能经过符号链接或逃出仓库根", path=str(path))], False))
                 continue
+            try:
+                data = path.read_bytes()
+            except OSError as exc:
+                results.append(DocumentParseResult(
+                    rel, None, "", [Diagnostic("EPE-DOC-READ", Severity.ERROR,
+                    f"无法读取文档: {exc}", path=rel)], False))
+                continue
             if path.suffix.lower() in {".md", ".markdown"}:
-                results.append(parse_markdown(path.read_bytes(), rel))
+                results.append(parse_markdown(data, rel))
             else:
-                value, ds = parse_yaml_bytes(path.read_bytes(), rel)
+                value, ds = parse_yaml_bytes(data, rel)
                 results.append(DocumentParseResult(rel, value if isinstance(value, dict) else None, "", ds, isinstance(value, dict) and "id" in value))
     return results

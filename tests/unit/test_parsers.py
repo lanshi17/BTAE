@@ -74,3 +74,28 @@ def test_recursive_parsers_reject_nested_symlink_paths(tmp_path):
     (tmp_path / "src" / "linked").symlink_to(real_src, target_is_directory=True)
     _, diagnostics = parse_python_tree(tmp_path, ["src"])
     assert any(item.code == "EPE-PATH-SYMLINK" for item in diagnostics)
+
+
+def test_recursive_parser_read_failures_are_structured(monkeypatch, tmp_path):
+    from pathlib import Path
+    from epe.parsers.documents import discover_documents
+    from epe.parsers.python import parse_python_tree
+
+    docs = tmp_path / "docs"; docs.mkdir()
+    (docs / "broken.md").write_text("# broken", encoding="utf-8")
+    src = tmp_path / "src"; src.mkdir()
+    (src / "broken.py").write_text("value = 1", encoding="utf-8")
+    original = Path.read_bytes
+
+    def fail_broken(path):
+        if path.name == "broken.md":
+            raise OSError("document unavailable")
+        if path.name == "broken.py":
+            raise OSError("source unavailable")
+        return original(path)
+
+    monkeypatch.setattr(Path, "read_bytes", fail_broken)
+    documents = discover_documents(tmp_path, ["docs"])
+    assert any(item.diagnostics and item.diagnostics[0].code == "EPE-DOC-READ" for item in documents)
+    _, diagnostics = parse_python_tree(tmp_path, ["src"])
+    assert any(item.code == "EPE-AST-READ" for item in diagnostics)
