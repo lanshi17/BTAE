@@ -27,6 +27,7 @@ from epe.governance.policies import validate_policy_files, load_workflow_require
 from epe.core.policy import validate_policy_document
 from epe.governance.baseline import capture_baseline, changeset_paths, compare_baseline, validate_changeset, transition_changeset, changeset_declaration, baseline_binding_version
 from epe.governance.conflicts import detect_changeset_conflicts
+from epe.governance.leases import acquire_lease, inspect_lease, renew_lease, release_lease, LeaseConflict, LeaseError, LeaseNotFound
 from epe.parsers.documents import discover_documents, parse_yaml_bytes
 from epe.parsers.python import parse_python_tree
 from epe.verification.architecture import validate_architecture
@@ -540,6 +541,40 @@ def cmd_changeset_conflicts(args) -> CommandResult:
         return _result("changeset conflicts", "error", diagnostics, {"changesets": len(changesets), "conflicts": []})
     status = "blocked" if conflicts else "passed"
     return _result("changeset conflicts", status, [Diagnostic("EPE-CHANGESET-CONFLICT", Severity.WARNING, "存在潜在 ChangeSet 范围冲突")] if conflicts else [], {"changesets": len(changesets), "conflicts": conflicts})
+
+
+def cmd_changeset_lease(args) -> CommandResult:
+    root = _root(args.root)
+    config, failure = _config_or_result(root, "changeset lease")
+    if failure:
+        return failure
+    try:
+        path, _ = changeset_paths(root, config, args.changeset_id)
+        if path.is_symlink() or not path.exists():
+            raise LeaseError("ChangeSet 记录不存在或是符号链接")
+        value = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(value, dict):
+            raise LeaseError("ChangeSet 必须为对象")
+        if args.lease_event == "inspect":
+            return _result("changeset lease inspect", "passed", data={"lease": inspect_lease(root, config, args.changeset_id)})
+        task, diagnostics = load_task(root, config, str(value.get("task", "")))
+        if task is None:
+            return _result("changeset lease", "error", diagnostics)
+        validate_changeset(value, task.id)
+        if args.lease_event == "acquire":
+            lease = acquire_lease(root, config, value, args.owner, args.ttl)
+            return _result("changeset lease acquire", "passed", data=lease)
+        if args.lease_event == "renew":
+            lease = renew_lease(root, config, value, args.owner, args.lease_id, args.ttl)
+            return _result("changeset lease renew", "passed", data=lease)
+        released = release_lease(root, config, args.changeset_id, args.owner, args.lease_id)
+        return _result("changeset lease release", "passed", data={"released": released})
+    except LeaseConflict as exc:
+        return _result("changeset lease", "blocked", [Diagnostic("EPE-CHANGESET-LEASE", Severity.ERROR, str(exc))])
+    except LeaseNotFound as exc:
+        return _result("changeset lease", "blocked", [Diagnostic("EPE-CHANGESET-LEASE", Severity.ERROR, str(exc))])
+    except (OSError, ValueError, TypeError, KeyError, json.JSONDecodeError, LeaseError) as exc:
+        return _result("changeset lease", "error", [Diagnostic("EPE-CHANGESET-LEASE", Severity.ERROR, str(exc))])
 
 
 def cmd_design_validate(args) -> CommandResult:
@@ -1081,6 +1116,11 @@ def build_parser() -> argparse.ArgumentParser:
     p = change_commands.add_parser("create"); common(p); p.add_argument("--file", required=True); p.set_defaults(func=cmd_changeset_create)
     p = change_commands.add_parser("transition"); common(p); p.add_argument("changeset_id"); p.add_argument("event", choices=["activate", "complete", "abort"]); p.add_argument("--expected-revision", type=int, default=None); p.set_defaults(func=cmd_changeset_transition)
     p = change_commands.add_parser("conflicts"); common(p); p.set_defaults(func=cmd_changeset_conflicts)
+    lease = change_commands.add_parser("lease"); common(lease); lease_commands = lease.add_subparsers(dest="lease_event", required=True)
+    p = lease_commands.add_parser("acquire"); common(p); p.add_argument("changeset_id"); p.add_argument("--owner", required=True); p.add_argument("--ttl", type=float, required=True); p.set_defaults(func=cmd_changeset_lease)
+    p = lease_commands.add_parser("renew"); common(p); p.add_argument("changeset_id"); p.add_argument("--owner", required=True); p.add_argument("--lease-id", required=True); p.add_argument("--ttl", type=float, required=True); p.set_defaults(func=cmd_changeset_lease)
+    p = lease_commands.add_parser("release"); common(p); p.add_argument("changeset_id"); p.add_argument("--owner", required=True); p.add_argument("--lease-id", required=True); p.set_defaults(func=cmd_changeset_lease)
+    p = lease_commands.add_parser("inspect"); common(p); p.add_argument("changeset_id"); p.set_defaults(func=cmd_changeset_lease)
     task = sub.add_parser("task"); common(task); ts = task.add_subparsers(dest="task_command", required=True)
     p = ts.add_parser("create"); common(p); p.add_argument("--file", required=True); p.set_defaults(func=cmd_task_create)
     p = ts.add_parser("classify"); common(p); p.add_argument("task_id"); p.set_defaults(func=cmd_task_classify)
