@@ -72,6 +72,8 @@ status 为 passed/blocked/error/unsupported。JSON stdout 仅含一个完整结�
 
 **宿主请求**：校验请求值对象 → 选择 `local-cli` 或显式 argv 的 Hermes adapter → 完成能力握手 → 输出 `accepted/blocked/unsupported/error`。该命令不修改权威工件；`--identity-source` 不构成认证，写入类操作在未受信宿主上保持 `unsupported`。
 
+`epe host capabilities --host hermes --transport acp --command-json '[...]'` 可执行只读 ACP `initialize` 能力探测；默认 `bridge` 保持既有 JSON bridge。ACP 探测成功不授予身份、写入隔离、取消或业务操作。
+
 ## 6. 依赖、幂等性与异常
 
 允许依赖所有内部模块，仅本组合入口选择具体 adapter。其他模块不得反向导入 CLI。共享 DTO、诊断和端口应在 core，不将 argparse/Click/Typer 类型传播到领域服务。

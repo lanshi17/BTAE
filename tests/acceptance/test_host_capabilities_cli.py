@@ -81,3 +81,15 @@ def test_host_capabilities_can_measure_explicit_hermes_bridge(tmp_path, capsys):
     result = json.loads(capsys.readouterr().out)
     assert code == 0 and result["status"] == "passed"
     assert result["data"]["hosts"][0]["status"] == "handshaken-untrusted"
+
+
+def test_host_capabilities_can_measure_explicit_hermes_acp(tmp_path, capsys):
+    code_text = ("import json,sys; json.loads(sys.stdin.readline()); "
+                 "print(json.dumps({'jsonrpc':'2.0','id':1,'result':{'protocolVersion':1,'agentInfo':{'name':'fixture','version':'1'}}}))")
+    code = main(["--root", str(tmp_path), "--format", "json", "host", "capabilities", "--host", "hermes",
+                 "--transport", "acp", "--command-json", json.dumps([sys.executable, "-c", code_text])])
+    result = json.loads(capsys.readouterr().out)
+    assert code == 0 and result["status"] == "passed"
+    measured = result["data"]["hosts"][0]
+    assert measured["status"] == "handshaken-untrusted"
+    assert measured["operations"] == [] and measured["write_isolation"] is False
