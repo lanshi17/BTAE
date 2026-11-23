@@ -107,3 +107,23 @@ def test_incremental_parser_read_failure_is_structured(tmp_path, monkeypatch):
     result = build_graph_incremental(tmp_path, Registry(), first.snapshot, cfg())
     assert not result.published and result.snapshot is None
     assert result.diagnostics[0].code == "EPE-AST-READ"
+
+
+def test_graph_manifest_read_failure_is_structured_for_full_and_incremental_build(tmp_path, monkeypatch):
+    import epe.graph.builder as builder
+
+    (tmp_path / "src").mkdir()
+    source = tmp_path / "src/a.py"
+    source.write_text("value = 1\n")
+    fact = parse_python(source.read_bytes(), "src/a.py")
+    first = build_graph(tmp_path, Registry(), [fact], cfg())
+    assert first.published
+
+    def fail_manifest(*args, **kwargs):
+        raise OSError("manifest unavailable")
+
+    monkeypatch.setattr(builder, "graph_manifest", fail_manifest)
+    full = build_graph(tmp_path, Registry(), [fact], cfg())
+    incremental = build_graph_incremental(tmp_path, Registry(), first.snapshot, cfg())
+    assert not full.published and full.diagnostics[0].code == "EPE-GRAPH-MANIFEST"
+    assert not incremental.published and incremental.diagnostics[0].code == "EPE-GRAPH-MANIFEST"

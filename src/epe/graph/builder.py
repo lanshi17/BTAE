@@ -178,12 +178,21 @@ def build_graph(root: Path, registry: Registry, code_results: Iterable[CodeParse
         dedup[sha256_json(edge)] = edge
     nodes = sorted({n["id"]: n for n in nodes}.values(), key=lambda n: n["id"])
     edges = sorted(dedup.values(), key=lambda e: (e["from"], e["to"], e["relation"], sha256_json(e)))
-    manifest = graph_manifest(root, config)
+    try:
+        manifest = graph_manifest(root, config)
+    except (OSError, ValueError) as exc:
+        diagnostics.append(Diagnostic("EPE-GRAPH-MANIFEST", Severity.ERROR, f"无法读取构图输入清单: {exc}"))
+        return GraphBuildResult(None, diagnostics, False)
     expected = {p: h for p, h in manifest.entries if _is_code_path(p, managed_roots)}
     actual = {r.path: r.digest for r in code_results}
     if len(actual) != len(code_results) or actual != expected or any(not r.complete for r in code_results):
         diagnostics.append(Diagnostic("EPE-GRAPH-FACTS", Severity.ERROR, "解析事实不完整或与输入清单不一致"))
-    if graph_manifest(root, config).digest != manifest.digest:
+    try:
+        current_manifest = graph_manifest(root, config)
+    except (OSError, ValueError) as exc:
+        diagnostics.append(Diagnostic("EPE-GRAPH-MANIFEST", Severity.ERROR, f"无法复核构图输入清单: {exc}"))
+        return GraphBuildResult(None, diagnostics, False)
+    if current_manifest.digest != manifest.digest:
         diagnostics.append(Diagnostic("EPE-GRAPH-INPUT-CHANGED", Severity.ERROR, "构图期间输入发生变化"))
     complete = not any(d.is_error for d in diagnostics)
     content = {"parser_config": _parser_config(config), "module_coverage": module_coverage, "schema_version": 1, "input_manifest": manifest.to_dict(), "complete": complete, "nodes": nodes, "edges": edges, "code_facts": [result.to_dict() for result in sorted(code_results, key=lambda item: item.path)], "diagnostics": [d.to_dict() for d in diagnostics]}
@@ -287,7 +296,10 @@ def build_graph_incremental(root: Path, registry: Registry, previous: dict[str, 
         if not isinstance(previous, dict) or parser_version != _parser_config(config)["version"]:
             raise ValueError("missing or incompatible snapshot")
         old, facts = _validated_previous(previous, config)
-        current = dict(graph_manifest(root, config).entries)
+        try:
+            current = dict(graph_manifest(root, config).entries)
+        except (OSError, ValueError) as exc:
+            return GraphBuildResult(None, [Diagnostic("EPE-GRAPH-MANIFEST", Severity.ERROR, f"无法读取增量构图输入清单: {exc}")], False)
         changed = {path for path in old.keys() | current.keys() if old.get(path) != current.get(path)}
         reused = [fact for fact in facts if fact.path not in changed]
         reparsed: list[CodeParseResult] = []
