@@ -578,6 +578,8 @@ def cmd_changeset_lease(args) -> CommandResult:
         return _result("changeset lease", "blocked", [Diagnostic("EPE-CHANGESET-LEASE", Severity.ERROR, str(exc))])
     except LeaseNotFound as exc:
         return _result("changeset lease", "blocked", [Diagnostic("EPE-CHANGESET-LEASE", Severity.ERROR, str(exc))])
+    except WriteConflict as exc:
+        return _result("changeset lease", "blocked", [Diagnostic("EPE-WRITE-CONFLICT", Severity.ERROR, str(exc))])
     except (OSError, ValueError, TypeError, KeyError, json.JSONDecodeError, LeaseError) as exc:
         return _result("changeset lease", "error", [Diagnostic("EPE-CHANGESET-LEASE", Severity.ERROR, str(exc))])
 
