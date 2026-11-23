@@ -430,7 +430,7 @@ def cmd_changeset_transition(args) -> CommandResult:
                 if gate.status != "passed":
                     return _result("changeset transition", "blocked", gate.diagnostics + [Diagnostic("EPE-CHANGESET-GATE", Severity.ERROR, "综合检查未通过，不能完成 ChangeSet")])
                 current_task, task_diagnostics = load_task(root, config, task.id)
-                if current_task is None or sha256_json(current_task.to_dict()) != task_digest or sha256_json(json.loads(change_path.read_text(encoding="utf-8"))) != change_digest:
+                if current_task is None or sha256_json(current_task.to_dict()) != task_digest or sha256_json(strict_json_loads(change_path.read_text(encoding="utf-8"))) != change_digest:
                     return _result("changeset transition", "blocked", task_diagnostics + [Diagnostic("EPE-CHANGESET-REVISION", Severity.ERROR, "门禁检查期间 Task 或 ChangeSet 已变化")])
             atomic_write_json(change_path, updated)
             from epe.core.fingerprint import sha256_json
@@ -666,7 +666,7 @@ def cmd_design_approve(args) -> CommandResult:
         if record["decision"] == "revoked":
             referenced = approval_dir / f"{record['supersedes']}.json"
             if referenced.is_symlink(): raise ValueError("被撤销记录不能为符号链接")
-            prior = json.loads(referenced.read_text(encoding="utf-8"))
+            prior = strict_json_loads(referenced.read_text(encoding="utf-8"))
             prior_identity, prior_error = verify_approval_identity(prior, config)
             if (prior_error or validate_approval_record(prior) or prior.get("decision") != "approved" or prior.get("entity_id") != record["entity_id"] or prior.get("revision") != record["revision"]
                     or not set(prior.get("risk_scope", [])) <= set(record["risk_scope"])
@@ -683,7 +683,7 @@ def cmd_design_approve(args) -> CommandResult:
                 return _result("design approve", "blocked", [Diagnostic("EPE-APPROVAL-STORE", Severity.ERROR, "审批记录不能为符号链接")])
             already_exists = target.exists()
             if already_exists:
-                try: existing = json.loads(target.read_text(encoding="utf-8"))
+                try: existing = strict_json_loads(target.read_text(encoding="utf-8"))
                 except (OSError, json.JSONDecodeError): existing = None
                 if existing != record:
                     return _result("design approve", "blocked", [Diagnostic("EPE-APPROVAL-DUPLICATE", Severity.ERROR, "审批记录 ID 已存在但内容不同", path=str(target.relative_to(root)))])
@@ -729,7 +729,7 @@ def cmd_graph(args) -> CommandResult:
     if not built.complete or any(d.is_error for d in pds): return _result(command_name, "error", built.diagnostics + pds, {"published": False})
     previous = None
     if getattr(args, "incremental_from", None):
-        try: previous = json.loads(_safe_input(root, args.incremental_from).read_text(encoding="utf-8"))
+        try: previous = strict_json_loads(_safe_input(root, args.incremental_from).read_text(encoding="utf-8"))
         except (OSError, ValueError, json.JSONDecodeError) as exc: return _result(command_name, "error", [Diagnostic("EPE-GRAPH-PREVIOUS", Severity.ERROR, str(exc), path=args.incremental_from)])
     graph = build_graph_incremental(root, built.registry, previous, config) if previous is not None else build_graph(root, built.registry, codes, config)
     all_ds = built.diagnostics + pds + graph.diagnostics
@@ -860,7 +860,7 @@ def cmd_check(args) -> CommandResult:
         if approval_dir is not None and approval_dir.exists():
             for record_path in sorted(approval_dir.glob("*.json")):
                 if record_path.is_symlink(): continue
-                try: record = json.loads(record_path.read_text(encoding="utf-8"))
+                try: record = strict_json_loads(record_path.read_text(encoding="utf-8"))
                 except (OSError, json.JSONDecodeError): continue
                 if not isinstance(record, dict) or validate_approval_record(record) or record_path.name != record.get("id", "") + ".json": continue
                 identity, error = verify_approval_identity(record, config)
@@ -883,7 +883,7 @@ def cmd_check(args) -> CommandResult:
         if task.changeset:
             try:
                 change_path, _ = changeset_paths(root, config, task.changeset)
-                if not change_path.is_symlink(): owner = json.loads(change_path.read_text(encoding="utf-8")).get("owner")
+                if not change_path.is_symlink(): owner = strict_json_loads(change_path.read_text(encoding="utf-8")).get("owner")
             except (OSError, ValueError, AttributeError): pass
         for record, identity in records.values():
             if record["id"] in revoked: continue
@@ -911,7 +911,7 @@ def cmd_check(args) -> CommandResult:
         try:
             changeset_path, _ = changeset_paths(root, config, task.changeset)
             if changeset_path.is_symlink(): raise ValueError("ChangeSet 记录不能是符号链接")
-            changeset = json.loads(changeset_path.read_text(encoding="utf-8"))
+            changeset = strict_json_loads(changeset_path.read_text(encoding="utf-8"))
             validate_changeset(changeset, task.id)
             if changeset["id"] != task.changeset: raise ValueError("ChangeSet ID 不匹配")
             if changeset["status"] not in {"active", "completed"}: raise ValueError("ChangeSet 未激活或已中止，不能满足完成门禁")
@@ -1060,7 +1060,7 @@ def cmd_impact_plan(args) -> CommandResult:
     if current is None: return _result("impact plan", "error", diagnostics)
     try:
         previous_path = _safe_input(root, args.previous)
-        previous = json.loads(previous_path.read_text(encoding="utf-8"))
+        previous = strict_json_loads(previous_path.read_text(encoding="utf-8"))
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         return _result("impact plan", "error", [Diagnostic("EPE-IMPACT-PREVIOUS", Severity.ERROR, str(exc), path=args.previous)])
     return _result("impact plan", "passed", data=plan_incremental(previous, current, args.parser_version, args.previous_parser_version))
@@ -1086,7 +1086,7 @@ def cmd_context(args) -> CommandResult:
         try:
             change_path, _ = changeset_paths(root, config, task.changeset)
             if change_path.is_symlink(): raise ValueError("ChangeSet 不能是符号链接")
-            change = json.loads(change_path.read_text(encoding="utf-8"))
+            change = strict_json_loads(change_path.read_text(encoding="utf-8"))
             validate_changeset(change, task.id)
             if change.get("id") != task.changeset: raise ValueError("ChangeSet ID 不匹配")
             required_sources.append({"path": change_path.relative_to(root).as_posix(), "reason": "任务声明的 ChangeSet 范围（不构成授权）", "source_type": "changeset", "entity_id": task.changeset})
