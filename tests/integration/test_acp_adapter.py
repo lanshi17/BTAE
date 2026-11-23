@@ -48,6 +48,10 @@ for line in sys.stdin:
         print(json.dumps({"jsonrpc":"2.0","id":req["id"],"result":{"protocolVersion":1,"agentInfo":{"name":"fixture","version":"1"}}}), flush=True)
     elif req["method"] == "session/new":
         print(json.dumps({"jsonrpc":"2.0","id":req["id"],"result":{"sessionId":"SESSION-1"}}), flush=True)
+    elif req["method"] == "session/prompt":
+        assert req["params"]["sessionId"] == "SESSION-1"
+        assert req["params"]["prompt"][0]["type"] == "text"
+        print(json.dumps({"jsonrpc":"2.0","id":req["id"],"result":{"stopReason":"end_turn"}}), flush=True)
 '''
     return [sys.executable, "-c", script]
 
@@ -61,3 +65,10 @@ def test_open_session_rejects_missing_session_id(tmp_path: Path):
     script = "import json,sys; [print(json.dumps({'jsonrpc':'2.0','id':json.loads(x)['id'],'result':{'protocolVersion':1,'agentInfo':{'name':'fixture'}} if json.loads(x)['method']=='initialize' else {'result':{}}}),flush=True) for x in sys.stdin]"
     with pytest.raises(ValueError, match="sessionId"):
         HermesACPAdapter([sys.executable, "-c", script], tmp_path, timeout=2).open_session()
+
+
+def test_prompt_is_explicit_text_only_and_returns_transport_result(tmp_path: Path):
+    with HermesACPAdapter(session_fixture(), tmp_path, timeout=2).open_session() as session:
+        assert session.prompt("hello") == {"stopReason": "end_turn"}
+        with pytest.raises(ValueError, match="empty"):
+            session.prompt(" ")
