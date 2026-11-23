@@ -22,10 +22,13 @@ MVP 上手和故障恢复步骤见 [使用指南](docs/standards/user-guide-mvp.
 PYTHONPATH=src python -m epe.cli --format json init
 PYTHONPATH=src python -m epe.cli inspect
 PYTHONPATH=src python -m epe.cli graph build
+PYTHONPATH=src python -m epe.cli --format json changeset conflicts
 PYTHONPATH=src pytest -q
 ```
 
 任务已关联 ChangeSet 后，可填写 `engineering/templates/changeset.yaml` 并运行 `epe changeset create --file PATH` 登记当前范围基线。完成检查会比较基线后的新增、修改和删除；审计目录、缓存、虚拟环境和报告不在比较范围内，具体边界见 [治理模块设计](docs/modules/governance/README.md)。
+
+多 Agent 开始修改前可运行 `epe changeset conflicts` 查询 planned/active ChangeSet 的潜在范围重叠；该命令只报告保守候选，不提供锁或宿主隔离。
 
 缺少设计时可运行 `epe design create CLASS-001`（或其他已支持实体前缀）生成草案模板；命令不会覆盖已有文件。契约设计使用 `CONTRACT-` 前缀和 YAML Schema 字段，审批必须使用配置的受信 SSH 公钥签名。
 
