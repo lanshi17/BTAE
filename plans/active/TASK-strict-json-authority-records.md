@@ -8,3 +8,4 @@
 ## 本轮结果
 
 - 新增共享严格解码器；Task、基线和 Audit 重复键回归已覆盖；完整 CLI、图、策略和架构回归结果随 PR 证据记录。
+- 追加覆盖审批、ChangeSet、Context、Lease 和 Evidence 的 CLI 读取路径，避免门禁复核阶段重新使用宽松 JSON 解码。

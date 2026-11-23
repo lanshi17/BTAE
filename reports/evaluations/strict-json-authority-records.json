@@ -1,7 +1,7 @@
 {
-  "time_utc": "2026-11-23T20:22:39Z",
+  "time_utc": "2026-11-23T20:33:21Z",
   "task_id": "TASK-strict-json-authority-records",
-  "git_head": "0ea3b8f66b1e188f12185633c57099bd5f26054d",
+  "git_head": "9769027e770ba86d8ea2d540e6d4ff15cd7e1d8c",
   "working_tree_before_report": "clean",
   "environment": {
     "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
@@ -15,10 +15,10 @@
     "src/epe/verification/runner.py": "eca12452bf8782712b9c0d0b3fae6ad93190d8d6aa996f1705e676a732c50d74",
     "src/epe/context/resolver.py": "63c68026aae932b8974c643da2714bbbfa6538387f7f340689e2738536237581",
     "src/epe/governance/leases.py": "3579b893664330961cc91ab36df6d6d534093680e30433c787708b7c06821450",
-    "src/epe/cli.py": "bc8266c122e454c31f44ade7e59a82c7bade559ba0086f093c05df9ae6a2d83e",
+    "src/epe/cli.py": "fc0dabaac8fa7c722e04afeddc1bad596bf234d1595ea476ad4b4863f804ee32",
     "tests/unit/test_parsers.py": "0ed1626da0fb5f8ceab31b4f804354a23f07514eba79b3c73c42cba5a294ce3f",
     "tests/integration/test_changeset_baseline.py": "38508940ca0f434bbce7671500e7da4d117e45472db7cb9068b37f0314701ed7",
-    "plans/active/TASK-strict-json-authority-records.md": "762a674b74e6bf1660c918ad6572fb1a2bfbc2218a156b79e2f3d8ffc55263d9"
+    "plans/active/TASK-strict-json-authority-records.md": "eaaf62debcd9ad1ca8b4c8e8666265f0381ddf6b850de42b3b6766f3f961aeca"
   },
   "commands": [
     {
@@ -48,9 +48,14 @@
     {
       "command": "git diff --check && python -m compileall -q src",
       "result": "passed"
+    },
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts=\"\" tests/acceptance/test_ac05_gate_cli.py tests/acceptance/test_ac12_closed_loop.py tests/acceptance/test_changeset_lease_cli.py tests/integration/test_approval_signatures.py",
+      "result": "passed",
+      "details": "14 passed in 17.55s"
     }
   ],
-  "change": "Shared strict JSON decoding rejects duplicate object keys and non-standard numeric constants across Task, ChangeSet baseline, Lease, Audit, Evidence, Context cache, and selected CLI authority readers. Existing failure/result mappings remain structured.",
+  "change": "Shared strict JSON decoding rejects duplicate object keys and non-standard numeric constants across Task, ChangeSet baseline, Lease, Audit, Evidence, Context cache, and selected CLI authority readers. Existing failure/result mappings remain structured. CLI authority reads for approval, ChangeSet, context and impact paths now use the same decoder.",
   "limitations": [
     "ACP JSON-RPC and untrusted host response parsing retain their protocol-specific boundaries; strict decoding does not provide immutable storage or writer authentication."
   ]
