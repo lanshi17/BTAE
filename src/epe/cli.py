@@ -755,8 +755,18 @@ def cmd_architecture_diff(args) -> CommandResult:
     if previous is None:
         return _result("architecture diff", "error", previous_diagnostics)
     data = diff_architecture_snapshots(previous, current)
-    status = "blocked" if data["incomplete"] else "passed"
-    return _result("architecture diff", status, data=data)
+    expected_report, policy_diagnostics = _check_architecture_policy(root, config, current)
+    data["expected_architecture"] = {
+        "status": expected_report.get("status", "error"),
+        "violations": expected_report.get("violations", []),
+        "unknowns": expected_report.get("unknowns", []),
+        "module_coverage": expected_report.get("module_coverage"),
+    }
+    diagnostics = previous_diagnostics + policy_diagnostics
+    if any(d.is_error for d in policy_diagnostics):
+        return _result("architecture diff", "error", diagnostics, data)
+    status = "blocked" if data["incomplete"] or expected_report.get("status") in {"fail", "unknown"} else "passed"
+    return _result("architecture diff", status, diagnostics, data)
 
 
 def _check_architecture_policy(root: Path, config: dict[str, Any], snap: dict) -> tuple[dict, list[Diagnostic]]:
