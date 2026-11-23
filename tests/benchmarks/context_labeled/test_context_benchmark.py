@@ -36,3 +36,10 @@ def test_required_source_selected_at_lower_level_is_not_c0_retained():
     )
     assert result["required_c0_retention"] == 0.0
     assert result["required_missing"] == ["AGENTS.md"]
+
+
+def test_zero_hits_has_zero_f1_when_errors_exist():
+    result = score_bundle(["expected.md"], [{"path": "other.md", "level": "C1", "content": ""}])
+    assert result["overall"]["precision"] == 0.0
+    assert result["overall"]["recall"] == 0.0
+    assert result["overall"]["f1"] == 0.0

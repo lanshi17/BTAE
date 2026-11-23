@@ -22,7 +22,8 @@ def _metrics(expected: set[str], actual: set[str]) -> dict[str, Any]:
     recall_denominator = true_positive + false_negative
     precision = true_positive / precision_denominator if precision_denominator else None
     recall = true_positive / recall_denominator if recall_denominator else None
-    f1 = (2 * precision * recall / (precision + recall)) if precision is not None and recall is not None and precision + recall else None
+    f1_denominator = 2 * true_positive + false_positive + false_negative
+    f1 = 2 * true_positive / f1_denominator if f1_denominator else None
     return {"true_positive": true_positive, "false_positive": false_positive, "false_negative": false_negative, "precision": precision, "recall": recall, "f1": f1}
 
 
