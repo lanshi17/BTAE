@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import selectors
 import signal
@@ -12,7 +13,10 @@ from pathlib import Path
 
 
 def probe(command: list[str], cwd: Path, timeout: float = 10.0, limit: int = 1048576) -> dict:
-    if not command or not all(isinstance(arg, str) and arg for arg in command) or timeout <= 0 or limit <= 0:
+    if (not command or not all(isinstance(arg, str) and arg for arg in command)
+            or not isinstance(timeout, (int, float)) or isinstance(timeout, bool)
+            or not math.isfinite(timeout) or timeout <= 0
+            or type(limit) is not int or limit <= 0):
         raise ValueError("invalid command, timeout, or output limit")
     request = {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {
         "protocolVersion": 1, "clientCapabilities": {}, "clientInfo": {"name": "btae-acp-probe", "version": "0.1"}}}

@@ -39,6 +39,12 @@ def test_timeout_and_output_limit(tmp_path):
         module.probe(command("print('x'*1000,flush=True)"), tmp_path, timeout=2, limit=64)
 
 
+@pytest.mark.parametrize("timeout", [float("nan"), float("inf"), 0, True])
+def test_rejects_invalid_timeout_before_starting_process(tmp_path, timeout):
+    with pytest.raises(ValueError, match="invalid"):
+        module.probe(["does-not-exist"], tmp_path, timeout=timeout)
+
+
 def test_cleans_descendant_after_leader_exits(tmp_path):
     marker = tmp_path / "survived"
     child = ("import time,pathlib,json; time.sleep(0.2); "
