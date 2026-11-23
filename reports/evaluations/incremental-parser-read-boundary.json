@@ -1,0 +1,49 @@
+{
+  "time_utc": "2026-11-23T19:35:35Z",
+  "task_id": "TASK-incremental-parser-read-boundary",
+  "git_head": "8295dfe96c6e1754a0f0c26d03b5ce91efdd3a95",
+  "working_tree_before_report": "clean",
+  "environment": {
+    "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+    "platform": "Linux-7.0.0-43-generic-x86_64-with-glibc2.43"
+  },
+  "file_sha256": {
+    "src/epe/graph/builder.py": "0e58c5d065205f62cd5a20d08dc5e629f5f1164ef982edba3c13ba1660f57532",
+    "tests/integration/test_graph_generations.py": "7c5dce5cded2434424c418b7f8f8068251e7952bf24e92bc754cb7b0053aa03b",
+    "plans/active/TASK-incremental-integrity.md": "a27238128d4a0f3b3caa59a2b7680837f055fe509131340dcfcfb682eac65d07"
+  },
+  "commands": [
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts='' tests/integration/test_graph_generations.py tests/integration/test_graph_provenance.py",
+      "result": "passed",
+      "details": "10 passed"
+    },
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts=''",
+      "result": "passed",
+      "details": "339 passed in 49.69s"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json graph build",
+      "result": "passed",
+      "details": "380 nodes, 499 edges, digest 1b233e442f9f0ee7b010266969906fa95074b1ffd7fb3240653a0430fe0e05bc"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json policy validate",
+      "result": "passed"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json architecture validate",
+      "result": "passed",
+      "details": "394 imports, no violations or unknowns"
+    },
+    {
+      "command": "git diff --check && python -m compileall -q src",
+      "result": "passed"
+    }
+  ],
+  "change": "Incremental graph reparsing now converts changed Python file read OSError into EPE-AST-READ GraphBuildResult instead of propagating an exception or publishing partial facts.",
+  "limitations": [
+    "Manifest and filesystem races outside this read point remain governed by existing freshness checks; no filesystem lock is claimed."
+  ]
+}

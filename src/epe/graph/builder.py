@@ -290,8 +290,17 @@ def build_graph_incremental(root: Path, registry: Registry, previous: dict[str, 
         current = dict(graph_manifest(root, config).entries)
         changed = {path for path in old.keys() | current.keys() if old.get(path) != current.get(path)}
         reused = [fact for fact in facts if fact.path not in changed]
-        reparsed = [parse_python((root / path).read_bytes(), path) for path in sorted(changed)
-                    if path in current and _is_code_path(path, roots)]
+        reparsed: list[CodeParseResult] = []
+        for path in sorted(changed):
+            if path not in current or not _is_code_path(path, roots):
+                continue
+            try:
+                data = (root / path).read_bytes()
+            except OSError as exc:
+                diagnostic = Diagnostic("EPE-AST-READ", Severity.ERROR,
+                                        f"无法读取 Python 文件: {exc}", path=path)
+                return GraphBuildResult(None, [diagnostic], False)
+            reparsed.append(parse_python(data, path))
         return build_graph(root, registry, reused + reparsed, config)
     except (KeyError, TypeError, ValueError, AttributeError):
         results, diagnostics = parse_python_tree(root, roots)
