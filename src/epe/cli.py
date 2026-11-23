@@ -30,7 +30,7 @@ from epe.governance.conflicts import detect_changeset_conflicts
 from epe.governance.leases import acquire_lease, inspect_lease, renew_lease, release_lease_with_record, LeaseConflict, LeaseError, LeaseNotFound
 from epe.parsers.documents import discover_documents, parse_json_bytes, parse_yaml_bytes
 from epe.parsers.python import parse_python_tree
-from epe.verification.architecture import validate_architecture
+from epe.verification.architecture import validate_architecture, diff_architecture_snapshots
 from epe.verification.import_boundaries import validate_import_boundaries
 from epe.verification.mapping import validate_mapping
 from epe.verification.runner import evidence_validity, load_evidence, load_required_checks, run_checks
@@ -745,6 +745,20 @@ def cmd_architecture(args) -> CommandResult:
     return _result("architecture validate", "error" if any(d.code.startswith(("EPE-ARCH-POLICY", "EPE-YAML")) for d in ds) else ("blocked" if any(d.is_error for d in ds) else "passed"), sds + ds, data)
 
 
+def cmd_architecture_diff(args) -> CommandResult:
+    root = _root(args.root); config, failure = _config_or_result(root, "architecture diff")
+    if failure: return failure
+    current, current_diagnostics = load_graph(root, config)
+    if current is None:
+        return _result("architecture diff", "error", current_diagnostics)
+    previous, previous_diagnostics = load_historical_graph(root, config, args.previous_generation)
+    if previous is None:
+        return _result("architecture diff", "error", previous_diagnostics)
+    data = diff_architecture_snapshots(previous, current)
+    status = "blocked" if data["incomplete"] else "passed"
+    return _result("architecture diff", status, data=data)
+
+
 def _check_architecture_policy(root: Path, config: dict[str, Any], snap: dict) -> tuple[dict, list[Diagnostic]]:
     rel = config.get("policies", {}).get("architecture", "engineering/policies/architecture.yaml")
     try:
@@ -1154,6 +1168,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("graph"); common(p); gs = p.add_subparsers(dest="graph_command", required=True); p = gs.add_parser("build"); common(p); p.add_argument("--incremental-from", default=None); p.set_defaults(func=cmd_graph)
     p = gs.add_parser("path"); common(p); p.add_argument("source"); p.add_argument("target"); p.add_argument("--direction", choices=("out", "in", "both"), default="out"); p.add_argument("--relation", action="append"); p.add_argument("--budget", type=int, default=1000); p.set_defaults(func=cmd_graph_path)
     p = sub.add_parser("architecture"); common(p); gs = p.add_subparsers(dest="architecture_command", required=True); p = gs.add_parser("validate"); common(p); p.set_defaults(func=cmd_architecture)
+    p = gs.add_parser("diff"); common(p); p.add_argument("--previous-generation", required=True); p.set_defaults(func=cmd_architecture_diff)
     p = sub.add_parser("verify"); common(p); p.add_argument("task_id"); p.set_defaults(func=cmd_verify)
     p = sub.add_parser("sync"); common(p); p.set_defaults(func=cmd_graph, command_name="sync")
     p = sub.add_parser("check"); common(p); p.add_argument("--task", dest="task_id", default=None); p.set_defaults(func=cmd_check)
