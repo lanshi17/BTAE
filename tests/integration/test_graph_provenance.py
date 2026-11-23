@@ -45,3 +45,21 @@ def test_distinct_import_locations_survive_build_incremental_and_queries(tmp_pat
     (derived / "graph.json").write_text(json.dumps(old))
     snapshot, diagnostics = load_graph(tmp_path, config)
     assert snapshot is None and diagnostics[0].code == "EPE-GRAPH-STALE"
+
+
+def test_load_graph_rejects_malformed_edge_shape_before_query(tmp_path):
+    import json
+
+    src = tmp_path / "src"; src.mkdir()
+    (src / "a.py").write_text("value = 1\n")
+    config = {"managed": {"design_roots": [], "code_roots": ["src"], "test_roots": [], "contract_roots": []}, "storage": {"derived": ".engineering"}}
+    full = build_graph(tmp_path, Registry(), [parse_python((src / "a.py").read_bytes(), "src/a.py")], config)
+    assert full.published
+    path = tmp_path / ".engineering/graph.json"
+    snapshot = json.loads(path.read_text())
+    snapshot["edges"] = [{"from": "A", "to": "B", "relation": "depends_on", "origin": "bad", "confidence": 1, "verified": False}]
+    snapshot["content_digest"] = sha256_json({k: v for k, v in snapshot.items() if k != "content_digest"})
+    path.write_text(json.dumps(snapshot))
+    (tmp_path / ".engineering/current.json").unlink()
+    loaded, diagnostics = load_graph(tmp_path, config)
+    assert loaded is None and diagnostics[0].code == "EPE-GRAPH-SHAPE"

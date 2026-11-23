@@ -300,6 +300,37 @@ def build_graph_incremental(root: Path, registry: Registry, previous: dict[str, 
         return build_graph(root, registry, results, config)
 
 
+def _validate_graph_shape(snapshot: dict[str, Any]) -> None:
+    """Validate the minimum node/edge shape before query consumers use a snapshot."""
+    nodes = snapshot.get("nodes")
+    edges = snapshot.get("edges")
+    if not isinstance(nodes, list) or not isinstance(edges, list):
+        raise ValueError("图快照 nodes/edges 必须为数组")
+    node_ids: set[str] = set()
+    for node in nodes:
+        if not isinstance(node, dict) or not isinstance(node.get("id"), str) or not node["id"]:
+            raise ValueError("图快照包含非法节点")
+        if node["id"] in node_ids:
+            raise ValueError(f"图快照包含重复节点: {node['id']}")
+        node_ids.add(node["id"])
+    for edge in edges:
+        if not isinstance(edge, dict):
+            raise ValueError("图快照包含非对象边")
+        if any(not isinstance(edge.get(key), str) or not edge[key] for key in ("from", "to", "relation")):
+            raise ValueError("图快照边缺少有效 from/to/relation")
+        origin = edge.get("origin")
+        if (not isinstance(origin, dict) or not isinstance(origin.get("type"), str)
+                or not origin["type"] or not isinstance(origin.get("source"), str)
+                or not origin["source"]):
+            raise ValueError("图快照边 origin 结构无效")
+        confidence = edge.get("confidence")
+        if (type(confidence) not in {int, float} or isinstance(confidence, bool)
+                or not math.isfinite(float(confidence)) or not 0 <= float(confidence) <= 1):
+            raise ValueError("图快照边 confidence 超出合法范围")
+        if not isinstance(edge.get("verified"), bool):
+            raise ValueError("图快照边 verified 必须为布尔值")
+
+
 def load_graph(root: Path, config: dict[str, Any]) -> tuple[dict[str, Any] | None, list[Diagnostic]]:
     derived = root / config.get("storage", {}).get("derived", ".engineering")
     path = derived / "graph.json"
@@ -322,6 +353,10 @@ def load_graph(root: Path, config: dict[str, Any]) -> tuple[dict[str, Any] | Non
         content = {k: v for k, v in snapshot.items() if k != "content_digest"}
         if snapshot.get("content_digest") != sha256_json(content) or (generation is not None and snapshot.get("content_digest") != generation):
             return None, [Diagnostic("EPE-GRAPH-INTEGRITY", Severity.ERROR, "图快照摘要不匹配", path=str(path.relative_to(root)))]
+        try:
+            _validate_graph_shape(snapshot)
+        except ValueError as exc:
+            return None, [Diagnostic("EPE-GRAPH-SHAPE", Severity.ERROR, str(exc), path=str(path.relative_to(root)))]
         if snapshot.get("parser_config") != _parser_config(config):
             return None, [Diagnostic("EPE-GRAPH-STALE", Severity.ERROR, "图构建版本或解析配置已变更，请重新构建", path=str(path.relative_to(root)))]
         if snapshot.get("input_manifest", {}).get("digest") != graph_manifest(root, config).digest:
@@ -346,6 +381,7 @@ def load_historical_graph(root: Path, config: dict[str, Any], generation: str) -
                 or snapshot.get("content_digest") != generation
                 or sha256_json({k: v for k, v in snapshot.items() if k != "content_digest"}) != generation):
             raise ValueError("历史图不完整或摘要不匹配")
+        _validate_graph_shape(snapshot)
         return snapshot, []
     except (OSError, ValueError, TypeError) as exc:
         return None, [Diagnostic("EPE-GRAPH-HISTORY", Severity.ERROR, str(exc), path=str(path))]
@@ -354,6 +390,8 @@ def load_historical_graph(root: Path, config: dict[str, Any], generation: str) -
 def graph_neighbors(snapshot: dict[str, Any], entity_id: str, relation_types: set[str] | None = None, direction: str = "both") -> list[dict[str, Any]]:
     result = []
     for edge in snapshot.get("edges", []):
+        if not isinstance(edge, dict):
+            continue
         if relation_types and edge.get("relation") not in relation_types: continue
         if (direction in {"out", "both"} and edge.get("from") == entity_id) or (direction in {"in", "both"} and edge.get("to") == entity_id): result.append(edge)
     return sorted(result, key=lambda e: (e.get("from", ""), e.get("to", ""), e.get("relation", ""), sha256_json(e)))
@@ -371,6 +409,8 @@ def trace_path(snapshot: dict[str, Any], source: str, target: str, *, direction:
         raise ValueError("path endpoint not in graph")
     adjacency: dict[str, list[tuple[str, str, dict[str, Any]]]] = {}
     for edge in snapshot.get("edges", []):
+        if not isinstance(edge, dict):
+            continue
         if relation_types is not None and edge.get("relation") not in relation_types:
             continue
         frm, to = edge.get("from"), edge.get("to")
