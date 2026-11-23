@@ -20,6 +20,7 @@
 - 将 `HERMES_HOME` 指向空临时目录时，安装器尝试准备隔离依赖，20–45 秒内未完成；该超时不是 ACP 协议拒绝。现有安装目录探针成功，但加载了现有 Hermes 环境文件；未记录文件内容。
 - 实验未创建 session、发起模型调用或测试工具权限，因此不证明端到端集成、可信身份、文件隔离或取消。
 - 后续原型：`experiments/hermes_acp_probe.py` 在真实 Hermes 安装目录运行 `python /mnt/data/Projects/Systems/01_btae/experiments/hermes_acp_probe.py --timeout 20 -- /home/lanshi/.hermes/hermes-agent/venv/bin/python -m acp_adapter`，返回 `hermes-agent`、版本 `0.22.2`、ACP 版本 1；结果显式标识 `initialize_only`，身份与写入隔离均为 false。路径依赖本机安装，不是可移植安装说明。
+- 正式代码原型：`src/epe/adapters/hosts/acp.py` 的 `HermesACPAdapter.handshake()` 复用同一失败关闭边界，成功结果为 `handshaken-untrusted`，不声明业务操作；`tests/integration/test_acp_adapter.py` 覆盖受控子进程与真实边界语义。
 
 ## 验收与决策
 
