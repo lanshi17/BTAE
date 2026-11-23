@@ -69,6 +69,18 @@ def _validate_owner(owner: Any) -> str:
     return owner
 
 
+def _validate_lease_id(value: Any) -> str:
+    if not isinstance(value, str) or not _LEASE_ID.fullmatch(value):
+        raise LeaseError("lease_id 格式非法")
+    try:
+        parsed = uuid.UUID(value)
+    except ValueError as exc:
+        raise LeaseError("lease_id 必须是规范 UUID") from exc
+    if str(parsed) != value:
+        raise LeaseError("lease_id 必须使用小写规范 UUID")
+    return value
+
+
 def _validate_ttl(ttl: Any) -> float:
     if isinstance(ttl, bool) or not isinstance(ttl, (int, float)) or not math.isfinite(ttl) or ttl <= 0 or ttl > 7 * 24 * 3600:
         raise LeaseError("租约 TTL 必须为 0 到 7 天以内的有限正数")
@@ -158,8 +170,7 @@ def acquire_lease(root: Path, config: dict[str, Any], changeset: dict[str, Any],
 def renew_lease(root: Path, config: dict[str, Any], changeset: dict[str, Any], owner: str, lease_id: str, ttl: Any) -> dict[str, Any]:
     owner = _validate_owner(owner)
     seconds = _validate_ttl(ttl)
-    if not isinstance(lease_id, str) or not _LEASE_ID.fullmatch(lease_id):
-        raise LeaseError("lease_id 格式非法")
+    _validate_lease_id(lease_id)
     path = lease_path(root.resolve(), config, changeset["id"])
     with acquire_write_lock(_write_lock_path(root.resolve(), config)):
         if not path.exists():
@@ -187,8 +198,7 @@ def renew_lease(root: Path, config: dict[str, Any], changeset: dict[str, Any], o
 
 def release_lease(root: Path, config: dict[str, Any], changeset_id: str, owner: str, lease_id: str) -> bool:
     owner = _validate_owner(owner)
-    if not isinstance(lease_id, str) or not _LEASE_ID.fullmatch(lease_id):
-        raise LeaseError("lease_id 格式非法")
+    _validate_lease_id(lease_id)
     path = lease_path(root.resolve(), config, changeset_id)
     with acquire_write_lock(_write_lock_path(root.resolve(), config)):
         if not path.exists():

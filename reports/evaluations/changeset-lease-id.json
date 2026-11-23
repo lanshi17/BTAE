@@ -1,0 +1,48 @@
+{
+  "time_utc": "2026-11-23T17:41:16.992526+00:00",
+  "task_id": "TASK-changeset-lease-id",
+  "git_head": "a15e720f3e09f423d7a1f53ac0ef972bfab574b8",
+  "working_tree_dirty": true,
+  "environment": {
+    "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+    "platform": "Linux-7.0.0-43-generic-x86_64-with-glibc2.43"
+  },
+  "file_sha256": {
+    "src/epe/governance/leases.py": "20bb5280b0ba0577bc0f50ea51690b27f198a1689238d0ea91b33d816f42908e",
+    "tests/unit/test_changeset_leases.py": "32b8113fd2bae8a98d7c47c99333ee0b868e73b4fc63cd72c5e5fb384ce3a9e7"
+  },
+  "commands": [
+    {
+      "command": "PYTHONPATH=src pytest -q tests/unit/test_changeset_leases.py",
+      "result": "passed",
+      "details": "5 passed"
+    },
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts=''",
+      "result": "passed",
+      "details": "327 passed in 49.29s"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json policy validate",
+      "result": "passed"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json graph build",
+      "result": "passed",
+      "details": "377 nodes, 496 edges, digest 04d2bf603ddcee2a6bbf67c2ac9089b84e05a5c4999d1f5a4aba8e702a3e58c4"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json architecture validate",
+      "result": "passed",
+      "details": "392 imports, no violations or unknowns"
+    },
+    {
+      "command": "git diff --check",
+      "result": "passed"
+    }
+  ],
+  "security_fact": "lease IDs are parsed as canonical lowercase UUIDs, eliminating ambiguous 36-character strings",
+  "limitations": [
+    "Identifier validation does not provide authentication or external lease enforcement."
+  ]
+}

@@ -42,6 +42,8 @@ def test_lease_conflicts_and_revision_mismatch(tmp_path):
         renew_lease(tmp_path, config(), change(revision=2), "alice", value["lease_id"], 30)
     with pytest.raises(LeaseConflict):
         release_lease(tmp_path, config(), "CHANGE-001", "bob", value["lease_id"])
+    with pytest.raises(LeaseError, match="规范 UUID"):
+        renew_lease(tmp_path, config(), change(), "alice", "a" * 36, 30)
 
 
 def test_expired_lease_is_recovered_and_invalid_ttl_is_rejected(tmp_path, monkeypatch):
