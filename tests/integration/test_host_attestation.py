@@ -71,3 +71,12 @@ def test_attestation_cannot_escalate_operations_beyond_trust_root(tmp_path):
     capabilities = signed_capabilities(tmp_path, key, operations=["verify", "start_implementation"])
     fact, error = verify_capability_attestation(capabilities, "nonce-1", config_for(key))
     assert fact is None and error == "能力证明操作超出受信范围"
+
+
+def test_attestation_rejects_non_finite_capability_payload_without_raising(tmp_path):
+    key = tmp_path / "key"
+    subprocess.run(["ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-f", str(key)], check=True, capture_output=True)
+    capabilities = signed_capabilities(tmp_path, key)
+    capabilities["nonfinite"] = float("nan")
+    fact, error = verify_capability_attestation(capabilities, "nonce-1", config_for(key))
+    assert fact is None and error == "能力证明载荷无效"
