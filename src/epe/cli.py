@@ -26,6 +26,7 @@ from epe.governance.tasks import load_task, save_task, create_task, validate_tas
 from epe.governance.policies import validate_policy_files, load_workflow_requirements
 from epe.core.policy import validate_policy_document
 from epe.governance.baseline import capture_baseline, changeset_paths, compare_baseline, validate_changeset, transition_changeset, changeset_declaration, baseline_binding_version
+from epe.governance.conflicts import detect_changeset_conflicts
 from epe.parsers.documents import discover_documents, parse_yaml_bytes
 from epe.parsers.python import parse_python_tree
 from epe.verification.architecture import validate_architecture
@@ -502,6 +503,43 @@ def cmd_changeset_create(args) -> CommandResult:
         return _result("changeset create", "error", [Diagnostic("EPE-CHANGESET-CREATE", Severity.ERROR, str(exc))])
     except WriteConflict as exc:
         return _result("changeset create", "blocked", [Diagnostic("EPE-WRITE-CONFLICT", Severity.ERROR, str(exc))])
+
+
+def cmd_changeset_conflicts(args) -> CommandResult:
+    root = _root(args.root)
+    config, failure = _config_or_result(root, "changeset conflicts")
+    if failure:
+        return failure
+    base = (root / config.get("storage", {}).get("changesets", "engineering/changesets")).resolve()
+    try:
+        base.relative_to(root)
+    except ValueError:
+        return _result("changeset conflicts", "error", [Diagnostic("EPE-PATH-SYMLINK", Severity.ERROR, "ChangeSet 目录越出仓库根")])
+    changesets: list[dict[str, Any]] = []
+    diagnostics: list[Diagnostic] = []
+    if base.exists() and base.is_symlink():
+        return _result("changeset conflicts", "error", [Diagnostic("EPE-PATH-SYMLINK", Severity.ERROR, "ChangeSet 目录不能是符号链接")])
+    if base.exists():
+        for path in sorted(base.glob("CHANGE-*.json")):
+            if path.is_symlink():
+                diagnostics.append(Diagnostic("EPE-PATH-SYMLINK", Severity.ERROR, "ChangeSet 记录不能是符号链接", path=str(path.relative_to(root))))
+                continue
+            try:
+                value = json.loads(path.read_text(encoding="utf-8"))
+                if not isinstance(value, dict):
+                    raise ValueError("ChangeSet 必须为对象")
+                changesets.append(value)
+            except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as exc:
+                diagnostics.append(Diagnostic("EPE-CHANGESET-PARSE", Severity.ERROR, str(exc), path=str(path.relative_to(root))))
+    try:
+        conflicts = detect_changeset_conflicts(changesets)
+    except ValueError as exc:
+        diagnostics.append(Diagnostic("EPE-CHANGESET-SCOPE", Severity.ERROR, str(exc)))
+        conflicts = []
+    if diagnostics:
+        return _result("changeset conflicts", "error", diagnostics, {"changesets": len(changesets), "conflicts": []})
+    status = "blocked" if conflicts else "passed"
+    return _result("changeset conflicts", status, [Diagnostic("EPE-CHANGESET-CONFLICT", Severity.WARNING, "存在潜在 ChangeSet 范围冲突")] if conflicts else [], {"changesets": len(changesets), "conflicts": conflicts})
 
 
 def cmd_design_validate(args) -> CommandResult:
@@ -1042,6 +1080,7 @@ def build_parser() -> argparse.ArgumentParser:
     changeset = sub.add_parser("changeset"); common(changeset); change_commands = changeset.add_subparsers(dest="changeset_command", required=True)
     p = change_commands.add_parser("create"); common(p); p.add_argument("--file", required=True); p.set_defaults(func=cmd_changeset_create)
     p = change_commands.add_parser("transition"); common(p); p.add_argument("changeset_id"); p.add_argument("event", choices=["activate", "complete", "abort"]); p.add_argument("--expected-revision", type=int, default=None); p.set_defaults(func=cmd_changeset_transition)
+    p = change_commands.add_parser("conflicts"); common(p); p.set_defaults(func=cmd_changeset_conflicts)
     task = sub.add_parser("task"); common(task); ts = task.add_subparsers(dest="task_command", required=True)
     p = ts.add_parser("create"); common(p); p.add_argument("--file", required=True); p.set_defaults(func=cmd_task_create)
     p = ts.add_parser("classify"); common(p); p.add_argument("task_id"); p.set_defaults(func=cmd_task_classify)

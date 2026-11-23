@@ -14,7 +14,7 @@ verification_status: passed
 
 提供统一人类/机器入口，装配内部服务和端口实现，执行用例并输出稳定结果。对应 PRD-001、PRD-008、PRD-009，主要验收 AC-01、AC-09、AC-11，并承载其余验收的端到端入口。
 
-CLI 管参数、装配和流程，不内嵌审批、证据有效性或架构规则算法。当前提供 SPEC 首批命令、`context resolve`、`impact analyze` 和安全 `design create`；不具备可靠实现的宿主能力仍明确返回 unsupported。
+CLI 管参数、装配和流程，不内嵌审批、证据有效性或架构规则算法。当前提供 SPEC 首批命令、`context resolve`、`impact analyze`、只读 `changeset conflicts` 和安全 `design create`；不具备可靠实现的宿主能力仍明确返回 unsupported。
 
 ## 2. 逻辑组件
 

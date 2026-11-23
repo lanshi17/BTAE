@@ -67,7 +67,7 @@ Policy 本身的修改也应纳入变更与审核，不能修改规则后马上�
 
 ChangeSet 生命周期通过 `changeset transition` 迁移：planned → active → completed，planned/active 可 aborted；每次迁移递增 revision；完成前要求关联 Task 为 active，并重新执行包含设计、架构、验证证据与范围的综合门禁；planned 或 aborted ChangeSet 不能满足 Task 完成门禁。生命周期字段不参与新基线声明摘要，避免合法状态迁移使自身基线失效；旧格式基线仅在原声明匹配时可只读比较，不自动迁移。Task 的内部执行阶段和 ChangeSet 状态分开定义，具体枚举在 Schema 冻结时落实。
 
-范围检查包含新增、修改、删除、移动前后路径和符号链接解析结果。重叠声明只产生冲突事实，MVP 不声称给多个 Agent 上了实体锁。V1.0 引入锁时再定义租约、续期、恢复和依赖契约版本协调。
+范围检查包含新增、修改、删除、移动前后路径和符号链接解析结果。`epe changeset conflicts` 只读扫描 `planned/active` ChangeSet 的 `write_scope` 与 `protected` glob，报告潜在 write/write 和 write/protected 重叠，供多 Agent 在开始修改前协调。重叠声明只产生保守冲突事实，MVP 不声称给多个 Agent 上了实体锁；结果不能证明实际写入、身份、租约或宿主隔离。V1.0 引入锁时再定义租约、续期、恢复和依赖契约版本协调。
 
 `epe changeset create --file PATH` 将当前仓库内容登记为基线并写入审计目录；完成门禁将当前路径和摘要与该基线比较，保护范围优先。基线摘要覆盖 ChangeSet 声明以及排序后的路径、内容摘要与类型，声明变化须重新建立基线。Git 内部、虚拟环境、缓存、派生索引、报告和 Evidence 目录不纳入此比较；目录链接或越界链接产生故障，文件链接的目标内容也参与摘要。这是检查能力，不是防止并发写入的锁或完整的宿主隔离。
 
