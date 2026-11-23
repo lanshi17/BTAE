@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -45,3 +46,17 @@ def test_expired_lease_is_recovered_and_invalid_ttl_is_rejected(tmp_path, monkey
     assert replacement["lease_id"] != old["lease_id"]
     with pytest.raises(LeaseError):
         acquire_lease(tmp_path, config(), change(), "alice", 0)
+
+
+def test_lease_record_is_bound_to_its_changeset_path(tmp_path):
+    value = acquire_lease(tmp_path, config(), change(), "alice", 30)
+    path = tmp_path / "engineering/changesets/CHANGE-001.lease.json"
+    record = json.loads(path.read_text())
+    record["changeset_id"] = "CHANGE-999"
+    path.write_text(json.dumps(record))
+    with pytest.raises(LeaseError, match="ID"):
+        inspect_lease(tmp_path, config(), "CHANGE-001")
+    with pytest.raises(LeaseError, match="ID"):
+        renew_lease(tmp_path, config(), change(), "alice", value["lease_id"], 30)
+    with pytest.raises(LeaseError, match="ID"):
+        release_lease(tmp_path, config(), "CHANGE-001", "alice", value["lease_id"])
