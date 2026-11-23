@@ -21,3 +21,4 @@ def test_architecture_diff_cli_compares_selected_history(tmp_path, capsys):
     assert result["data"]["previous_digest"] == first
     assert result["data"]["current_digest"] != first
     assert result["data"]["status"] == "changed"
+    assert result["data"]["expected_architecture"]["status"] == "pass"
