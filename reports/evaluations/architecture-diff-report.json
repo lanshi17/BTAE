@@ -1,0 +1,51 @@
+{
+  "time_utc": "2026-11-23T21:06:36Z",
+  "task_id": "TASK-architecture-diff-report",
+  "git_head": "e1055756d4da6ea25bbfa1621311375edbf400eb",
+  "working_tree_before_report": "clean",
+  "environment": {
+    "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+    "platform": "Linux-7.0.0-43-generic-x86_64-with-glibc2.43"
+  },
+  "file_sha256": {
+    "src/epe/verification/architecture.py": "bc5af8f93347a818f9c0490782ee7f728f82dfc4565b613faad858e9980ca9f3",
+    "src/epe/cli.py": "eb81910620853f5603d2b7f94213a27ce5ceb75f0745c3f44c49d321108c01e7",
+    "tests/unit/test_architecture_diff.py": "11e695ca3651d9602fe38349ae33ac2944528e841c7788b6eb077d89776cee1b",
+    "tests/integration/test_architecture_diff_cli.py": "8bdca131edb8782664e200eea35bc07d6fea19afe466ab40b950edfd2c9a8775",
+    "plans/active/TASK-architecture-diff-report.md": "73460517ea045f70edfddc009d6bdcadc8ac20b31fff37c90a391ac066c5ddfd"
+  },
+  "commands": [
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts='' tests/unit/test_architecture_diff.py tests/integration/test_architecture_diff_cli.py tests/unit/test_architecture_rules.py tests/integration/test_module_dependencies.py",
+      "result": "passed",
+      "details": "9 passed"
+    },
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts=''",
+      "result": "passed",
+      "details": "349 passed in 53.56s"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json graph build",
+      "result": "passed",
+      "details": "391 nodes, 529 edges, digest ac09acebbde0227ab61c8ad6d91e6093c730af885043ae96f7758735f1212fca"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json architecture validate",
+      "result": "passed",
+      "details": "411 imports, no violations or unknowns"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json policy validate",
+      "result": "passed"
+    },
+    {
+      "command": "git diff --check && python -m compileall -q src",
+      "result": "passed"
+    }
+  ],
+  "change": "Added read-only architecture diff report comparing a selected historical generation with the current fresh graph, preserving node/edge provenance and marking analysis unknowns as incomplete. No ADR or authorization state is mutated.",
+  "limitations": [
+    "Diff is a discovered-architecture delta, not a design violation verdict or automatic ADR decision. Historical generation selection and entity identity mapping remain caller-specified."
+  ]
+}
