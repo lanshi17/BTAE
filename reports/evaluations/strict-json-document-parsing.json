@@ -1,0 +1,50 @@
+{
+  "time_utc": "2026-11-23T19:56:55Z",
+  "task_id": "TASK-strict-json-document-parsing",
+  "git_head": "48cf1936f72f5d939e689e1a7421772d9207e722",
+  "working_tree_before_report": "clean",
+  "environment": {
+    "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+    "platform": "Linux-7.0.0-43-generic-x86_64-with-glibc2.43"
+  },
+  "file_sha256": {
+    "src/epe/parsers/documents.py": "9d624541aa75b565e28aae89c62a6ee04870796c05d035d525e41033b2b7b85a",
+    "src/epe/parsers/coordinator.py": "f1d2940803e5b543faef46d84457275f6606164cda3d5b4f5f3c93ae498cd471",
+    "tests/unit/test_parsers.py": "3393cf47da37436b0fbede24e2012dd5254afeba5a514bcd821096501f4188d7",
+    "plans/active/TASK-parse-batch-contract.md": "af61481be9f2f05152363de7921223479edb95dccd8111171d92f756e401bfad"
+  },
+  "commands": [
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts='' tests/unit/test_parsers.py tests/acceptance/test_ac02_registry_diagnostics_cli.py tests/integration/test_project_config_contract.py",
+      "result": "passed",
+      "details": "18 passed"
+    },
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts=''",
+      "result": "passed",
+      "details": "342 passed in 51.19s"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json graph build",
+      "result": "passed",
+      "details": "384 nodes, 500 edges, digest 1c1d1d343c3f6fb87464b6e355827892fd30001559418ec3101d11fa1735ec17"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json policy validate",
+      "result": "passed"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json architecture validate",
+      "result": "passed",
+      "details": "395 imports, no violations or unknowns"
+    },
+    {
+      "command": "git diff --check && python -m compileall -q src",
+      "result": "passed"
+    }
+  ],
+  "change": "JSON files in recursive document discovery and ParseBatch now use strict UTF-8 JSON parsing, reject duplicate keys and non-standard NaN/Infinity constants, and return EPE-JSON-PARSE rather than accepting YAML syntax.",
+  "limitations": [
+    "This does not alter repository configuration or runtime JSON readers outside the document parser; strict JSON enforcement there remains an independent task."
+  ]
+}
