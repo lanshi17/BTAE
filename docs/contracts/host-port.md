@@ -23,7 +23,7 @@ HostPort 定义宿主 Agent 与 EPE 之间的结构化请求/响应边界。协�
 
 ## 3. 响应契约
 
-响应 `decision` 为 `accepted`、`blocked`、`unsupported` 或 `error` 之一，并携带字符串数组 `reasons`、结构化 `diagnostics`、`evidence_ids` 和 `next_steps`。`accepted` 只表示宿主协议和当前适配器能力允许继续，不等价于治理门禁通过；真正的实现和完成决定由 EPE 应用层重新计算。
+响应 `decision` 为 `accepted`、`blocked`、`unsupported` 或 `error` 之一，并携带字符串数组 `reasons`、结构化 `diagnostics`、`evidence_ids` 和 `next_steps`。每条 `diagnostics` 必须包含非空 `code`、`severity`（`error/warning/info`）和 `message`，可选定位字段必须符合机器 Schema；bridge 会拒绝非法结构并保留合法诊断。`accepted` 只表示宿主协议和当前适配器能力允许继续，不等价于治理门禁通过；真正的实现和完成决定由 EPE 应用层重新计算。
 
 ## 4. 传输与生命周期
 

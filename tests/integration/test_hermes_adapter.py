@@ -89,3 +89,34 @@ def test_hermes_rejects_malformed_dispatch_response(response):
     code = ("import json,sys; p=json.load(sys.stdin); "
             f"print(json.dumps({handshake!r} if p['operation']=='capabilities' else {operation!r}))")
     assert HermesHostAdapter([sys.executable, "-c", code]).dispatch(request()).decision == "error"
+
+
+def test_hermes_preserves_structured_diagnostics():
+    handshake = {"status": "ok", "capabilities": {"protocol_version": "1", "operations": ["verify"]}}
+    operation = {"status": "ok", "response": {"decision": "blocked", "reasons": ["gate"],
+        "diagnostics": [{"code": "EPE-GATE", "severity": "error", "message": "阻断", "line": 2}],
+        "evidence_ids": [], "next_steps": ["修复"]}}
+    code = ("import json,sys; p=json.load(sys.stdin); "
+            f"print(json.dumps({handshake!r} if p['operation']=='capabilities' else {operation!r}, ensure_ascii=False))")
+    response = HermesHostAdapter([sys.executable, "-c", code]).dispatch(request())
+    assert response.decision == "blocked"
+    assert response.diagnostics[0].code == "EPE-GATE"
+    assert response.diagnostics[0].line == 2
+
+
+@pytest.mark.parametrize("diagnostics", [
+    [{"severity": "error", "message": "missing code"}],
+    [{"code": "EPE", "severity": "fatal", "message": "bad severity"}],
+    [{"code": "EPE", "severity": "error", "message": "unknown", "extra": True}],
+    [{"code": "EPE", "severity": "error", "message": "bad line", "line": 0}],
+    "not-an-array",
+])
+def test_hermes_rejects_malformed_structured_diagnostics(diagnostics):
+    handshake = {"status": "ok", "capabilities": {"protocol_version": "1", "operations": ["verify"]}}
+    operation = {"status": "ok", "response": {"decision": "blocked", "reasons": [],
+        "diagnostics": diagnostics, "evidence_ids": [], "next_steps": []}}
+    code = ("import json,sys; p=json.load(sys.stdin); "
+            f"print(json.dumps({handshake!r} if p['operation']=='capabilities' else {operation!r}))")
+    response = HermesHostAdapter([sys.executable, "-c", code]).dispatch(request())
+    assert response.decision == "error"
+    assert response.diagnostics[0].code == "EPE-HOST-RESPONSE"

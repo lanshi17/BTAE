@@ -71,7 +71,35 @@ class HermesHostAdapter:
                for name in ("reasons", "evidence_ids", "next_steps")):
             diagnostic = Diagnostic("EPE-HOST-RESPONSE", Severity.ERROR, "Hermes 响应字段必须为字符串数组")
             return AgentResponse("error", [diagnostic.message], [diagnostic])
-        return AgentResponse(str(value["decision"]), list(value.get("reasons", [])), [], list(value.get("evidence_ids", [])), list(value.get("next_steps", [])))
+        diagnostics = self._parse_diagnostics(value.get("diagnostics", []))
+        if diagnostics is None:
+            diagnostic = Diagnostic("EPE-HOST-RESPONSE", Severity.ERROR, "Hermes 响应 diagnostics 结构无效")
+            return AgentResponse("error", [diagnostic.message], [diagnostic])
+        return AgentResponse(str(value["decision"]), list(value.get("reasons", [])), diagnostics,
+                             list(value.get("evidence_ids", [])), list(value.get("next_steps", [])))
+
+    @staticmethod
+    def _parse_diagnostics(value: Any) -> list[Diagnostic] | None:
+        """Validate and preserve structured diagnostics from the host."""
+        if not isinstance(value, list):
+            return None
+        allowed = {"code", "severity", "message", "entity_id", "path", "line", "suggestion"}
+        parsed: list[Diagnostic] = []
+        for item in value:
+            if not isinstance(item, dict) or set(item) - allowed:
+                return None
+            if (not isinstance(item.get("code"), str) or not item["code"]
+                    or item.get("severity") not in {"error", "warning", "info"}
+                    or not isinstance(item.get("message"), str) or not item["message"]):
+                return None
+            optional_strings = ("entity_id", "path", "suggestion")
+            if any(name in item and (not isinstance(item[name], str) or not item[name]) for name in optional_strings):
+                return None
+            if "line" in item and (type(item["line"]) is not int or item["line"] < 1):
+                return None
+            parsed.append(Diagnostic(item["code"], item["severity"], item["message"],
+                                     item.get("entity_id"), item.get("path"), item.get("line"), item.get("suggestion")))
+        return parsed
 
     def _call(self, payload: dict[str, Any]) -> dict[str, Any] | None:
         if not self.command or not isinstance(self.command, list) or not self.command or not all(isinstance(item, str) and item for item in self.command): return None
