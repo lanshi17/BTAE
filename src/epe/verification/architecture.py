@@ -8,7 +8,8 @@ from epe.graph.builder import dependency_cycles
 from epe.core.fingerprint import sha256_json
 
 
-def validate_architecture(snapshot: dict[str, Any], policy: dict[str, Any] | None) -> tuple[dict[str, Any], list[Diagnostic]]:
+def validate_architecture(snapshot: dict[str, Any], policy: dict[str, Any] | None,
+                         valid_exceptions: list[dict[str, Any]] | None = None) -> tuple[dict[str, Any], list[Diagnostic]]:
     policy = policy or {}; ds: list[Diagnostic] = []; violations: list[dict[str, Any]] = []
     blind_spots = [d for d in snapshot.get("diagnostics", []) if d.get("code", "").startswith("EPE-AST-")]
     nodes = snapshot.get("nodes", [])
@@ -24,6 +25,7 @@ def validate_architecture(snapshot: dict[str, Any], policy: dict[str, Any] | Non
         violations.append({"rule": "ARCH-CYCLE", "path": cycle, "edge_evidence": evidence})
         ds.append(Diagnostic("EPE-ARCH-CYCLE", Severity.ERROR, "发现依赖循环: " + " -> ".join(cycle)))
     forbidden = policy.get("forbidden_dependencies", []) or []
+    exceptions = valid_exceptions or []
     reported = set()
     for edge in snapshot.get("edges", []):
         if edge.get("relation") != "depends_on": continue
@@ -31,6 +33,12 @@ def validate_architecture(snapshot: dict[str, Any], policy: dict[str, Any] | Non
         for rule in forbidden:
             if not isinstance(rule, dict): continue
             if fnmatch(frm, str(rule["from"])) and fnmatch(to, str(rule["to"])):
+                matched_exception = next((exception for exception in exceptions
+                                          if exception.get("rule_id") == rule.get("id", "ARCH-FORBIDDEN")
+                                          and fnmatch(frm, exception.get("from", ""))
+                                          and fnmatch(to, exception.get("to", ""))), None)
+                if matched_exception is not None:
+                    continue
                 key = (rule.get("id", "ARCH-FORBIDDEN"), frm, to)
                 if key in reported: continue
                 reported.add(key)
@@ -38,7 +46,7 @@ def validate_architecture(snapshot: dict[str, Any], policy: dict[str, Any] | Non
                 ds.append(Diagnostic("EPE-ARCH-FORBIDDEN", Severity.ERROR, f"禁止依赖: {frm} -> {to}"))
     status = "fail" if any(d.is_error for d in ds) else ("unknown" if blind_spots else "pass")
     return {"status": status, "cycles": cycles, "violations": violations, "unknowns": blind_spots,
-            "module_coverage": coverage}, ds
+            "module_coverage": coverage, "exceptions_applied": exceptions}, ds
 
 
 def diff_architecture_snapshots(previous: dict[str, Any], current: dict[str, Any]) -> dict[str, Any]:

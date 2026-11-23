@@ -1,0 +1,53 @@
+{
+  "time_utc": "2026-11-23T21:32:14Z",
+  "task_id": "TASK-architecture-adr-exceptions",
+  "git_head": "e637a76dfa0e6addde6d5ceecc78241b3ec70d78",
+  "working_tree_before_report": "clean",
+  "environment": {
+    "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+    "platform": "Linux-7.0.0-43-generic-x86_64-with-glibc2.43"
+  },
+  "file_sha256": {
+    "engineering/schemas/policy.schema.json": "0549ae87aeac163fbebf2fad4687c439c5b90b0eb061a7d6d9858ee783494fd4",
+    "src/epe/data/schemas/policy.schema.json": "0549ae87aeac163fbebf2fad4687c439c5b90b0eb061a7d6d9858ee783494fd4",
+    "src/epe/verification/architecture.py": "496ca1a8141cde58cf13114761a59b8f86bad1b65050df4c009734aade8cf411",
+    "src/epe/cli.py": "031a732f238db108ad50c3745acc3560bee0b2114c2b4d13f2fff3c2186e7482",
+    "tests/unit/test_architecture_rules.py": "380e5da4a882b8ddaa609a1dc4257ded35bf369a37f491eff35f2d84ae73b609",
+    "tests/integration/test_module_dependencies.py": "1c0e610f322ccbfc5310a60e091671d8190a5b3f6987b98f792f36cddd4a0399",
+    "plans/active/TASK-architecture-adr-exceptions.md": "e58624728fda54ce2ac18e9cd6cf0a783ab5dc3cbc7741d0347ac5c2dd185bb6"
+  },
+  "commands": [
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts='' tests/unit/test_architecture_rules.py tests/integration/test_module_dependencies.py tests/acceptance/test_policy_validate.py",
+      "result": "passed",
+      "details": "13 passed"
+    },
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts=''",
+      "result": "passed",
+      "details": "351 passed in 51.43s"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json graph build",
+      "result": "passed",
+      "details": "392 nodes, 530 edges, digest 43d5ee5fdde2af641c2ccbb890f45272021eecb2613221a8cf214a14bda8a0ee"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json architecture validate",
+      "result": "passed",
+      "details": "412 imports, no violations or unknowns"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json policy validate",
+      "result": "passed"
+    },
+    {
+      "command": "git diff --check && python -m compileall -q src",
+      "result": "passed"
+    }
+  ],
+  "change": "Architecture policy now supports ADR-backed exceptions. Only approved, unexpired ADR records with matching rule and from/to scope suppress a forbidden dependency; invalid or expired exceptions error and do not suppress rules. Reports retain exceptions_applied.",
+  "limitations": [
+    "Approval and review facts remain repository-local; no external immutable review authority is claimed. Exceptions do not affect cycles, unknowns, or unrelated rules."
+  ]
+}

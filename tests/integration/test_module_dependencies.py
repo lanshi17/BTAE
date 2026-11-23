@@ -1,3 +1,5 @@
+import json
+
 from epe.core.registry import build_registry
 from epe.graph.builder import build_graph, build_graph_incremental, dependency_cycles, load_graph
 from epe.parsers.python import parse_python
@@ -74,6 +76,26 @@ def test_cli_reports_module_cycle_with_source_evidence(tmp_path):
     assert code != 0 and result["data"]["module_coverage"] == "configured"
     cycle = next(v for v in result["data"]["violations"] if v["rule"] == "ARCH-CYCLE" and v["path"][0] == "MOD-A")
     assert cycle["edge_evidence"][0][0]["origin"]["source"] == "src/a/x.py"
+
+
+def test_cli_architecture_exception_requires_approved_adr_and_review_deadline(tmp_path, capsys):
+    from epe.cli import main
+    import yaml
+
+    assert main(["--root", str(tmp_path), "--format", "json", "init"]) == 0
+    capsys.readouterr()
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src/a.py").write_text("import b\n", encoding="utf-8")
+    (tmp_path / "src/b.py").write_text("value = 1\n", encoding="utf-8")
+    adr_dir = tmp_path / "docs/architecture/decisions"; adr_dir.mkdir(parents=True)
+    (adr_dir / "ADR-1.md").write_text("---\nid: ADR-1\ntype: ADR\nname: exception\ndesign_status: approved\n---\n", encoding="utf-8")
+    policy = tmp_path / "engineering/policies/architecture.yaml"
+    policy.write_text(yaml.safe_dump({"schema_version": 1, "forbidden_dependencies": [{"id": "R1", "from": "SRC-src/a.py", "to": "SRC-src/b.py"}], "exceptions": [{"id": "EX-1", "rule_id": "R1", "adr": "ADR-1", "from": "SRC-src/a.py", "to": "SRC-src/b.py", "review_until": "2099-01-01T00:00:00Z"}]}), encoding="utf-8")
+    assert main(["--root", str(tmp_path), "--format", "json", "graph", "build"]) == 0
+    capsys.readouterr()
+    assert main(["--root", str(tmp_path), "--format", "json", "architecture", "validate"]) == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result["status"] == "passed"
 
 
 def test_cli_unknown_module_coverage_and_explicit_policy(tmp_path):
