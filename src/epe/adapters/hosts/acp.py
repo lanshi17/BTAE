@@ -45,11 +45,12 @@ class HermesACPSession:
     """An explicitly opened ACP session with text-only prompt support."""
 
     def __init__(self, process: subprocess.Popen, selector: selectors.BaseSelector,
-                 timeout: float, output_limit: int):
+                 timeout: float, output_limit: int, cwd: Path):
         self._process = process
         self._selector = selector
         self._timeout = timeout
         self._output_limit = output_limit
+        self._cwd = cwd.resolve()
         self._pending = b""
         self._consumed = 0
         self._next_id = 3
@@ -61,6 +62,7 @@ class HermesACPSession:
         self._active_readers = 0
         self._wakeup_read, self._wakeup_write = os.pipe()
         self.session_id = ""
+        self._session_ids: set[str] = set()
         self._closed = False
 
     def close(self) -> None:
@@ -107,13 +109,29 @@ class HermesACPSession:
     def __exit__(self, *_: object) -> None:
         self.close()
 
-    def prompt(self, text: str) -> dict[str, Any]:
+    def fork_session(self, cwd: Path | None = None) -> str:
+        """Create and register a child session without enabling MCP servers."""
+        self._ensure_open()
+        value = self._request("session/fork", {
+            "sessionId": self.session_id,
+            "cwd": str((cwd or self._cwd).resolve()),
+            "mcpServers": [],
+        })
+        if not isinstance(value, dict) or not isinstance(value.get("sessionId"), str) or not value["sessionId"]:
+            self.close()
+            raise ACPProtocolError("ACP session/fork response lacks sessionId")
+        with self._state_lock:
+            self._session_ids.add(value["sessionId"])
+        return value["sessionId"]
+
+    def prompt(self, text: str, *, session_id: str | None = None) -> dict[str, Any]:
         """Send one text prompt; the result is model output, never a gate decision."""
         if not isinstance(text, str) or not text.strip():
             raise ValueError("session is closed or prompt is empty")
         self._ensure_open()
+        target = self._resolve_session_id(session_id)
         result = self._request("session/prompt", {
-            "sessionId": self.session_id,
+            "sessionId": target,
             "prompt": [{"type": "text", "text": text}],
         })
         if not isinstance(result, dict):
@@ -121,14 +139,15 @@ class HermesACPSession:
             raise ACPProtocolError("ACP session/prompt response is not an object")
         return result
 
-    def prompt_with_updates(self, text: str) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    def prompt_with_updates(self, text: str, *, session_id: str | None = None) -> tuple[dict[str, Any], list[dict[str, Any]]]:
         """Return the transport result and ordered, untrusted session updates."""
         if not isinstance(text, str) or not text.strip():
             raise ValueError("session is closed or prompt is empty")
         self._ensure_open()
+        target = self._resolve_session_id(session_id)
         updates: list[dict[str, Any]] = []
         result = self._request("session/prompt", {
-            "sessionId": self.session_id,
+            "sessionId": target,
             "prompt": [{"type": "text", "text": text}],
         }, updates=updates)
         if not isinstance(result, dict):
@@ -136,13 +155,14 @@ class HermesACPSession:
             raise ACPProtocolError("ACP session/prompt response is not an object")
         return result, updates
 
-    def cancel(self) -> None:
+    def cancel(self, *, session_id: str | None = None) -> None:
         """Send ACP's session/cancel notification for the current operation."""
         self._ensure_open()
-        if not self.session_id:
+        target = self._resolve_session_id(session_id)
+        if not target:
             raise ValueError("session is closed or has no session ID")
         payload = {"jsonrpc": "2.0", "method": "session/cancel",
-                   "params": {"sessionId": self.session_id}}
+                   "params": {"sessionId": target}}
         try:
             self._send(payload)
         except (TimeoutError, ACPProtocolError, OSError):
@@ -166,7 +186,7 @@ class HermesACPSession:
                     if updates is not None and message["method"] == "session/update":
                         notification = message.get("params")
                         if (not isinstance(notification, dict)
-                                or notification.get("sessionId") != self.session_id
+                                or notification.get("sessionId") not in self._session_ids
                                 or not isinstance(notification.get("update"), dict)):
                             raise ACPProtocolError("invalid ACP session update")
                         updates.append(notification["update"])
@@ -186,6 +206,15 @@ class HermesACPSession:
         with self._state_lock:
             if self._closed:
                 raise ACPSessionClosed("ACP session is closed")
+
+    def _resolve_session_id(self, session_id: str | None) -> str:
+        target = self.session_id if session_id is None else session_id
+        with self._state_lock:
+            if self._closed:
+                raise ACPSessionClosed("ACP session is closed")
+            if not isinstance(target, str) or not target or target not in self._session_ids:
+                raise ACPProtocolError("unknown ACP session ID")
+        return target
 
     def _close_selector(self, selector: selectors.BaseSelector) -> None:
         try:
@@ -349,7 +378,7 @@ class HermesACPAdapter:
         session = None
         try:
             selector = selectors.DefaultSelector()
-            session = HermesACPSession(process, selector, self.timeout, self.output_limit)
+            session = HermesACPSession(process, selector, self.timeout, self.output_limit, self.cwd)
             os.set_blocking(process.stdin.fileno(), False)
             selector.register(process.stdout, selectors.EVENT_READ)
             selector.register(session._wakeup_read, selectors.EVENT_READ)
@@ -367,6 +396,7 @@ class HermesACPAdapter:
             if not isinstance(value, dict) or not isinstance(value.get("sessionId"), str) or not value["sessionId"]:
                 raise ACPProtocolError("ACP session/new response lacks sessionId")
             session.session_id = value["sessionId"]
+            session._session_ids.add(session.session_id)
             return session
         except BaseException:
             if session is not None:

@@ -276,3 +276,49 @@ for line in sys.stdin:
             with pytest.raises(ACPProtocolError, match="invalid ACP session update"):
                 session.prompt_with_updates("hello")
             assert session._process.poll() is not None
+
+
+def test_fork_registers_child_and_routes_parent_and_child_prompts(tmp_path: Path):
+    script = r'''
+import json,sys
+for line in sys.stdin:
+    req=json.loads(line); method=req["method"]
+    if method == "initialize":
+        result={"protocolVersion":1,"agentInfo":{"name":"fixture"}}
+    elif method == "session/new":
+        result={"sessionId":"PARENT"}
+    elif method == "session/fork":
+        assert req["params"]["sessionId"] == "PARENT" and req["params"]["mcpServers"] == []
+        result={"sessionId":"CHILD"}
+    elif method == "session/prompt":
+        result={"stopReason":req["params"]["sessionId"]}
+    elif method == "session/cancel":
+        continue
+    else:
+        result={"stopReason":"unexpected"}
+    print(json.dumps({"jsonrpc":"2.0","id":req["id"],"result":result}),flush=True)
+'''
+    with HermesACPAdapter([sys.executable, "-c", script], tmp_path, timeout=2).open_session() as session:
+        child = session.fork_session()
+        assert child == "CHILD"
+        assert session.prompt("parent")["stopReason"] == "PARENT"
+        assert session.prompt("child", session_id=child)["stopReason"] == "CHILD"
+        session.cancel(session_id=child)
+        with pytest.raises(ACPProtocolError, match="unknown"):
+            session.prompt("bad", session_id="NOT-REGISTERED")
+
+
+def test_fork_rejects_missing_child_id_and_closes_session(tmp_path: Path):
+    script = r'''
+import json,sys
+for line in sys.stdin:
+    req=json.loads(line)
+    if req["method"] == "initialize": result={"protocolVersion":1,"agentInfo":{"name":"fixture"}}
+    elif req["method"] == "session/new": result={"sessionId":"PARENT"}
+    else: result={}
+    print(json.dumps({"jsonrpc":"2.0","id":req["id"],"result":result}),flush=True)
+'''
+    session = HermesACPAdapter([sys.executable, "-c", script], tmp_path, timeout=2).open_session()
+    with pytest.raises(ACPProtocolError, match="session/fork"):
+        session.fork_session()
+    assert session._process.poll() is not None

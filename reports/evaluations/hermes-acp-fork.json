@@ -1,0 +1,58 @@
+{
+  "time_utc": "2026-11-23T14:18:09.356667+00:00",
+  "task_id": "TASK-hermes-acp-fork",
+  "git_head": "cd09a5e9608e6960e65aba75e6b555a1d54ac3a2",
+  "working_tree_dirty": true,
+  "environment": {
+    "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+    "platform": "Linux-7.0.0-43-generic-x86_64-with-glibc2.43"
+  },
+  "file_sha256": {
+    "src/epe/adapters/hosts/acp.py": "57607d6963104162619c3d445c3538c4c395d672db842a4c3f6a06ba0ed12d9f",
+    "tests/integration/test_acp_adapter.py": "67e75f7510dd9f529c74821690addd86515bc3242def67b10269795a3a6aece8",
+    "docs/modules/adapters/host-capability-matrix.md": "347d9f7b58e1ba4deaba21997ac6cbbc7b056e0c26e897b464366bc95cb7ff29",
+    "plans/active/TASK-hermes-acp-fork.md": "dedb17c8a87adddfa0d34a7b39934410c924bc71c5aa5e0d1476cd707c273354"
+  },
+  "commands": [
+    {
+      "command": "PYTHONPATH=src pytest -q tests/integration/test_acp_adapter.py",
+      "result": "passed",
+      "details": "21 passed"
+    },
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts=''",
+      "result": "passed",
+      "details": "306 passed in 49.20s"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json policy validate",
+      "result": "passed"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json graph build",
+      "result": "passed",
+      "details": "349 nodes, 460 edges, digest adbe6a5647582bf9bb0151cd497e3400464603923d7733a6d641ae63b08b9758"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json architecture validate",
+      "result": "passed",
+      "details": "361 imports, no violations or unknowns"
+    },
+    {
+      "command": "git diff --check",
+      "result": "passed"
+    }
+  ],
+  "hermes_experiment": {
+    "scope": "temporary HOME, empty MCP list, tools disabled, EPE HermesACPAdapter.fork_session only",
+    "result": "session/fork returned a non-empty child ID and the session closed cleanly",
+    "model_prompt_sent": false,
+    "tool_call": false,
+    "identity_trust": false,
+    "write_isolation": false
+  },
+  "limitations": [
+    "Child registration is local to one transport handle and is not an authorization or isolation boundary.",
+    "Real model, MCP tools, identity attestation, write isolation and cross-process recovery remain unverified."
+  ]
+}
