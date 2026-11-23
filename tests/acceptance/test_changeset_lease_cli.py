@@ -25,3 +25,18 @@ def test_lease_cli_lifecycle_and_inspect_is_read_only(tmp_path, capsys):
     assert events[-2:] == ["changeset_lease_acquired", "changeset_lease_released"]
     release_event = json.loads((tmp_path / "engineering/audit/events.jsonl").read_text().splitlines()[-1])
     assert release_event["payload"]["record_sha256"]
+
+
+def test_lease_audit_failure_returns_recovery_record(tmp_path, capsys, monkeypatch):
+    setup_project(tmp_path, capsys)
+    import epe.cli as cli
+    real_append = cli._append_state_audit
+    monkeypatch.setattr(cli, "_append_state_audit", lambda *args, **kwargs: (_ for _ in ()).throw(OSError("audit unavailable")))
+    base = ["--root", str(tmp_path), "--format", "json"]
+    assert main(base + ["changeset", "lease", "acquire", "CHANGE-001", "--owner", "alice", "--ttl", "30"]) == 3
+    result = json.loads(capsys.readouterr().out)
+    assert result["status"] == "error" and result["data"]["audit_recorded"] is False
+    lease_id = result["data"]["lease"]["lease_id"]
+    monkeypatch.setattr(cli, "_append_state_audit", real_append)
+    assert main(base + ["changeset", "lease", "release", "CHANGE-001", "--owner", "alice", "--lease-id", lease_id]) == 0
+    capsys.readouterr()

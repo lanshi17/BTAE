@@ -1,0 +1,48 @@
+{
+  "time_utc": "2026-11-23T17:59:49.305330+00:00",
+  "task_id": "TASK-changeset-lease-audit",
+  "git_head": "59b8e1d3931c8b15c4f021890f0d9745af78cd18",
+  "working_tree_dirty": true,
+  "environment": {
+    "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+    "platform": "Linux-7.0.0-43-generic-x86_64-with-glibc2.43"
+  },
+  "file_sha256": {
+    "src/epe/cli.py": "60aa5c025955ceb9ca57c271029d22f8605905b3007cf931dcb1c2481f73c361",
+    "tests/acceptance/test_changeset_lease_cli.py": "71c7db700c38628b6b473a3655b210a087c6888e776bc7e2c72234f52c258252"
+  },
+  "commands": [
+    {
+      "command": "PYTHONPATH=src pytest -q tests/acceptance/test_changeset_lease_cli.py",
+      "result": "passed",
+      "details": "2 passed"
+    },
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts=''",
+      "result": "passed",
+      "details": "328 passed in 50.22s"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json policy validate",
+      "result": "passed"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json graph build",
+      "result": "passed",
+      "details": "378 nodes, 498 edges, digest 882f69ef41cab3f51edb7108c43c8243d2b0f06bb688d41912bd238c02e7eda1"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json architecture validate",
+      "result": "passed",
+      "details": "393 imports, no violations or unknowns"
+    },
+    {
+      "command": "git diff --check",
+      "result": "passed"
+    }
+  ],
+  "recovery_fact": "acquire/renew/release audit append failures return state record and audit_recorded=false for explicit recovery",
+  "limitations": [
+    "State and audit remain separate; caller must decide retry or release after an audit failure."
+  ]
+}
