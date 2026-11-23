@@ -21,3 +21,5 @@ def test_lease_cli_lifecycle_and_inspect_is_read_only(tmp_path, capsys):
     assert json.loads(capsys.readouterr().out)["data"]["lease"]["lease_id"] == acquired["lease_id"]
     assert main(base + ["changeset", "lease", "release", "CHANGE-001", "--owner", "alice", "--lease-id", acquired["lease_id"]]) == 0
     assert json.loads(capsys.readouterr().out)["data"]["released"] is True
+    events = [json.loads(line)["event_type"] for line in (tmp_path / "engineering/audit/events.jsonl").read_text().splitlines()]
+    assert events[-2:] == ["changeset_lease_acquired", "changeset_lease_released"]

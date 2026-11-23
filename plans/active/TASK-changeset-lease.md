@@ -10,3 +10,4 @@
 
 - 新增 `epe changeset lease acquire|renew|release|inspect` 与本地租约存储；获取使用 EPE 写锁和独占创建，过期记录可回收，续期绑定 owner、lease ID 和 ChangeSet revision。
 - 单元及真实 CLI 生命周期测试覆盖冲突、错误身份、revision 变化、TTL 过期恢复和只读 inspect。
+- acquire/renew/release 追加带 lease ID、revision 和记录摘要的 hash-chain 审计事件；inspect 不写入状态或审计。

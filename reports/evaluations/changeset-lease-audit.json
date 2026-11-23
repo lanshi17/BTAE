@@ -1,0 +1,53 @@
+{
+  "time_utc": "2026-11-23T16:25:49.193926+00:00",
+  "task_id": "TASK-changeset-lease",
+  "git_head": "c977a12744797138f184d8840c3408f80c5894d9",
+  "working_tree_dirty": true,
+  "environment": {
+    "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+    "platform": "Linux-7.0.0-43-generic-x86_64-with-glibc2.43"
+  },
+  "file_sha256": {
+    "src/epe/cli.py": "832a7dd22f0d58815a5079075b38c238f4d32ad0394de103f660b8ee084ab6eb",
+    "tests/acceptance/test_changeset_lease_cli.py": "8937117d446335a90a07ea282bffc56a1b990d3f3b8492e9d95788106e81fabe",
+    "plans/active/TASK-changeset-lease.md": "6012394084287830d3201436e4ec69c790ff173a592f3e111182d76381bf2d7a"
+  },
+  "commands": [
+    {
+      "command": "PYTHONPATH=src pytest -q tests/unit/test_changeset_leases.py tests/acceptance/test_changeset_lease_cli.py",
+      "result": "passed",
+      "details": "4 passed"
+    },
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts=''",
+      "result": "passed",
+      "details": "323 passed in 53.45s"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json policy validate",
+      "result": "passed"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json graph build",
+      "result": "passed",
+      "details": "376 nodes, 494 edges, digest 16cacc2ee376bbcfc9e0139de4aa58e2eaf9c3acc9bc8f424a5a09e948f85220"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json architecture validate",
+      "result": "passed",
+      "details": "390 imports, no violations or unknowns"
+    },
+    {
+      "command": "git diff --check",
+      "result": "passed"
+    }
+  ],
+  "audit_events": [
+    "changeset_lease_acquired",
+    "changeset_lease_renewed",
+    "changeset_lease_released"
+  ],
+  "limitations": [
+    "Audit and lease state writes are separate; audit failure leaves a conservative error with state requiring explicit retry/review."
+  ]
+}
