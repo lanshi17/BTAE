@@ -57,3 +57,22 @@ def test_ac02_registry_failures_are_separate_cli_diagnostics(tmp_path):
     assert dangling["message"].endswith("MOD-A -> CLASS-MISSING")
     assert result["data"]["published"] is False
     assert not (tmp_path / ".engineering/current.json").exists()
+
+
+def test_engineering_json_manifest_rejects_duplicate_keys_in_subprocess(tmp_path):
+    env = dict(os.environ, PYTHONPATH=str(SOURCE))
+    base = [sys.executable, "-m", "epe", "--root", str(tmp_path), "--format", "json"]
+    initialized = subprocess.run(base + ["init"], cwd=tmp_path, env=env, capture_output=True, text=True)
+    assert initialized.returncode == 0, initialized.stderr
+    manifest = tmp_path / "engineering/entities.json"
+    manifest.write_text(
+        '{"entities":[{"id":"CLASS-1","type":"Class","name":"first"}],"entities":[]}\n',
+        encoding="utf-8",
+    )
+    process = subprocess.run(base + ["graph", "build"], cwd=tmp_path, env=env, capture_output=True, text=True)
+    result = json.loads(process.stdout)
+    assert process.returncode == 3
+    assert result["status"] == "error" and result["data"]["published"] is False
+    assert any(item["code"] == "EPE-JSON-PARSE" and item["path"] == "engineering/entities.json"
+               for item in result["diagnostics"])
+    assert "Traceback" not in process.stderr

@@ -28,7 +28,7 @@ from epe.core.policy import validate_policy_document
 from epe.governance.baseline import capture_baseline, changeset_paths, compare_baseline, validate_changeset, transition_changeset, changeset_declaration, baseline_binding_version
 from epe.governance.conflicts import detect_changeset_conflicts
 from epe.governance.leases import acquire_lease, inspect_lease, renew_lease, release_lease_with_record, LeaseConflict, LeaseError, LeaseNotFound
-from epe.parsers.documents import discover_documents, parse_yaml_bytes
+from epe.parsers.documents import discover_documents, parse_json_bytes, parse_yaml_bytes
 from epe.parsers.python import parse_python_tree
 from epe.verification.architecture import validate_architecture
 from epe.verification.import_boundaries import validate_import_boundaries
@@ -133,7 +133,8 @@ def _load_registry(root: Path, config: dict[str, Any]):
             if any(part in {"schemas", "policies", "workflows", "templates", "tasks", "changesets", "approvals", "evidence"} for part in path.relative_to(engineering).parts):
                 continue
             try:
-                value, pds = parse_yaml_bytes(path.read_bytes(), rel) if path.suffix != ".json" else (json.loads(path.read_text(encoding="utf-8")), [])
+                value, pds = (parse_yaml_bytes(path.read_bytes(), rel) if path.suffix != ".json"
+                              else parse_json_bytes(path.read_bytes(), rel))
             except (OSError, json.JSONDecodeError) as exc:
                 ds.append(Diagnostic("EPE-RELATION-PARSE", Severity.ERROR, str(exc), path=rel)); continue
             ds.extend(pds)

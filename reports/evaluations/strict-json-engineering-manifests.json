@@ -1,0 +1,49 @@
+{
+  "time_utc": "2026-11-23T20:07:53Z",
+  "task_id": "TASK-strict-json-engineering-manifests",
+  "git_head": "072f4bbfdff6ac32cb55d54c5f83a227b0f0f317",
+  "working_tree_before_report": "clean",
+  "environment": {
+    "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+    "platform": "Linux-7.0.0-43-generic-x86_64-with-glibc2.43"
+  },
+  "file_sha256": {
+    "src/epe/cli.py": "220efa607883a69be4c3c6a0a31b2598e5f00a9d9ae81b81ceff8b064a40f03a",
+    "tests/acceptance/test_ac02_registry_diagnostics_cli.py": "e139d14a51b56345e839e128b909047ffbd37edb9fdf579a4c94073eecb2c2f7",
+    "plans/active/TASK-strict-json-engineering-manifests.md": "59f3f663e4a262e01020c807501662a8a91375d22dff1bf82b4109900b175758"
+  },
+  "commands": [
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts='' tests/acceptance/test_ac02_registry_diagnostics_cli.py tests/unit/test_parsers.py",
+      "result": "passed",
+      "details": "14 passed"
+    },
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts=''",
+      "result": "passed",
+      "details": "343 passed in 51.64s"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json graph build",
+      "result": "passed",
+      "details": "384 nodes, 500 edges, digest d5c2a2201462fe8b4d671523c97a328e3c63e8d0b33477602c2223226a5fe003"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json policy validate",
+      "result": "passed"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json architecture validate",
+      "result": "passed",
+      "details": "395 imports, no violations or unknowns"
+    },
+    {
+      "command": "git diff --check && python -m compileall -q src",
+      "result": "passed"
+    }
+  ],
+  "change": "Registry scans of engineering JSON manifests now use the strict shared parser and reject duplicate keys instead of silently accepting the final value; a real CLI subprocess test confirms no graph publication.",
+  "limitations": [
+    "Task, Evidence, Audit and other authoritative JSON storage readers remain separate strictness review targets."
+  ]
+}
