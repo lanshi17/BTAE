@@ -117,6 +117,47 @@
         },
         "additionalProperties": false
       }
+    },
+    "exceptions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "rule_id",
+          "adr",
+          "from",
+          "to",
+          "review_until"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "rule_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "adr": {
+            "type": "string",
+            "pattern": "^ADR-[A-Z0-9][A-Z0-9_-]*$"
+          },
+          "from": {
+            "type": "string",
+            "minLength": 1
+          },
+          "to": {
+            "type": "string",
+            "minLength": 1
+          },
+          "review_until": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
     }
   }
 }

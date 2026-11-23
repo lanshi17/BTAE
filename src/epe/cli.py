@@ -6,6 +6,7 @@ import os
 import re
 import subprocess
 import sys
+from datetime import datetime, timezone
 from importlib.resources import files
 from pathlib import Path
 from typing import Any, Callable
@@ -787,13 +788,55 @@ def _check_architecture_policy(root: Path, config: dict[str, Any], snap: dict) -
             or any(not isinstance(rule, dict) or not isinstance(rule.get("from"), str) or not rule["from"].strip()
                    or not isinstance(rule.get("to"), str) or not rule["to"].strip() for rule in policy.get("forbidden_dependencies", []))):
         return {}, [Diagnostic("EPE-ARCH-POLICY", Severity.ERROR, "架构策略缺少有效 forbidden_dependencies 规则")]
-    report, diagnostics = validate_architecture(snap, policy)
+    valid_exceptions, exception_diagnostics = _effective_architecture_exceptions(root, config, policy)
+    if any(d.is_error for d in exception_diagnostics):
+        return {}, exception_diagnostics
+    report, diagnostics = validate_architecture(snap, policy, valid_exceptions)
     import_report, import_diagnostics = validate_import_boundaries(root, config, policy)
     report["import_boundaries"] = import_report
     report["violations"] = list(report.get("violations", [])) + list(import_report.get("violations", []))
     diagnostics.extend(import_diagnostics)
     if any(d.is_error for d in import_diagnostics): report["status"] = "fail"
     return report, diagnostics
+
+
+def _effective_architecture_exceptions(root: Path, config: dict[str, Any], policy: dict[str, Any]) -> tuple[list[dict[str, Any]], list[Diagnostic]]:
+    """Resolve only current, approved ADR-backed architecture exceptions."""
+    exceptions = policy.get("exceptions", []) or []
+    if not exceptions:
+        return [], []
+    built = _load_registry(root, config)
+    diagnostics = list(built.diagnostics)
+    entities = built.registry.entities
+    rule_ids = {str(rule.get("id", "ARCH-FORBIDDEN")) for rule in policy.get("forbidden_dependencies", []) if isinstance(rule, dict)}
+    now = datetime.now(timezone.utc)
+    valid: list[dict[str, Any]] = []
+    for exception in exceptions:
+        if not isinstance(exception, dict):
+            diagnostics.append(Diagnostic("EPE-ARCH-EXCEPTION", Severity.ERROR, "架构例外必须为对象"))
+            continue
+        rule_id = exception.get("rule_id")
+        adr_id = exception.get("adr")
+        if rule_id not in rule_ids:
+            diagnostics.append(Diagnostic("EPE-ARCH-EXCEPTION", Severity.ERROR, f"例外引用未知规则: {rule_id}"))
+            continue
+        adr = entities.get(adr_id) if isinstance(adr_id, str) else None
+        if adr is None or adr.type != "ADR" or adr.design_status != "approved":
+            diagnostics.append(Diagnostic("EPE-ARCH-EXCEPTION", Severity.ERROR, f"例外 ADR 未找到或未批准: {adr_id}", entity_id=adr_id if isinstance(adr_id, str) else None))
+            continue
+        try:
+            expires = datetime.fromisoformat(str(exception.get("review_until")).replace("Z", "+00:00"))
+            if expires.tzinfo is None or expires.utcoffset() is None:
+                raise ValueError("review_until 必须带时区")
+            expires = expires.astimezone(timezone.utc)
+        except (TypeError, ValueError):
+            diagnostics.append(Diagnostic("EPE-ARCH-EXCEPTION", Severity.ERROR, f"例外复查期限无效: {exception.get('review_until')}"))
+            continue
+        if expires <= now:
+            diagnostics.append(Diagnostic("EPE-ARCH-EXCEPTION", Severity.ERROR, f"例外已过期: {exception.get('id')}"))
+            continue
+        valid.append(exception)
+    return valid, diagnostics
 
 
 def cmd_verify(args) -> CommandResult:
