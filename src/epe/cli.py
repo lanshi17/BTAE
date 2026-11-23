@@ -564,16 +564,25 @@ def cmd_changeset_lease(args) -> CommandResult:
         if args.lease_event == "acquire":
             lease = acquire_lease(root, config, value, args.owner, args.ttl)
             from epe.core.fingerprint import sha256_json
-            _append_state_audit(root, config, "changeset_lease_acquired", {"changeset_id": args.changeset_id, "owner": args.owner, "lease_id": lease["lease_id"], "revision": lease["revision"], "record_sha256": sha256_json(lease)})
+            try:
+                _append_state_audit(root, config, "changeset_lease_acquired", {"changeset_id": args.changeset_id, "owner": args.owner, "lease_id": lease["lease_id"], "revision": lease["revision"], "record_sha256": sha256_json(lease)})
+            except (OSError, ValueError, TypeError, KeyError) as exc:
+                return _result("changeset lease acquire", "error", [Diagnostic("EPE-AUDIT-WRITE", Severity.ERROR, f"租约已创建但无法登记审计: {exc}")], data={"lease": lease, "audit_recorded": False})
             return _result("changeset lease acquire", "passed", data=lease)
         if args.lease_event == "renew":
             lease = renew_lease(root, config, value, args.owner, args.lease_id, args.ttl)
             from epe.core.fingerprint import sha256_json
-            _append_state_audit(root, config, "changeset_lease_renewed", {"changeset_id": args.changeset_id, "owner": args.owner, "lease_id": lease["lease_id"], "revision": lease["revision"], "record_sha256": sha256_json(lease)})
+            try:
+                _append_state_audit(root, config, "changeset_lease_renewed", {"changeset_id": args.changeset_id, "owner": args.owner, "lease_id": lease["lease_id"], "revision": lease["revision"], "record_sha256": sha256_json(lease)})
+            except (OSError, ValueError, TypeError, KeyError) as exc:
+                return _result("changeset lease renew", "error", [Diagnostic("EPE-AUDIT-WRITE", Severity.ERROR, f"租约已续期但无法登记审计: {exc}")], data={"lease": lease, "audit_recorded": False})
             return _result("changeset lease renew", "passed", data=lease)
         released, released_record = release_lease_with_record(root, config, args.changeset_id, args.owner, args.lease_id)
         from epe.core.fingerprint import sha256_json
-        _append_state_audit(root, config, "changeset_lease_released", {"changeset_id": args.changeset_id, "owner": args.owner, "lease_id": args.lease_id, "released": released, "record_sha256": sha256_json(released_record) if released_record else None})
+        try:
+            _append_state_audit(root, config, "changeset_lease_released", {"changeset_id": args.changeset_id, "owner": args.owner, "lease_id": args.lease_id, "released": released, "record_sha256": sha256_json(released_record) if released_record else None})
+        except (OSError, ValueError, TypeError, KeyError) as exc:
+            return _result("changeset lease release", "error", [Diagnostic("EPE-AUDIT-WRITE", Severity.ERROR, f"租约已释放但无法登记审计: {exc}")], data={"released": released, "record": released_record, "audit_recorded": False})
         return _result("changeset lease release", "passed", data={"released": released})
     except LeaseConflict as exc:
         return _result("changeset lease", "blocked", [Diagnostic("EPE-CHANGESET-LEASE", Severity.ERROR, str(exc))])
