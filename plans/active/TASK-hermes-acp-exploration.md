@@ -30,3 +30,5 @@
 - 2026-11-23：真实 CLI 只读握手证据见 [`reports/acceptance/hermes-acp-cli-20261123.md`](../../reports/acceptance/hermes-acp-cli-20261123.md)。
 
 - 2026-11-23：真实 Hermes v0.22.2 + 本地模型 fixture 完成 initialize、session/new、纯文本 session/prompt、session/fork；证据见 [`reports/acceptance/hermes-acp-core-lifecycle-20261123.md`](../../reports/acceptance/hermes-acp-core-lifecycle-20261123.md)。
+
+- 2026-11-23：真实 Hermes v0.22.2 + 本地延迟模型 fixture 完成 `session/cancel` 实测并返回 `stopReason=cancelled`；证据见 [`reports/acceptance/hermes-acp-cancel-20261123.md`](../../reports/acceptance/hermes-acp-cancel-20261123.md)。
