@@ -1,0 +1,35 @@
+{
+  "time_utc": "2026-11-23T19:18:59Z",
+  "task_id": "TASK-parse-batch-source-field",
+  "git_head": "51c3f6e783543860d07d4741e60cc61abce81e64",
+  "working_tree_before_report": "clean",
+  "environment": {
+    "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+    "platform": "Linux-7.0.0-43-generic-x86_64-with-glibc2.43"
+  },
+  "file_sha256": {
+    "src/epe/parsers/coordinator.py": "82a47b234b98c6966939d0c95d459f84ff87205633ce1d3d6f7e9995b1253750",
+    "tests/unit/test_parsers.py": "67dba1d471026cc6f1d8c279fe0c11d025cac58e7bc4a27f4f323300b5814926",
+    "plans/active/TASK-parse-batch-contract.md": "01b1c4be4abf9043b422bf1fac533c15c13d5eb5a22a603067b15b9d51867d55"
+  },
+  "commands": [
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts='' tests/unit/test_parsers.py",
+      "result": "passed",
+      "details": "9 passed"
+    },
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts=''",
+      "result": "passed",
+      "details": "337 passed in 48.99s"
+    },
+    {
+      "command": "git diff --check && python -m compileall -q src",
+      "result": "passed"
+    }
+  ],
+  "change": "ParseBatch structured YAML/JSON result records now expose the same normalized source field as Markdown/Python results while retaining path for compatibility.",
+  "limitations": [
+    "This is a local parser contract correction; it does not add multi-language parsing or semantic retrieval backends."
+  ]
+}
