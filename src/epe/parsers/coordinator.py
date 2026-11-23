@@ -83,7 +83,7 @@ def parse_batch(sources: Iterable[Any], options: dict[str, Any] | None = None) -
                 counts["success"] += 1
         elif suffix in {".yaml", ".yml", ".json"}:
             value, ds = parse_yaml_bytes(data, path)
-            results.append({"path": path, "digest": digest, "value": value, "diagnostics": [d.to_dict() for d in ds], "kind": "structured"})
+            results.append({"path": path, "source": path, "digest": digest, "value": value, "diagnostics": [d.to_dict() for d in ds], "kind": "structured"})
             diagnostics.extend(ds)
             if ds:
                 counts["failed"] += 1

@@ -7,3 +7,5 @@
 - 状态：draft，不构成审批。
 
 - 本地验证：`PYTHONPATH=src pytest -q -o addopts=''`，100 passed；`git diff --check` 通过。执行记录见 `reports/evaluations/parse-batch-contract.json`。
+
+- 契约补充：YAML/JSON 结构化结果现在与 Markdown/Python 结果统一暴露 `source`（其值为规范化相对路径），并保留 `path` 兼容字段；新增回归断言。

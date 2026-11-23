@@ -29,6 +29,14 @@ def test_parse_batch_is_deterministic_and_tracks_incomplete_inputs():
     assert not bad.complete and bad.counts["unsupported"] == 1
 
 
+def test_parse_batch_structured_documents_expose_common_source_field():
+    from epe.parsers.coordinator import parse_batch
+    result = parse_batch([("contract.yaml", b"version: 1\n")])
+    item = result.results[0]
+    assert item["path"] == item["source"] == "contract.yaml"
+    assert item["digest"]
+
+
 def test_parse_batch_rejects_duplicates_and_path_escape():
     from epe.parsers.coordinator import parse_batch
     result = parse_batch([("a.py", b"x = 1"), ("a.py", b"x = 2"), ("../outside.py", b"x = 3")])
