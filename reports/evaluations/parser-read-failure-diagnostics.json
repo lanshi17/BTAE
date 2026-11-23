@@ -1,0 +1,50 @@
+{
+  "time_utc": "2026-11-23T19:26:22Z",
+  "task_id": "TASK-parser-read-failure-diagnostics",
+  "git_head": "10a9dab776a84d8423de7da911f68dcac9d17c9d",
+  "working_tree_before_report": "clean",
+  "environment": {
+    "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+    "platform": "Linux-7.0.0-43-generic-x86_64-with-glibc2.43"
+  },
+  "file_sha256": {
+    "src/epe/parsers/documents.py": "5747da99307c0bc42cf4978bbefc2fd5fad903ee8d5b1aa3efee40f29c46d6ab",
+    "src/epe/parsers/python.py": "51558674c341a382c174e6d7f97243d6cca75b8153838884b922c0e7dbfbf33a",
+    "tests/unit/test_parsers.py": "cbd8d3d50a8ccc132e329a813cae979d60ea4b4cf353da610f9f6f414f71276a",
+    "plans/active/TASK-parser-read-failure-diagnostics.md": "e3f93669298dc85f50f9b0d1f72e635d640f6b95961c1ff5fb83cce8eaf299bb"
+  },
+  "commands": [
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts='' tests/unit/test_parsers.py",
+      "result": "passed",
+      "details": "10 passed"
+    },
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts=''",
+      "result": "passed",
+      "details": "338 passed in 48.78s"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json graph build",
+      "result": "passed",
+      "details": "380 nodes, 499 edges, digest aaa3bd2fdbe7630a222fdd0b228e55a2bd41f813598ba3325ee1082f5a1c9d8f"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json policy validate",
+      "result": "passed"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json architecture validate",
+      "result": "passed",
+      "details": "394 imports, no violations or unknowns"
+    },
+    {
+      "command": "git diff --check && python -m compileall -q src",
+      "result": "passed"
+    }
+  ],
+  "change": "Recursive Markdown/YAML and Python tree parsers now convert file read OSError into EPE-DOC-READ/EPE-AST-READ diagnostics with relative paths and continue collecting other files.",
+  "limitations": [
+    "Read-after-check races remain detectable by later manifest freshness checks; this does not create filesystem locking or isolation."
+  ]
+}

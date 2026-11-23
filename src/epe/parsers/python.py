@@ -146,6 +146,11 @@ def parse_python_tree(root: Path, roots: Iterable[str] = ("src",)) -> tuple[list
                 ds.append(Diagnostic("EPE-PATH-SYMLINK", Severity.ERROR, "代码路径不能经过符号链接或逃出仓库根", path=str(path)))
                 continue
             rel = path.relative_to(root).as_posix()
-            result = parse_python(path.read_bytes(), rel)
+            try:
+                data = path.read_bytes()
+            except OSError as exc:
+                ds.append(Diagnostic("EPE-AST-READ", Severity.ERROR, f"无法读取 Python 文件: {exc}", path=rel))
+                continue
+            result = parse_python(data, rel)
             results.append(result); ds.extend(result.diagnostics); ds.extend(result.gaps)
     return results, ds
