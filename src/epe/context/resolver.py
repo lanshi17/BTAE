@@ -51,7 +51,15 @@ def context_inputs_manifest(root: Path, config: dict[str, Any]):
 
 def context_cache_key(task: Any, snapshot: dict[str, Any] | None, config: dict[str, Any], budget: int, required_sources: list[dict[str, Any]] | None = None, source_assessments: dict[str, Any] | None = None) -> str:
     manifest = context_inputs_manifest(Path(config["_root"]), config)
-    payload = {"version": 5, "required_sources": required_sources or [], "source_assessments": source_assessments or {}, "task": getattr(task, "to_dict", lambda: {"id": getattr(task, "id", None), "objective": getattr(task, "objective", None), "acceptance": getattr(task, "acceptance", []), "risk": getattr(task, "risk", None), "target_entities": getattr(task, "target_entities", []), "changeset": getattr(task, "changeset", None)})(), "snapshot": snapshot.get("content_digest") if snapshot else None, "manifest": manifest.digest, "budget": budget}
+    source_fingerprints = []
+    for source in required_sources or []:
+        path = source.get("path") if isinstance(source, dict) else None
+        try:
+            source_path = _safe_context_path(Path(config["_root"]), path)
+            source_fingerprints.append({"path": path, "sha256": sha256_bytes(source_path.read_bytes())})
+        except (OSError, TypeError, ValueError):
+            source_fingerprints.append({"path": path, "sha256": None})
+    payload = {"version": 6, "required_sources": required_sources or [], "required_source_fingerprints": source_fingerprints, "source_assessments": source_assessments or {}, "task": getattr(task, "to_dict", lambda: {"id": getattr(task, "id", None), "objective": getattr(task, "objective", None), "acceptance": getattr(task, "acceptance", []), "risk": getattr(task, "risk", None), "target_entities": getattr(task, "target_entities", []), "changeset": getattr(task, "changeset", None)})(), "snapshot": snapshot.get("content_digest") if snapshot else None, "manifest": manifest.digest, "budget": budget}
     return sha256_json(payload)
 
 
