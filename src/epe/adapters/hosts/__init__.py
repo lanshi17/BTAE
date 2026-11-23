@@ -1,5 +1,5 @@
 from .base import HostCapabilities, LocalHostAdapter, capability_matrix
 from .hermes import HermesHostAdapter
-from .acp import HermesACPAdapter
+from .acp import ACPProtocolError, ACPSessionClosed, HermesACPAdapter
 
-__all__ = ["HostCapabilities", "LocalHostAdapter", "HermesHostAdapter", "HermesACPAdapter", "capability_matrix"]
+__all__ = ["HostCapabilities", "LocalHostAdapter", "HermesHostAdapter", "HermesACPAdapter", "ACPProtocolError", "ACPSessionClosed", "capability_matrix"]

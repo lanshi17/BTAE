@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "time_utc": "2026-11-23T13:22:07.799471+00:00",
+  "task_id": "TASK-hermes-acp-session-safety",
+  "git_head": "1a9a8b02d259a84b226668295c4264cf8ad904f3",
+  "working_tree_dirty": true,
+  "commands": [
+    {
+      "command": "PYTHONPATH=src pytest -q tests/integration/test_acp_adapter.py",
+      "result": "passed",
+      "details": "11 passed"
+    },
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts=''",
+      "result": "passed",
+      "details": "296 passed in 50.07s"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json policy validate",
+      "result": "passed"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json graph build",
+      "result": "passed",
+      "details": "345 nodes, 460 edges, published=true, content_digest=ee45a9a0b00b5c1629a4268be50c05ec3ab89add3824ec4fa90e8f3349ee2d04"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json architecture validate",
+      "result": "passed",
+      "details": "361 imports; no cycles, violations, or unknowns"
+    },
+    {
+      "command": "git diff --check",
+      "result": "passed"
+    }
+  ],
+  "environment": {
+    "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+    "platform": "Linux-7.0.0-43-generic-x86_64-with-glibc2.43"
+  },
+  "file_sha256": {
+    "src/epe/adapters/hosts/acp.py": "6f43026d046911b9ba2b2c0a87a0d6cc8fe90e1bdd79dce7639f3787431f93b5",
+    "src/epe/adapters/hosts/__init__.py": "8f1bc4d279c7a9a691816e53c650e3aaf6be294011175107c0320fdd4e3c74dd",
+    "tests/integration/test_acp_adapter.py": "b7d1467fd6e45fe98c8331f2b7e1426231d26fce96bb282ecadca05a2117b270",
+    "docs/modules/adapters/host-capability-matrix.md": "633eae06c3ca05b3313a6298d058ca0ea83ed4bc38539bbea93b73875feaed02",
+    "docs/contracts/host-port.md": "ffecf64e92039b74e0d840632d3d62fae5fae51afcb9dbe756ae7c54f05ac612",
+    "README.md": "63e0c2a9aeb6004fe6299b05f9f7a1c56f6d6056f8bba466544cb7be807074b5",
+    "plans/active/TASK-hermes-acp-session-safety.md": "c1e5680880722290e64faa51c6b635ae1dcf197123f1c4075e66e0acfa0b2a8c"
+  },
+  "limitations": [
+    "ACP 会话修复只约束 EPE 客户端自身的并发、关闭和进程清理；不证明宿主不创建逃逸子进程。",
+    "真实 Hermes 身份、文件写入隔离、工具权限、远程审计和跨平台进程组语义仍未验证。",
+    "设计与契约仍处于草案/待评审状态，未伪造正式批准。"
+  ]
+}

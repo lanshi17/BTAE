@@ -6,7 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from epe.adapters.hosts.acp import HermesACPAdapter
+import epe.adapters.hosts.acp as acp_module
+from epe.adapters.hosts.acp import ACPProtocolError, ACPSessionClosed, HermesACPAdapter
 
 
 def command(body: str) -> list[str]:
@@ -94,3 +95,251 @@ for line in sys.stdin:
         worker = threading.Thread(target=lambda: result.append(session.prompt("slow")))
         worker.start(); time.sleep(0.1); session.cancel(); worker.join(timeout=2)
         assert result == [{"stopReason": "cancelled"}]
+
+
+def test_close_wakes_pending_prompt_and_is_idempotent(tmp_path: Path):
+    script = r'''
+import json,sys,time
+for line in sys.stdin:
+    req=json.loads(line)
+    if req["method"] == "initialize":
+        print(json.dumps({"jsonrpc":"2.0","id":req["id"],"result":{"protocolVersion":1,"agentInfo":{"name":"fixture"}}}),flush=True)
+    elif req["method"] == "session/new":
+        print(json.dumps({"jsonrpc":"2.0","id":req["id"],"result":{"sessionId":"SESSION-1"}}),flush=True)
+    elif req["method"] == "session/prompt":
+        time.sleep(30)
+'''
+    with HermesACPAdapter([sys.executable, "-c", script], tmp_path, timeout=30).open_session() as session:
+        errors = []
+
+        def wait_for_prompt():
+            try:
+                session.prompt("slow")
+            except BaseException as exc:  # assert the exact protocol error below
+                errors.append(exc)
+
+        worker = threading.Thread(target=wait_for_prompt)
+        worker.start()
+        time.sleep(0.1)
+        session.close()
+        session.close()
+        worker.join(timeout=2)
+        assert not worker.is_alive()
+        assert len(errors) == 1 and isinstance(errors[0], ACPSessionClosed)
+
+
+def test_concurrent_prompts_fail_before_sharing_response_reader(tmp_path: Path):
+    marker = tmp_path / "prompt-started"
+    script = f'''
+import json,sys,time
+for line in sys.stdin:
+    req=json.loads(line)
+    if req["method"] == "initialize":
+        print(json.dumps({{"jsonrpc":"2.0","id":req["id"],"result":{{"protocolVersion":1,"agentInfo":{{"name":"fixture"}}}}}}),flush=True)
+    elif req["method"] == "session/new":
+        print(json.dumps({{"jsonrpc":"2.0","id":req["id"],"result":{{"sessionId":"SESSION-1"}}}}),flush=True)
+    elif req["method"] == "session/prompt":
+        open({str(marker)!r}, "w").close()
+        time.sleep(0.4)
+        print(json.dumps({{"jsonrpc":"2.0","id":req["id"],"result":{{"stopReason":"end_turn"}}}}),flush=True)
+'''
+    with HermesACPAdapter([sys.executable, "-c", script], tmp_path, timeout=2).open_session() as session:
+        result = []
+        worker = threading.Thread(target=lambda: result.append(session.prompt("first")))
+        worker.start()
+        deadline = time.monotonic() + 1
+        while not marker.exists() and time.monotonic() < deadline:
+            time.sleep(0.01)
+        with pytest.raises(ACPProtocolError, match="concurrent"):
+            session.prompt("second")
+        worker.join(timeout=2)
+        assert not worker.is_alive() and result == [{"stopReason": "end_turn"}]
+
+
+def test_prompt_write_timeout_closes_unresponsive_session(tmp_path: Path):
+    script = r'''
+import json,sys,time
+for line in sys.stdin:
+    req=json.loads(line)
+    if req["method"] == "initialize":
+        result={"protocolVersion":1,"agentInfo":{"name":"fixture"}}
+    else:
+        result={"sessionId":"SESSION-1"}
+    print(json.dumps({"jsonrpc":"2.0","id":req["id"],"result":result}),flush=True)
+    if req["method"] == "session/new": time.sleep(30)
+'''
+    session = HermesACPAdapter([sys.executable, "-c", script], tmp_path, timeout=0.5).open_session()
+    started = time.monotonic()
+    with pytest.raises(TimeoutError):
+        session.prompt("x" * (2 * 1024 * 1024))
+    assert time.monotonic() - started < 3
+    assert session._process.poll() is not None
+    with pytest.raises(ACPSessionClosed):
+        session.prompt("again")
+
+
+def test_notifications_do_not_extend_request_deadline(tmp_path: Path):
+    script = r'''
+import json,sys,time
+for line in sys.stdin:
+    req=json.loads(line)
+    if req["method"] == "initialize":
+        print(json.dumps({"jsonrpc":"2.0","id":req["id"],"result":{"protocolVersion":1,"agentInfo":{"name":"fixture"}}}),flush=True)
+    elif req["method"] == "session/new":
+        print(json.dumps({"jsonrpc":"2.0","id":req["id"],"result":{"sessionId":"SESSION-1"}}),flush=True)
+    else:
+        for _ in range(30):
+            print(json.dumps({"jsonrpc":"2.0","method":"session/update","params":{}}),flush=True)
+            time.sleep(0.05)
+'''
+    session = HermesACPAdapter([sys.executable, "-c", script], tmp_path, timeout=0.4).open_session()
+    started = time.monotonic()
+    with pytest.raises(TimeoutError):
+        session.prompt("hello")
+    assert time.monotonic() - started < 2
+    assert session._process.poll() is not None
+
+
+@pytest.mark.parametrize("failure_point", ["selector", "session"])
+def test_open_session_reaps_child_when_resource_setup_fails(tmp_path: Path, monkeypatch, failure_point):
+    processes = []
+    original_popen = acp_module.subprocess.Popen
+
+    def start_process(*args, **kwargs):
+        process = original_popen(*args, **kwargs)
+        processes.append(process)
+        return process
+
+    def fail(*args, **kwargs):
+        raise OSError("resource allocation failed")
+
+    monkeypatch.setattr(acp_module.subprocess, "Popen", start_process)
+    if failure_point == "selector":
+        monkeypatch.setattr(acp_module.selectors, "DefaultSelector", fail)
+    else:
+        monkeypatch.setattr(acp_module, "HermesACPSession", fail)
+    with pytest.raises(OSError, match="resource allocation"):
+        HermesACPAdapter([sys.executable, "-c", "import time; time.sleep(30)"], tmp_path).open_session()
+    assert len(processes) == 1 and processes[0].poll() is not None
+    assert processes[0].stdin.closed and processes[0].stdout.closed
+
+
+def test_invalid_prompt_result_closes_session(tmp_path: Path):
+    script = r'''
+import json,sys
+for line in sys.stdin:
+    req=json.loads(line)
+    if req["method"] == "initialize":
+        result={"protocolVersion":1,"agentInfo":{"name":"fixture"}}
+    elif req["method"] == "session/new":
+        result={"sessionId":"SESSION-1"}
+    else:
+        result=[]
+    print(json.dumps({"jsonrpc":"2.0","id":req["id"],"result":result}),flush=True)
+'''
+    session = HermesACPAdapter([sys.executable, "-c", script], tmp_path, timeout=2).open_session()
+    with pytest.raises(ACPProtocolError, match="not an object"):
+        session.prompt("hello")
+    assert session._process.poll() is not None
+    with pytest.raises(ACPSessionClosed):
+        session.prompt("again")
+
+
+@pytest.mark.parametrize("session_id, update, valid", [
+    ("SESSION-1", {"sessionUpdate": "agent_message_chunk", "content": {"type": "text", "text": "hello"}}, True),
+    ("OTHER", {"sessionUpdate": "agent_message_chunk"}, False),
+    ("SESSION-1", "invalid", False),
+])
+def test_prompt_receives_ordered_session_updates(tmp_path: Path, session_id, update, valid):
+    script = r'''
+import json,sys
+session_id, update = json.loads(sys.argv[1])
+for line in sys.stdin:
+    req=json.loads(line)
+    if req["method"] == "initialize":
+        result={"protocolVersion":1,"agentInfo":{"name":"fixture"}}
+    elif req["method"] == "session/new":
+        result={"sessionId":"SESSION-1"}
+    else:
+        for item in (update, update):
+            print(json.dumps({"jsonrpc":"2.0","method":"session/update","params":{"sessionId":session_id,"update":item}}),flush=True)
+        result={"stopReason":"end_turn"}
+    print(json.dumps({"jsonrpc":"2.0","id":req["id"],"result":result}),flush=True)
+'''
+    session = HermesACPAdapter([sys.executable, "-c", script, json.dumps([session_id, update])], tmp_path, timeout=2).open_session()
+    with session:
+        if valid:
+            result, updates = session.prompt_with_updates("hello")
+            assert result == {"stopReason": "end_turn"}
+            assert updates == [update, update]
+        else:
+            with pytest.raises(ACPProtocolError, match="invalid ACP session update"):
+                session.prompt_with_updates("hello")
+            assert session._process.poll() is not None
+
+
+def test_fork_registers_child_and_routes_parent_and_child_prompts(tmp_path: Path):
+    script = r'''
+import json,sys
+for line in sys.stdin:
+    req=json.loads(line); method=req["method"]
+    if method == "initialize":
+        result={"protocolVersion":1,"agentInfo":{"name":"fixture"}}
+    elif method == "session/new":
+        result={"sessionId":"PARENT"}
+    elif method == "session/fork":
+        assert req["params"]["sessionId"] == "PARENT" and req["params"]["mcpServers"] == []
+        result={"sessionId":"CHILD"}
+    elif method == "session/prompt":
+        result={"stopReason":req["params"]["sessionId"]}
+    elif method == "session/cancel":
+        continue
+    else:
+        result={"stopReason":"unexpected"}
+    print(json.dumps({"jsonrpc":"2.0","id":req["id"],"result":result}),flush=True)
+'''
+    with HermesACPAdapter([sys.executable, "-c", script], tmp_path, timeout=2).open_session() as session:
+        child = session.fork_session()
+        assert child == "CHILD"
+        assert session.prompt("parent")["stopReason"] == "PARENT"
+        assert session.prompt("child", session_id=child)["stopReason"] == "CHILD"
+        session.cancel(session_id=child)
+        with pytest.raises(ACPProtocolError, match="unknown"):
+            session.prompt("bad", session_id="NOT-REGISTERED")
+
+
+def test_fork_rejects_missing_child_id_and_closes_session(tmp_path: Path):
+    script = r'''
+import json,sys
+for line in sys.stdin:
+    req=json.loads(line)
+    if req["method"] == "initialize": result={"protocolVersion":1,"agentInfo":{"name":"fixture"}}
+    elif req["method"] == "session/new": result={"sessionId":"PARENT"}
+    else: result={}
+    print(json.dumps({"jsonrpc":"2.0","id":req["id"],"result":result}),flush=True)
+'''
+    session = HermesACPAdapter([sys.executable, "-c", script], tmp_path, timeout=2).open_session()
+    with pytest.raises(ACPProtocolError, match="session/fork"):
+        session.fork_session()
+    assert session._process.poll() is not None
+
+
+def test_updates_must_match_the_requested_fork_session(tmp_path: Path):
+    script = r'''
+import json,sys
+for line in sys.stdin:
+    req=json.loads(line); method=req["method"]
+    if method == "initialize": result={"protocolVersion":1,"agentInfo":{"name":"fixture"}}
+    elif method == "session/new": result={"sessionId":"PARENT"}
+    elif method == "session/fork": result={"sessionId":"CHILD"}
+    elif method == "session/prompt":
+        print(json.dumps({"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"CHILD","update":{"sessionUpdate":"agent_message_chunk"}}}),flush=True)
+        result={"stopReason":"end_turn"}
+    else: continue
+    print(json.dumps({"jsonrpc":"2.0","id":req["id"],"result":result}),flush=True)
+'''
+    with HermesACPAdapter([sys.executable, "-c", script], tmp_path, timeout=2).open_session() as session:
+        child = session.fork_session()
+        assert child == "CHILD"
+        with pytest.raises(ACPProtocolError, match="invalid ACP session update"):
+            session.prompt_with_updates("parent", session_id="PARENT")

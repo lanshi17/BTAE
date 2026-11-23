@@ -37,7 +37,7 @@ Hermes bridge 使用一行 JSON 请求和一行 JSON 响应。请求发送前执
 | `start_implementation` | `unsupported`（无写入隔离） | 未取得外部可信能力证明时 `unsupported` |
 | `finalize` | `unsupported`（无写入隔离） | 未取得外部可信能力证明时 `unsupported` |
 
-适配器不写入 Task、Approval 或 Evidence；宿主返回值也不能绕过 `check`、`verify` 或完成门禁。真实 Hermes 身份、权限和隔离仍需外部实测，当前能力矩阵见[宿主能力矩阵](../modules/adapters/host-capability-matrix.md)。
+适配器不写入 Task、Approval 或 Evidence；宿主返回值也不能绕过 `check`、`verify` 或完成门禁。ACP 探索会话对普通请求使用单一响应读取器；外部关闭会话必须唤醒等待者并返回关闭错误，不得把调用方关闭误报为超时。真实 Hermes 身份、权限和隔离仍需外部实测，当前能力矩阵见[宿主能力矩阵](../modules/adapters/host-capability-matrix.md)。
 
 ## 5. 兼容性与失败语义
 

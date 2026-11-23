@@ -1,0 +1,48 @@
+{
+  "time_utc": "2026-11-23T13:42:39.427913+00:00",
+  "task_id": "TASK-hermes-acp-session-safety",
+  "git_head": "e8667c8cf4ee54da8bc142b649aaf674f2291519",
+  "working_tree_dirty": true,
+  "environment": {
+    "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+    "platform": "Linux-7.0.0-43-generic-x86_64-with-glibc2.43"
+  },
+  "file_sha256": {
+    "src/epe/adapters/hosts/acp.py": "a2cc7624efd7af2b138dfed3030ea683f6b0ff8688e439daee6b03bd2b403c94",
+    "tests/integration/test_acp_adapter.py": "fc57f90781977dce9bc8fe94fb3926676c651b7dcd97010638a19fe3834df1b6",
+    "plans/active/TASK-hermes-acp-session-safety.md": "9392747982877346646b1e53b0419e0c2faec30a777832534caca55570729904"
+  },
+  "commands": [
+    {
+      "command": "PYTHONPATH=src pytest -q tests/integration/test_acp_adapter.py",
+      "result": "passed",
+      "details": "16 passed"
+    },
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts=''",
+      "result": "passed",
+      "details": "301 passed in 48.49s"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json policy validate",
+      "result": "passed"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json graph build",
+      "result": "passed",
+      "details": "346 nodes, 460 edges, digest 53a6bc4354760014e1d78630a2b53e42657323cd95afc64008f48f9fdd989f13"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json architecture validate",
+      "result": "passed",
+      "details": "361 imports, no violations or unknowns"
+    },
+    {
+      "command": "git diff --check",
+      "result": "passed"
+    }
+  ],
+  "limitations": [
+    "Controlled failures do not establish real host identity, write isolation or escaped process containment."
+  ]
+}

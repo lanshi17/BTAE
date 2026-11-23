@@ -40,6 +40,8 @@ python -m venv /tmp/epe-wheel-venv
 
 可用 `epe host capabilities --host hermes --command-json '[...]'` 单独执行 capability handshake。`handshaken-untrusted` 只表示协议响应结构有效，不表示身份或写入隔离可信。
 
+需要复核 ACP 会话传输时，可使用 `experiments/hermes_acp_session_probe.py --prompt '...' -- COMMAND ...`。该探针只输出会话状态、更新数量和字符计数；它不会把模型文字当作门禁决定，也不会启用 MCP。必须显式提供临时宿主配置和受控工作目录。
+
 ## 已知限制
 
 - CI 工作流会上传 JUnit 测试报告作为本次运行产物；artifact 保存不等于远程分支保护已启用。
