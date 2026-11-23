@@ -58,6 +58,8 @@ analyze_impact(snapshot, changed_entities, change_kind, budget) -> ImpactReport 
 
 计算由 graph 完成，临时目录、写锁和指针发布通过 core 的 SnapshotStore 端口由 adapters 实现。指针是提交点：先写兼容视图再切换指针，失败时保留旧指针；复用同名 generation 前比较完整图与实体载荷，发现不一致则拒绝发布。兼容视图不是事务性接口；查询旧 generation 时必须检查输入版本。遗留临时文件不可视为成功快照；当前尚未保证断电后目录项持久性。
 
+读取当前或指定历史 generation 时，除内容摘要、解析配置和输入清单外，还校验节点、边、来源、置信度与 `verified` 的最小结构。损坏记录返回 `EPE-GRAPH-SHAPE`/历史读取诊断，不让查询消费者把坏边当作“无路径”。
+
 默认允许依赖表禁止 graph 直接依赖 parsers/adapters；当前本地实现中的兼容导入已在 `engineering/policies/architecture.yaml` 的 `allowed_imports` 显式记录，作为待重构例外，并由架构检查追踪。Python 相对导入按纳管代码根和包层级解析；`from package import module` 在目标唯一时不猜测多个候选并保留 unknown 诊断。
 
 ## 6. V0.3 影响传播
