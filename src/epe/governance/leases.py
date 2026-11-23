@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from epe.adapters.storage import acquire_write_lock
+from epe.core.json_codec import strict_json_loads
 from epe.governance.baseline import changeset_paths
 
 
@@ -91,8 +92,8 @@ def _read(path: Path) -> dict[str, Any]:
     if path.is_symlink():
         raise LeaseError("租约记录不能是符号链接")
     try:
-        value = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        value = strict_json_loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, ValueError) as exc:
         raise LeaseError("租约记录不可读或 JSON 无效") from exc
     try:
         import jsonschema

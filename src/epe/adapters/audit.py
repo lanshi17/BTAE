@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from epe.core.fingerprint import sha256_json
+from epe.core.json_codec import strict_json_loads
 from epe.core.ports import ClockPort
 from epe.adapters.clock import SystemClock
 
@@ -59,8 +60,8 @@ def _verify_bytes(data: bytes) -> tuple[bool, str | None, int, str]:
         return False, "审计链不是 UTF-8", 0, previous
     for index, line in enumerate(lines, 1):
         try:
-            event = json.loads(line)
-        except json.JSONDecodeError:
+            event = strict_json_loads(line)
+        except (json.JSONDecodeError, ValueError):
             return False, f"第 {index} 行不是 JSON", index - 1, previous
         required = {"schema_version", "sequence", "timestamp", "event_type", "payload", "previous_hash", "hash"}
         if (not isinstance(event, dict) or set(event) != required or event.get("schema_version") != 1
@@ -144,6 +145,6 @@ def read_audit_events(path: Path) -> list[dict[str, Any]]:
         valid, error, _, _ = _verify_bytes(data)
         if not valid:
             raise ValueError(f"现有审计链无效: {error}")
-        return [json.loads(line) for line in data.decode("utf-8").splitlines()]
+        return [strict_json_loads(line) for line in data.decode("utf-8").splitlines()]
     finally:
         os.close(fd)

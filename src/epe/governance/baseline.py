@@ -2,13 +2,13 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import os
 import re
 from pathlib import Path, PurePosixPath
 from typing import Any
 
 from epe.core.fingerprint import sha256_json
+from epe.core.json_codec import strict_json_loads
 from epe.governance.tasks import check_scope
 
 
@@ -75,7 +75,7 @@ def _validated_baseline(root: Path, config: dict[str, Any], changeset: dict[str,
     _, baseline_path = changeset_paths(root.resolve(), config, changeset["id"])
     if baseline_path.is_symlink():
         raise ValueError("基线记录不能是符号链接")
-    baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
+    baseline = strict_json_loads(baseline_path.read_text(encoding="utf-8"))
     entries = baseline.get("entries") if isinstance(baseline, dict) else None
     if (not isinstance(entries, list) or set(baseline) != {"schema_version", "entries", "digest"} or baseline.get("schema_version") != 1
             or not all(isinstance(e, dict) and set(e) == {"path", "sha256", "kind"}

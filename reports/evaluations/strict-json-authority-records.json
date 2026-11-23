@@ -1,0 +1,57 @@
+{
+  "time_utc": "2026-11-23T20:22:39Z",
+  "task_id": "TASK-strict-json-authority-records",
+  "git_head": "0ea3b8f66b1e188f12185633c57099bd5f26054d",
+  "working_tree_before_report": "clean",
+  "environment": {
+    "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+    "platform": "Linux-7.0.0-43-generic-x86_64-with-glibc2.43"
+  },
+  "file_sha256": {
+    "src/epe/core/json_codec.py": "6ebd2accc560c350882b4028953726815b7b5792ccabde7b5f8cce8db3e9e435",
+    "src/epe/governance/tasks.py": "302d70279732c7f86ecb673f4a3a323bc5629154a3189627a48c58c1d4069a14",
+    "src/epe/governance/baseline.py": "9a6cc263c60153859d3dae87cb47276e20a077ba52c1af801ee053d66bcb4012",
+    "src/epe/adapters/audit.py": "d7315a6f796d71e9500c8f70871772d15daeefe0085d5bab7eed6bcd9893ab99",
+    "src/epe/verification/runner.py": "eca12452bf8782712b9c0d0b3fae6ad93190d8d6aa996f1705e676a732c50d74",
+    "src/epe/context/resolver.py": "63c68026aae932b8974c643da2714bbbfa6538387f7f340689e2738536237581",
+    "src/epe/governance/leases.py": "3579b893664330961cc91ab36df6d6d534093680e30433c787708b7c06821450",
+    "src/epe/cli.py": "bc8266c122e454c31f44ade7e59a82c7bade559ba0086f093c05df9ae6a2d83e",
+    "tests/unit/test_parsers.py": "0ed1626da0fb5f8ceab31b4f804354a23f07514eba79b3c73c42cba5a294ce3f",
+    "tests/integration/test_changeset_baseline.py": "38508940ca0f434bbce7671500e7da4d117e45472db7cb9068b37f0314701ed7",
+    "plans/active/TASK-strict-json-authority-records.md": "762a674b74e6bf1660c918ad6572fb1a2bfbc2218a156b79e2f3d8ffc55263d9"
+  },
+  "commands": [
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts='' tests/unit/test_parsers.py tests/integration/test_changeset_baseline.py tests/acceptance/test_changeset_lease_cli.py",
+      "result": "passed",
+      "details": "30 passed"
+    },
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts=''",
+      "result": "passed",
+      "details": "346 passed in 51.08s"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json graph build",
+      "result": "passed",
+      "details": "387 nodes, 518 edges, digest 3de16226c78cb35508dd031058840366faabb25b9274f5f3cad838b269ab24db"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json policy validate",
+      "result": "passed"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json architecture validate",
+      "result": "passed",
+      "details": "405 imports, no violations or unknowns"
+    },
+    {
+      "command": "git diff --check && python -m compileall -q src",
+      "result": "passed"
+    }
+  ],
+  "change": "Shared strict JSON decoding rejects duplicate object keys and non-standard numeric constants across Task, ChangeSet baseline, Lease, Audit, Evidence, Context cache, and selected CLI authority readers. Existing failure/result mappings remain structured.",
+  "limitations": [
+    "ACP JSON-RPC and untrusted host response parsing retain their protocol-specific boundaries; strict decoding does not provide immutable storage or writer authentication."
+  ]
+}
