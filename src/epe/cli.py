@@ -522,6 +522,8 @@ def cmd_changeset_conflicts(args) -> CommandResult:
         return _result("changeset conflicts", "error", [Diagnostic("EPE-PATH-SYMLINK", Severity.ERROR, "ChangeSet 目录不能是符号链接")])
     if base.exists():
         for path in sorted(base.glob("CHANGE-*.json")):
+            if path.name.endswith(".lease.json") or path.name.endswith(".baseline.json"):
+                continue
             if path.is_symlink():
                 diagnostics.append(Diagnostic("EPE-PATH-SYMLINK", Severity.ERROR, "ChangeSet 记录不能是符号链接", path=str(path.relative_to(root))))
                 continue
