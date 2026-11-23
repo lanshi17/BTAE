@@ -1,0 +1,50 @@
+{
+  "time_utc": "2026-11-23T13:31:42.289735+00:00",
+  "task_id": "TASK-hermes-acp-session-safety",
+  "git_head": "58238ca0dd470867f852ca86d31d2a36d245da79",
+  "working_tree_dirty": true,
+  "environment": {
+    "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+    "platform": "Linux-7.0.0-43-generic-x86_64-with-glibc2.43"
+  },
+  "file_sha256": {
+    "src/epe/adapters/hosts/acp.py": "8e2552ee56635ed3d3b8a54e2fd0ab0f0471e05ce2e13f2a613e55a009b59330",
+    "tests/integration/test_acp_adapter.py": "9dd8c47d0e6f41809a222595eb3bfa3854d534c046d4048c7c880965b8dce873",
+    "docs/modules/adapters/host-capability-matrix.md": "ae0266f7754b8f75f16f0a7c372c80ee41ab17c025706ebfe328d422fe8d1669",
+    "plans/active/TASK-hermes-acp-session-safety.md": "aa77f57fb2311acde86d5553702c6fa8b1bb76e3a270612e1e3f20dfdfb74d10"
+  },
+  "commands": [
+    {
+      "command": "PYTHONPATH=src pytest -q tests/integration/test_acp_adapter.py",
+      "result": "passed",
+      "details": "13 passed"
+    },
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts=''",
+      "result": "passed",
+      "details": "298 passed in 48.65s"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json policy validate",
+      "result": "passed"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json graph build",
+      "result": "passed",
+      "details": "346 nodes, 460 edges; digest 0bb894226ad6af5e6ad59d100343fab82aa3a5d1f81b3cd109580d6fb1c27e74"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json architecture validate",
+      "result": "passed",
+      "details": "361 imports, no violations or unknowns"
+    },
+    {
+      "command": "git diff --check",
+      "result": "passed"
+    }
+  ],
+  "limitations": [
+    "POSIX selector only; escaped process groups and OS uninterruptible processes are not contained.",
+    "Fixture subprocesses do not prove real Hermes permissions, identity or write isolation."
+  ]
+}

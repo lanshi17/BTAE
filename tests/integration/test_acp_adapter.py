@@ -153,3 +153,47 @@ for line in sys.stdin:
             session.prompt("second")
         worker.join(timeout=2)
         assert not worker.is_alive() and result == [{"stopReason": "end_turn"}]
+
+
+def test_prompt_write_timeout_closes_unresponsive_session(tmp_path: Path):
+    script = r'''
+import json,sys,time
+for line in sys.stdin:
+    req=json.loads(line)
+    if req["method"] == "initialize":
+        result={"protocolVersion":1,"agentInfo":{"name":"fixture"}}
+    else:
+        result={"sessionId":"SESSION-1"}
+    print(json.dumps({"jsonrpc":"2.0","id":req["id"],"result":result}),flush=True)
+    if req["method"] == "session/new": time.sleep(30)
+'''
+    session = HermesACPAdapter([sys.executable, "-c", script], tmp_path, timeout=0.5).open_session()
+    started = time.monotonic()
+    with pytest.raises(TimeoutError):
+        session.prompt("x" * (2 * 1024 * 1024))
+    assert time.monotonic() - started < 3
+    assert session._process.poll() is not None
+    with pytest.raises(ACPSessionClosed):
+        session.prompt("again")
+
+
+def test_notifications_do_not_extend_request_deadline(tmp_path: Path):
+    script = r'''
+import json,sys,time
+for line in sys.stdin:
+    req=json.loads(line)
+    if req["method"] == "initialize":
+        print(json.dumps({"jsonrpc":"2.0","id":req["id"],"result":{"protocolVersion":1,"agentInfo":{"name":"fixture"}}}),flush=True)
+    elif req["method"] == "session/new":
+        print(json.dumps({"jsonrpc":"2.0","id":req["id"],"result":{"sessionId":"SESSION-1"}}),flush=True)
+    else:
+        for _ in range(30):
+            print(json.dumps({"jsonrpc":"2.0","method":"session/update","params":{}}),flush=True)
+            time.sleep(0.05)
+'''
+    session = HermesACPAdapter([sys.executable, "-c", script], tmp_path, timeout=0.4).open_session()
+    started = time.monotonic()
+    with pytest.raises(TimeoutError):
+        session.prompt("hello")
+    assert time.monotonic() - started < 2
+    assert session._process.poll() is not None

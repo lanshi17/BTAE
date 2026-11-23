@@ -127,19 +127,24 @@ class HermesACPSession:
             raise ValueError("session is closed or has no session ID")
         payload = {"jsonrpc": "2.0", "method": "session/cancel",
                    "params": {"sessionId": self.session_id}}
-        self._send(payload)
+        try:
+            self._send(payload)
+        except (TimeoutError, ACPProtocolError, OSError):
+            self.close()
+            raise
 
     def _request(self, method: str, params: dict[str, Any]) -> Any:
         if not self._request_lock.acquire(blocking=False):
             raise ACPProtocolError("concurrent ACP requests are not supported")
         try:
             self._ensure_open()
+            deadline = time.monotonic() + self._timeout
             request_id = self._next_id
             self._next_id += 1
             payload = {"jsonrpc": "2.0", "id": request_id, "method": method, "params": params}
-            self._send(payload)
+            self._send(payload, deadline)
             while True:
-                message = self._read_message()
+                message = self._read_message(deadline)
                 if "id" not in message and isinstance(message.get("method"), str):
                     continue
                 if type(message.get("id")) is not int or message["id"] != request_id:
@@ -147,6 +152,9 @@ class HermesACPSession:
                 if "error" in message:
                     raise ACPProtocolError("ACP request failed")
                 return message.get("result")
+        except (TimeoutError, ACPProtocolError, OSError):
+            self.close()
+            raise
         finally:
             self._request_lock.release()
 
@@ -169,33 +177,72 @@ class HermesACPSession:
                     pass
                 setattr(self, fd_name, None)
 
-    def _send(self, payload: dict[str, Any]) -> None:
+    def _send(self, payload: dict[str, Any], deadline: float | None = None) -> None:
         self._ensure_open()
+        deadline = deadline if deadline is not None else time.monotonic() + self._timeout
         encoded = (json.dumps(payload, separators=(",", ":")) + "\n").encode("utf-8")
-        with self._write_lock:
+        if not self._write_lock.acquire(timeout=max(0, deadline - time.monotonic())):
+            raise TimeoutError("ACP request timed out while waiting to write")
+        try:
             self._ensure_open()
+            with self._state_lock:
+                self._ensure_open()
+                self._active_readers += 1
+                self._reader_done.clear()
             try:
-                remaining = memoryview(encoded)
-                while remaining:
-                    written = self._process.stdin.write(remaining)
-                    if not written:
-                        raise OSError("incomplete ACP request")
-                    remaining = remaining[written:]
+                with selectors.DefaultSelector() as writer:
+                    writer.register(self._process.stdin, selectors.EVENT_WRITE)
+                    writer.register(self._wakeup_read, selectors.EVENT_READ)
+                    remaining = memoryview(encoded)
+                    while remaining:
+                        self._ensure_open()
+                        wait = deadline - time.monotonic()
+                        if wait <= 0:
+                            raise TimeoutError("ACP request timed out while writing")
+                        ready = writer.select(wait)
+                        if not ready:
+                            raise TimeoutError("ACP request timed out while writing")
+                        self._ensure_open()
+                        if any(key.fd == self._wakeup_read for key, _ in ready):
+                            self._ensure_open()
+                        if any(key.fileobj is self._process.stdin for key, _ in ready):
+                            try:
+                                written = os.write(self._process.stdin.fileno(), remaining)
+                            except BlockingIOError:
+                                continue
+                            if not written:
+                                raise OSError("incomplete ACP request")
+                            remaining = remaining[written:]
+            except TimeoutError:
+                raise
             except (OSError, ValueError) as exc:
                 if self._closed:
                     raise ACPSessionClosed("ACP session is closed") from exc
                 raise ACPProtocolError("ACP request could not be written") from exc
+            finally:
+                self._operation_finished()
+        finally:
+            self._write_lock.release()
 
-    def _read_message(self) -> dict[str, Any]:
+    def _operation_finished(self) -> None:
+        with self._state_lock:
+            self._active_readers -= 1
+            if self._active_readers == 0:
+                self._reader_done.set()
+                if self._closed:
+                    self._close_selector(self._selector)
+
+    def _read_message(self, deadline: float) -> dict[str, Any]:
         with self._state_lock:
             if self._closed:
                 raise ACPSessionClosed("ACP session is closed")
             self._active_readers += 1
             self._reader_done.clear()
-        deadline = time.monotonic() + self._timeout
         try:
             while True:
                 self._ensure_open()
+                if time.monotonic() >= deadline:
+                    raise TimeoutError("ACP request timed out")
                 while b"\n" in self._pending:
                     line, self._pending = self._pending.split(b"\n", 1)
                     try:
@@ -217,10 +264,6 @@ class HermesACPSession:
                 if not ready:
                     raise TimeoutError("ACP request timed out")
                 if any(key.fd == self._wakeup_read for key, _ in ready):
-                    try:
-                        os.read(self._wakeup_read, 1)
-                    except OSError:
-                        pass
                     self._ensure_open()
                 self._ensure_open()
                 try:
@@ -241,12 +284,7 @@ class HermesACPSession:
                     raise ACPProtocolError("ACP output limit exceeded")
                 self._pending += chunk
         finally:
-            with self._state_lock:
-                self._active_readers -= 1
-                if self._active_readers == 0:
-                    self._reader_done.set()
-                    if self._closed:
-                        self._close_selector(self._selector)
+            self._operation_finished()
 
 
 class HermesACPAdapter:
@@ -277,6 +315,8 @@ class HermesACPAdapter:
         return self._open_session(open_empty=True, cwd=cwd)
 
     def _open_session(self, open_empty: bool, cwd: Path | None = None) -> HermesACPSession:
+        if os.name != "posix":
+            raise OSError("ACP session transport requires POSIX pipe selectors")
         process = subprocess.Popen(
             self.command, cwd=self.cwd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL, bufsize=0, start_new_session=os.name == "posix",
@@ -284,6 +324,7 @@ class HermesACPAdapter:
         selector = selectors.DefaultSelector()
         session = HermesACPSession(process, selector, self.timeout, self.output_limit)
         try:
+            os.set_blocking(process.stdin.fileno(), False)
             selector.register(process.stdout, selectors.EVENT_READ)
             selector.register(session._wakeup_read, selectors.EVENT_READ)
             initialized = self._request(session, "initialize", {
@@ -307,9 +348,10 @@ class HermesACPAdapter:
 
     def _request(self, session: HermesACPSession, method: str, params: dict[str, Any], request_id: int) -> Any:
         payload = {"jsonrpc": "2.0", "id": request_id, "method": method, "params": params}
-        session._send(payload)
+        deadline = time.monotonic() + session._timeout
+        session._send(payload, deadline)
         while True:
-            message = session._read_message()
+            message = session._read_message(deadline)
             if "id" not in message and isinstance(message.get("method"), str):
                 continue
             if type(message.get("id")) is not int or message["id"] != request_id:
