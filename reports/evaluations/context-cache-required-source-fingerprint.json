@@ -1,0 +1,48 @@
+{
+  "time_utc": "2026-11-23T18:27:45.841786+00:00",
+  "task_id": "TASK-context-cache-required-source-fingerprint",
+  "git_head": "577bf6899e058d7843e201ee34c294663e680ef6",
+  "working_tree_dirty": true,
+  "environment": {
+    "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+    "platform": "Linux-7.0.0-43-generic-x86_64-with-glibc2.43"
+  },
+  "file_sha256": {
+    "src/epe/context/resolver.py": "f55a96f70a9745dbed3156ee39dffe1158f21baeace8b37c69a12d6d115a7761",
+    "tests/acceptance/test_context_cache_cli.py": "0c5dac10a0955d14fa8d1a816b117389afb302e27b5c460e1006a22fbb1eb755"
+  },
+  "commands": [
+    {
+      "command": "PYTHONPATH=src pytest -q tests/acceptance/test_context_cache_cli.py",
+      "result": "passed",
+      "details": "3 passed"
+    },
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts=''",
+      "result": "passed",
+      "details": "330 passed in 50.32s"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json policy validate",
+      "result": "passed"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json graph build",
+      "result": "passed",
+      "details": "378 nodes, 498 edges, digest eb8c7701d389aca39e78d30192336e5a457ece91b39cf1fc51bebd06c9399ae6"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json architecture validate",
+      "result": "passed",
+      "details": "393 imports, no violations or unknowns"
+    },
+    {
+      "command": "git diff --check",
+      "result": "passed"
+    }
+  ],
+  "cache_fact": "required source fingerprints are part of cache key even when budget prevents selecting those C0 items",
+  "limitations": [
+    "This improves local cache freshness; it does not establish independent context relevance or cost evidence."
+  ]
+}

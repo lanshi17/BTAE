@@ -64,3 +64,25 @@ def test_context_requires_declared_changeset(tmp_path, capsys):
     assert main(["--root", str(tmp_path), "--format", "json", "context", "resolve", "TASK-001"]) == 1
     data = json.loads(capsys.readouterr().out)["data"]
     assert data["incomplete"] and "changeset:missing" in data["omissions"]
+
+
+def test_small_budget_cache_key_tracks_required_changeset_content(tmp_path, capsys):
+    assert main(["--root", str(tmp_path), "--format", "json", "init"]) == 0
+    capsys.readouterr()
+    (tmp_path / "AGENTS.md").write_text("rules")
+    (tmp_path / "docs").mkdir(); (tmp_path / "docs/index.md").write_text("index")
+    (tmp_path / "docs/core.md").write_text("---\nid: MOD-001\ntype: Module\nname: Core\n---\n# Core\n")
+    (tmp_path / "task.yaml").write_text("id: TASK-001\ntype: feature\nobjective: goal\nacceptance: [ok]\nrisk: low\ntarget_entities: [MOD-001]\nchangeset: CHANGE-001\n")
+    assert main(["--root", str(tmp_path), "--format", "json", "task", "create", "--file", "task.yaml"]) == 0; capsys.readouterr()
+    (tmp_path / "change.yaml").write_text("id: CHANGE-001\ntask: TASK-001\nowner: owner\naffected_entities: [MOD-001]\nwrite_scope: [docs]\nprotected: [src]\ndependencies: []\nstatus: planned\n")
+    assert main(["--root", str(tmp_path), "--format", "json", "changeset", "create", "--file", "change.yaml"]) == 0; capsys.readouterr()
+    assert main(["--root", str(tmp_path), "--format", "json", "graph", "build"]) == 0; capsys.readouterr()
+    # Budget 1 means only C0's first item is selected; the ChangeSet is omitted.
+    assert main(["--root", str(tmp_path), "--format", "json", "context", "resolve", "TASK-001", "--budget", "1"]) == 1
+    assert json.loads(capsys.readouterr().out)["data"]["cache"] == "miss"
+    assert main(["--root", str(tmp_path), "--format", "json", "context", "resolve", "TASK-001", "--budget", "1"]) == 1
+    assert json.loads(capsys.readouterr().out)["data"]["cache"] == "miss"
+    change_path = tmp_path / "engineering/changesets/CHANGE-001.json"
+    change = json.loads(change_path.read_text()); change["protected"] = ["src", "tests"]; change_path.write_text(json.dumps(change))
+    assert main(["--root", str(tmp_path), "--format", "json", "context", "resolve", "TASK-001", "--budget", "1"]) == 1
+    assert json.loads(capsys.readouterr().out)["data"]["cache"] == "miss"
