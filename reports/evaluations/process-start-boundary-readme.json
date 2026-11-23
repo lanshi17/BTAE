@@ -1,0 +1,41 @@
+{
+  "time_utc": "2026-11-23T18:44:43Z",
+  "task_id": "TASK-process-start-boundary-readme",
+  "git_head": "8f1795313a7f0b668f3e0932ce4fd771f8eac966",
+  "working_tree_before_report": "clean",
+  "environment": {
+    "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+    "platform": "Linux-7.0.0-43-generic-x86_64-with-glibc2.43"
+  },
+  "file_sha256": {
+    "README.md": "e3d95916ac7bba15459b70d7374c044f5233d6a38222721eea7a2f30653358a2",
+    "src/epe/adapters/process.py": "06c5ca4c15d423f145d296cd2b767f8c38567b019617d4a8e4a3be142bff5d7d",
+    "tests/unit/test_process.py": "2e3322763cf94e03f7a1070b1b764db45ba058e502d258bc0d4932cb0622f8a6"
+  },
+  "commands": [
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts='' tests/unit/test_process.py tests/integration/test_process_lifecycle.py",
+      "result": "passed",
+      "details": "13 passed"
+    },
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts=''",
+      "result": "passed",
+      "details": "331 passed in 49.32s"
+    },
+    {
+      "command": "git diff --check && python -m compileall -q src",
+      "result": "passed"
+    },
+    {
+      "command": "python -m pip wheel --no-deps . --wheel-dir <temporary>/dist; install wheel outside source tree; epe init; epe policy validate; epe host capabilities",
+      "result": "passed",
+      "details": "wheel installed in a temporary virtualenv outside the repository; all three CLI commands returned passed"
+    }
+  ],
+  "change": "run_process now validates argv and input_data before spawning and maps Popen OSError/TypeError/ValueError to start_error; README documents graph path, leases, audit verification, host limits, and external wheel evidence.",
+  "limitations": [
+    "Process-group guarantees remain POSIX-only and do not provide host isolation.",
+    "This local evidence does not establish real Hermes identity, tool permissions, filesystem isolation, or method-effectiveness claims."
+  ]
+}
