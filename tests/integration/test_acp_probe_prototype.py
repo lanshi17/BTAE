@@ -1,6 +1,7 @@
 """Exercises the exploration probe with real, controlled subprocesses."""
 import importlib.util
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -36,3 +37,14 @@ def test_timeout_and_output_limit(tmp_path):
         module.probe(command("time.sleep(10)"), tmp_path, timeout=0.2)
     with pytest.raises(ValueError, match="limit"):
         module.probe(command("print('x'*1000,flush=True)"), tmp_path, timeout=2, limit=64)
+
+
+def test_cleans_descendant_after_leader_exits(tmp_path):
+    marker = tmp_path / "survived"
+    child = ("import time,pathlib,json; time.sleep(0.2); "
+             "print(json.dumps({'jsonrpc':'2.0','id':1,'result':{'protocolVersion':1,'agentInfo':{'name':'fixture'}}}),flush=True); "
+             "time.sleep(1); pathlib.Path(%r).write_text('alive')") % str(marker)
+    body = "import subprocess; subprocess.Popen([sys.executable,'-c',%r])" % child
+    module.probe(command(body), tmp_path, timeout=2)
+    time.sleep(1.2)
+    assert not marker.exists()

@@ -60,11 +60,12 @@ def probe(command: list[str], cwd: Path, timeout: float = 10.0, limit: int = 104
                         "trusted_identity": False, "write_isolation": False, "scope": "initialize_only"}
     finally:
         selector.close()
-        if proc.poll() is None:
-            try:
-                os.killpg(proc.pid, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
+        # The session leader can exit before its descendants; clean the group
+        # even when poll() has already observed that exit.
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
         proc.wait()
         proc.stdin.close()
         proc.stdout.close()
