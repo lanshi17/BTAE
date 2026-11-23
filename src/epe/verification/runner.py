@@ -21,6 +21,7 @@ from epe.core.diagnostics import Diagnostic, Severity
 from epe.core.fingerprint import build_manifest, sha256_bytes
 from epe.core.models import Evidence
 from epe.core.ports import ClockPort
+from epe.core.json_codec import strict_json_loads
 from epe.adapters.clock import SystemClock
 
 
@@ -318,7 +319,7 @@ def load_evidence(root: Path, config: dict[str, Any], task_id: str | None = None
         try:
             if directory.is_symlink() or not directory.is_dir() or path.is_symlink():
                 raise ValueError("运行记录路径不是普通目录或文件")
-            value = json.loads(path.read_text(encoding="utf-8"))
+            value = strict_json_loads(path.read_text(encoding="utf-8"))
             _validate_evidence_record(root, value)
             if (not isinstance(value, dict) or value.get("run_id") != directory.name
                     or not isinstance(value.get("id"), str) or not value["id"].startswith("EVIDENCE-")
@@ -380,7 +381,7 @@ def evidence_validity(root: Path, config: dict[str, Any], evidence: dict[str, An
             matches = [a for a in artifacts if a.get("path") == relative_summary]
             if len(matches) != 1:
                 return "unknown"
-            summary = json.loads(summary_path.read_text(encoding="utf-8"))
+            summary = strict_json_loads(summary_path.read_text(encoding="utf-8"))
             if (not isinstance(summary, dict) or set(summary) != {"passed", "failed", "skipped"}
                     or any(type(value) is not int or value < 0 for value in summary.values())
                     or summary["passed"] < 1 or summary["failed"] != 0):

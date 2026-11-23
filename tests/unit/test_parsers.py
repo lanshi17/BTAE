@@ -56,6 +56,14 @@ def test_parse_batch_uses_strict_json_syntax():
     assert invalid.diagnostics[0].code == "EPE-JSON-PARSE"
 
 
+def test_strict_json_codec_is_reusable_for_authority_records():
+    import pytest
+    from epe.core.json_codec import strict_json_loads
+    assert strict_json_loads('{"a":1,"nested":{"b":true}}') == {"a": 1, "nested": {"b": True}}
+    with pytest.raises(ValueError):
+        strict_json_loads('{"a":1,"a":2}')
+
+
 def test_parse_batch_rejects_duplicates_and_path_escape():
     from epe.parsers.coordinator import parse_batch
     result = parse_batch([("a.py", b"x = 1"), ("a.py", b"x = 2"), ("../outside.py", b"x = 3")])

@@ -6,6 +6,7 @@ import json
 
 from epe.core.fingerprint import build_manifest, sha256_bytes
 from epe.core.models import InputManifest
+from epe.core.json_codec import strict_json_loads
 from epe.core.registry import Registry
 from epe.graph.builder import graph_neighbors
 from epe.core.fingerprint import sha256_json
@@ -68,7 +69,7 @@ def load_cached_context(root: Path, config: dict[str, Any], task: Any, snapshot:
     key = context_cache_key(task, snapshot, local, budget, required_sources, source_assessments)
     path = root / config.get("storage", {}).get("derived", ".engineering") / "context" / f"{key}.json"
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
+        data = strict_json_loads(path.read_text(encoding="utf-8"))
         if data.get("cache_key") != key or data.get("input_manifest", {}).get("digest") != context_inputs_manifest(root, config).digest: return None
         if data.get("content_digest") != sha256_json({k: v for k, v in data.items() if k != "content_digest"}): return None
         for item in data.get("items", []):
@@ -170,7 +171,7 @@ def resolve_context(root: Path, config: dict[str, Any], task: Any, registry: Reg
     evidence_root = _safe_context_path(root, config.get("storage", {}).get("evidence", "engineering/evidence"))
     if evidence_root.exists():
         for path in sorted(evidence_root.glob("*/evidence.json")):
-            try: evidence = json.loads(path.read_text(encoding="utf-8"))
+            try: evidence = strict_json_loads(path.read_text(encoding="utf-8"))
             except (OSError, UnicodeError, json.JSONDecodeError): continue
             if not isinstance(evidence, dict): continue
             if getattr(task, "id", None) and evidence.get("task_id") == task.id:

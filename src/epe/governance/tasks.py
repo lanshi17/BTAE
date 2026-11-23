@@ -8,6 +8,7 @@ from typing import Any, Sequence
 from epe.adapters.storage import atomic_write_json
 from epe.core.diagnostics import Diagnostic, Severity
 from epe.core.models import Task
+from epe.core.json_codec import strict_json_loads
 
 
 def validate_task(data: dict[str, Any]) -> tuple[Task | None, list[Diagnostic]]:
@@ -75,8 +76,8 @@ def load_task(root: Path, config: dict[str, Any], task_id: str) -> tuple[Task | 
         return None, [Diagnostic("EPE-TASK-ID", Severity.ERROR, "任务 ID 格式非法", entity_id=task_id)]
     path = task_path(root, config, task_id)
     if not path.exists(): return None, [Diagnostic("EPE-TASK-MISSING", Severity.ERROR, f"任务不存在: {task_id}", entity_id=task_id, path=str(path.relative_to(root)))]
-    try: data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc: return None, [Diagnostic("EPE-TASK-READ", Severity.ERROR, str(exc), path=str(path.relative_to(root)))]
+    try: data = strict_json_loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, ValueError) as exc: return None, [Diagnostic("EPE-TASK-READ", Severity.ERROR, str(exc), path=str(path.relative_to(root)))]
     return validate_task(data)
 
 

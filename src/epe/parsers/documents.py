@@ -11,6 +11,7 @@ import yaml
 
 from epe.core.diagnostics import Diagnostic, Severity
 from epe.core.fingerprint import sha256_bytes
+from epe.core.json_codec import strict_json_loads
 
 
 @dataclass
@@ -49,23 +50,6 @@ def _construct_mapping(loader: StrictLoader, node: yaml.nodes.MappingNode, deep:
 StrictLoader.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _construct_mapping)
 
 
-class _DuplicateJSONKey(ValueError):
-    pass
-
-
-def _json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
-    value: dict[str, Any] = {}
-    for key, item in pairs:
-        if key in value:
-            raise _DuplicateJSONKey(f"duplicate JSON object key: {key}")
-        value[key] = item
-    return value
-
-
-def _reject_json_constant(value: str):
-    raise ValueError(f"non-standard JSON numeric constant: {value}")
-
-
 def parse_json_bytes(data: bytes, path: str = "<memory>") -> tuple[Any | None, list[Diagnostic]]:
     """Parse strict UTF-8 JSON, rejecting duplicate keys and NaN/Infinity."""
     try:
@@ -73,7 +57,7 @@ def parse_json_bytes(data: bytes, path: str = "<memory>") -> tuple[Any | None, l
     except UnicodeDecodeError as exc:
         return None, [Diagnostic("EPE-JSON-ENCODING", Severity.ERROR, f"JSON 必须为 UTF-8: {exc}", path=path)]
     try:
-        return json.loads(text, object_pairs_hook=_json_object, parse_constant=_reject_json_constant), []
+        return strict_json_loads(text), []
     except json.JSONDecodeError as exc:
         return None, [Diagnostic("EPE-JSON-PARSE", Severity.ERROR, str(exc), path=path, line=exc.lineno)]
     except (ValueError, TypeError) as exc:

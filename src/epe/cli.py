@@ -40,6 +40,7 @@ from epe.adapters.hosts.acp import HermesACPAdapter
 from epe.adapters.protocol import AgentRequest
 from epe.adapters.audit import append_audit, verify_audit, read_audit_events
 from epe.adapters.clock import SystemClock
+from epe.core.json_codec import strict_json_loads
 
 
 EXIT_CODES = {"passed": 0, "blocked": 1, "error": 3, "unsupported": 4}
@@ -392,7 +393,7 @@ def cmd_changeset_transition(args) -> CommandResult:
         with acquire_write_lock(lock):
             if change_path.is_symlink():
                 return _result("changeset transition", "error", [Diagnostic("EPE-CHANGESET-STORE", Severity.ERROR, "ChangeSet 记录不能是符号链接")])
-            value = json.loads(change_path.read_text(encoding="utf-8"))
+            value = strict_json_loads(change_path.read_text(encoding="utf-8"))
             task_id = value.get("task") if isinstance(value, dict) else ""
             task, tds = load_task(root, config, str(task_id))
             if task is None:
@@ -529,7 +530,7 @@ def cmd_changeset_conflicts(args) -> CommandResult:
                 diagnostics.append(Diagnostic("EPE-PATH-SYMLINK", Severity.ERROR, "ChangeSet 记录不能是符号链接", path=str(path.relative_to(root))))
                 continue
             try:
-                value = json.loads(path.read_text(encoding="utf-8"))
+                value = strict_json_loads(path.read_text(encoding="utf-8"))
                 if not isinstance(value, dict):
                     raise ValueError("ChangeSet 必须为对象")
                 changesets.append(value)
@@ -555,7 +556,7 @@ def cmd_changeset_lease(args) -> CommandResult:
         path, _ = changeset_paths(root, config, args.changeset_id)
         if path.is_symlink() or not path.exists():
             raise LeaseError("ChangeSet 记录不存在或是符号链接")
-        value = json.loads(path.read_text(encoding="utf-8"))
+        value = strict_json_loads(path.read_text(encoding="utf-8"))
         if not isinstance(value, dict):
             raise LeaseError("ChangeSet 必须为对象")
         if args.lease_event == "inspect":

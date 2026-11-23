@@ -73,6 +73,33 @@ def test_changeset_runtime_validation_rejects_unknown_and_wrong_typed_fields():
         validate_changeset({**base, "baseline_manifest": []}, "TASK-001")
 
 
+def test_task_and_baseline_loaders_reject_duplicate_json_keys(tmp_path):
+    import pytest
+    from epe.governance.tasks import load_task
+    from epe.governance.baseline import _validated_baseline
+
+    tasks = tmp_path / "engineering/tasks"; tasks.mkdir(parents=True)
+    task_path = tasks / "TASK-001.json"
+    task_path.write_text('{"schema_version":1,"id":"TASK-001","id":"TASK-002"}', encoding="utf-8")
+    task, diagnostics = load_task(tmp_path, {}, "TASK-001")
+    assert task is None and diagnostics[0].code == "EPE-TASK-READ"
+
+    changes = tmp_path / "engineering/changesets"; changes.mkdir(parents=True)
+    baseline_path = changes / "CHANGE-001.baseline.json"
+    baseline_path.write_text('{"schema_version":1,"entries":[],"entries":[],"digest":"00"}', encoding="utf-8")
+    with pytest.raises(ValueError):
+        _validated_baseline(tmp_path, {}, {"id": "CHANGE-001", "baseline_manifest": "00"})
+
+
+def test_audit_reader_rejects_duplicate_json_keys(tmp_path):
+    from epe.adapters.audit import read_audit_events
+    path = tmp_path / "events.jsonl"
+    path.write_text('{"schema_version":1,"schema_version":1}\n', encoding="utf-8")
+    import pytest
+    with pytest.raises(ValueError):
+        read_audit_events(path)
+
+
 def test_changeset_schema_rejects_empty_required_collections():
     import json
     import jsonschema
