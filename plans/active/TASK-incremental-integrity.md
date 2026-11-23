@@ -9,3 +9,5 @@
 
 - 验证：`PYTHONPATH=src pytest -q -o addopts=''`，69 passed；`git diff --check` 通过。详见 `reports/evaluations/incremental-integrity.json`。
 - 限制：缓存摘要不提供防篡改认证；外部进程仍可在最后一次清单检查与发布间修改文件，读取时的新鲜度校验提供后续检测。解析器版本须在实现语义变化时同步更新。
+
+- 后续边界补充：增量重解析遇到变更 Python 文件读取故障时返回 `EPE-AST-READ`，不再让 `OSError` 绕过 `GraphBuildResult`。

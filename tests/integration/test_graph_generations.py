@@ -1,7 +1,7 @@
 import json
 
 from epe.core.registry import Registry
-from epe.graph.builder import build_graph, load_graph
+from epe.graph.builder import build_graph, build_graph_incremental, load_graph
 from epe.parsers.python import parse_python
 
 
@@ -81,3 +81,29 @@ def test_pointer_rejects_path_traversal(tmp_path):
     derived = tmp_path / ".engineering"; derived.mkdir()
     (derived / "current.json").write_text(json.dumps({"schema_version": 1, "generation": "../outside", "content_digest": "../outside"}))
     assert load_graph(tmp_path, cfg())[1][0].code == "EPE-GRAPH-POINTER"
+
+
+def test_incremental_parser_read_failure_is_structured(tmp_path, monkeypatch):
+    from pathlib import Path
+
+    (tmp_path / "src").mkdir()
+    source = tmp_path / "src/a.py"
+    source.write_text("value = 1\n")
+    fact = parse_python(source.read_bytes(), "src/a.py")
+    first = build_graph(tmp_path, Registry(), [fact], cfg())
+    assert first.published
+    source.write_text("value = 2\n")
+    original = Path.read_bytes
+    reads = {source: 0}
+
+    def fail_on_reparse(path):
+        if path == source:
+            reads[source] += 1
+            if reads[source] >= 2:
+                raise OSError("source disappeared during incremental parse")
+        return original(path)
+
+    monkeypatch.setattr(Path, "read_bytes", fail_on_reparse)
+    result = build_graph_incremental(tmp_path, Registry(), first.snapshot, cfg())
+    assert not result.published and result.snapshot is None
+    assert result.diagnostics[0].code == "EPE-AST-READ"
