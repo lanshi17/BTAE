@@ -1,0 +1,49 @@
+{
+  "time_utc": "2026-11-23T19:45:41Z",
+  "task_id": "TASK-graph-manifest-read-boundary",
+  "git_head": "bde3b54388c0b02c22a27bee10b5d70e04c3efcf",
+  "working_tree_before_report": "clean",
+  "environment": {
+    "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+    "platform": "Linux-7.0.0-43-generic-x86_64-with-glibc2.43"
+  },
+  "file_sha256": {
+    "src/epe/graph/builder.py": "d221dc0c5a389e40872135fa230719b39bfcfed619cd2ce4bb5956cac10d07ca",
+    "tests/integration/test_graph_generations.py": "dcec291e9764864a8ffd415abbb2175c1b6eb9d85c19db1fb8041ae3f75b7e6e",
+    "plans/active/TASK-incremental-integrity.md": "14f09fbef0b4791d34723476d93678ea3d5155863825bc33886fb7d8fdb2a9d9"
+  },
+  "commands": [
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts='' tests/integration/test_graph_generations.py tests/integration/test_graph_provenance.py",
+      "result": "passed",
+      "details": "11 passed"
+    },
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts=''",
+      "result": "passed",
+      "details": "340 passed in 50.53s"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json graph build",
+      "result": "passed",
+      "details": "380 nodes, 499 edges, digest c19c679a762abb40da495893e30d8d0e192248bff9e8723135fa0e3b9f0a750a"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json policy validate",
+      "result": "passed"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json architecture validate",
+      "result": "passed",
+      "details": "394 imports, no violations or unknowns"
+    },
+    {
+      "command": "git diff --check && python -m compileall -q src",
+      "result": "passed"
+    }
+  ],
+  "change": "Full and incremental graph builds now convert initial, final freshness, and incremental manifest OSError/ValueError into EPE-GRAPH-MANIFEST and refuse publication.",
+  "limitations": [
+    "This does not provide filesystem locks or protect against writers after the last manifest check; the snapshot remains subject to existing freshness semantics."
+  ]
+}
