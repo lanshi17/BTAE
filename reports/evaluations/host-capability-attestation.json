@@ -1,0 +1,60 @@
+{
+  "time_utc": "2026-11-23T15:10:49.496893+00:00",
+  "task_id": "TASK-host-capability-attestation",
+  "git_head": "3e294f4d285cc9300996a4ebd7e3ab90677595bc",
+  "working_tree_dirty": true,
+  "environment": {
+    "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+    "platform": "Linux-7.0.0-43-generic-x86_64-with-glibc2.43"
+  },
+  "file_sha256": {
+    "src/epe/adapters/host_attestation.py": "7f971e8fcef52af7ab336da44e7404b1fc65539c552024f3c3cad13387c0aeae",
+    "src/epe/adapters/hosts/hermes.py": "038e4db67ab384502b963ac211f41461c896b114ab9637f8c2558e6ec963c4c6",
+    "src/epe/cli.py": "07feeccb803a31533b968ca752accf8b4a68ff14031ab06800602e05bd704638",
+    "tests/integration/test_host_attestation.py": "d0a61fd923b2c61e91ff2dc104e6bf3aa474d9ce5c1bb44a757c5cf7e76fa701",
+    "tests/integration/test_hermes_adapter.py": "0278cc944aa1371b0d321f84bfafd49e4d577eadce1096365b9b5179e4c0ee2f",
+    "engineering/schemas/project-config.schema.json": "feece00285524fb5687d83f356815aaa2135487f8ef504372968ecc3742d786f",
+    "src/epe/data/schemas/project-config.schema.json": "feece00285524fb5687d83f356815aaa2135487f8ef504372968ecc3742d786f",
+    "plans/active/TASK-host-capability-attestation.md": "6f72399bbeb25fb2f98a59b4f9d8935fa272944690eef871157ef0badd39940e"
+  },
+  "commands": [
+    {
+      "command": "PYTHONPATH=src pytest -q tests/integration/test_host_attestation.py tests/integration/test_hermes_adapter.py tests/acceptance/test_host_capabilities_cli.py",
+      "result": "passed",
+      "details": "38 passed"
+    },
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts=''",
+      "result": "passed",
+      "details": "313 passed in 45.77s"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json policy validate",
+      "result": "passed"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json graph build",
+      "result": "passed",
+      "details": "352 nodes, 469 edges, digest 97c5c8e8a81b2bc1b451ea7bf7110a843ac0fb8a60a83f2f126b26377674dae7"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json architecture validate",
+      "result": "passed",
+      "details": "370 imports, no violations or unknowns"
+    },
+    {
+      "command": "git diff --check",
+      "result": "passed"
+    }
+  ],
+  "security_properties": [
+    "每次 capability 请求携带随机 nonce；签名载荷绑定完整 capabilities。",
+    "无 attestation 保持 handshaken-untrusted，且最多保留 verify。",
+    "旧 trusted_capabilities 参数不能授予信任；非法证明失败关闭。"
+  ],
+  "limitations": [
+    "SSH 公钥配置和宿主私钥必须由外部受保护信任根管理。",
+    "签名证明来源和新鲜挑战，不证明真实 OS 文件隔离、工具权限或身份在宿主中的全部语义。",
+    "现有真实 Hermes ACP 不提供该 bridge attestation，因此 ACP 能力矩阵继续保守。"
+  ]
+}

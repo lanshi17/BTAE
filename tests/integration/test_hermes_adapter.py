@@ -1,5 +1,7 @@
 import json
+import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -22,8 +24,30 @@ def test_unconfigured_hermes_is_explicitly_unsupported():
     assert adapter.dispatch(request()).decision == "unsupported"
 
 
-def test_configured_hermes_requires_and_uses_handshake():
-    adapter = HermesHostAdapter(fake_command(), trusted_capabilities=True)
+def signed_fake_command(key: Path):
+    code = f'''import json, pathlib, subprocess, sys, tempfile
+p=json.load(sys.stdin)
+if p["operation"] == "capabilities":
+ caps={{"protocol_version":"1","trusted_identity":True,"write_isolation":True,"process_group_control":True,"cancellation":True,"operations":["verify"]}}
+ payload={{"protocol_version":"1","nonce":p["nonce"],"capabilities":caps}}
+ with tempfile.TemporaryDirectory() as d:
+  path=pathlib.Path(d)/"payload"
+  path.write_text(json.dumps(payload,ensure_ascii=False,sort_keys=True,separators=(",",":")))
+  subprocess.run(["ssh-keygen","-Y","sign","-q","-n","epe-host-capability","-f",{str(key)!r},str(path)],check=True,capture_output=True)
+  caps["attestation"]={{"identity":"hermes-runner","nonce":p["nonce"],"signature":path.with_name(path.name+".sig").read_text()}}
+  print(json.dumps({{"status":"ok","capabilities":caps}}))
+else:
+ print(json.dumps({{"status":"ok","response":{{"decision":"accepted","reasons":["signed fixture"]}}}}))
+'''
+    return [sys.executable, "-c", code]
+
+
+def test_configured_hermes_requires_and_uses_signed_handshake(tmp_path):
+    key = tmp_path / "host-key"
+    subprocess.run(["ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-f", str(key)], check=True, capture_output=True)
+    config = {"host_trust": {"identities": {"hermes-runner": {
+        "public_key": key.with_suffix(".pub").read_text().strip(), "operations": ["verify"]}}}}
+    adapter = HermesHostAdapter(signed_fake_command(key), attestation_config=config)
     capabilities = adapter.handshake()
     assert capabilities.status == "handshaken"
     assert capabilities.write_isolation is True
@@ -36,6 +60,15 @@ def test_hermes_runs_bridge_in_explicit_repository_directory(tmp_path):
             "if p.get('operation')=='capabilities' else {'status':'ok','response':{'decision':'accepted','reasons':[os.getcwd()]}}))")
     adapter = HermesHostAdapter([sys.executable, "-c", code], cwd=tmp_path)
     assert adapter.dispatch(request()).reasons == [str(tmp_path)]
+
+
+def test_legacy_trusted_flag_does_not_elevate_unsigned_capabilities():
+    code = "import json; print(json.dumps({'status':'ok','capabilities':{'protocol_version':'1','trusted_identity':True,'write_isolation':True,'operations':['start_implementation']}}))"
+    adapter = HermesHostAdapter([sys.executable, "-c", code], trusted_capabilities=True)
+    capabilities = adapter.handshake()
+    assert capabilities.status == "handshaken-untrusted"
+    assert capabilities.operations == ()
+    assert not capabilities.trusted_identity and not capabilities.write_isolation
 
 
 def test_hermes_rejects_handshake_protocol_mismatch():
