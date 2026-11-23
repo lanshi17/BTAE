@@ -6,3 +6,9 @@
 - wheel SHA-256：`f359e28478d94723980b78d1c4b9392481839d62fc0a44e76ca98fda2a303ef7`。
 
 该检查证明发布包包含当前运行时 Schema 和 CLI 入口，不证明 wheel 环境具备 Hermes 身份、工具权限、写入隔离或远程审计。
+
+## Lease Schema follow-up
+
+- 合并基线：`c4fb921`。
+- 重新构建 wheel 并安装到源码目录外的隔离 virtualenv；wheel SHA-256：`981c7f66aa5479b7510adeeb88a94a02a2f451718fc7400b504bc5927b3b64b8`。
+- runtime probe 成功读取 `https://btae.local/schema/lease/v1`；源码外 `epe --format json host capabilities` 退出码 0，Hermes 仍为 `unsupported-unintegrated`。
