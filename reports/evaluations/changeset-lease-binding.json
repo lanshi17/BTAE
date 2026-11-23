@@ -1,0 +1,48 @@
+{
+  "time_utc": "2026-11-23T17:16:54.193820+00:00",
+  "task_id": "TASK-changeset-lease",
+  "git_head": "3e7fc984ac3b31c0f6761f9ae203d2cf85447312",
+  "working_tree_dirty": true,
+  "environment": {
+    "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+    "platform": "Linux-7.0.0-43-generic-x86_64-with-glibc2.43"
+  },
+  "file_sha256": {
+    "src/epe/governance/leases.py": "430a4ac577d3c406eabb0c42a53edceaa653c706bac4c7fdc39718728caf9881",
+    "tests/unit/test_changeset_leases.py": "05fe9aeec4bd07c7eda117f73cebf194a2219e1bf5a080eb59388cf02c64ff0d"
+  },
+  "commands": [
+    {
+      "command": "PYTHONPATH=src pytest -q tests/unit/test_changeset_leases.py",
+      "result": "passed",
+      "details": "4 passed"
+    },
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts=''",
+      "result": "passed",
+      "details": "326 passed in 49.90s"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json policy validate",
+      "result": "passed"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json graph build",
+      "result": "passed",
+      "details": "376 nodes, 494 edges, digest f0c74a515b45a1eaef6468d9868bbda06a4f12152eac82ac675e4ffa917e3fdf"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe.cli --format json architecture validate",
+      "result": "passed",
+      "details": "390 imports, no violations or unknowns"
+    },
+    {
+      "command": "git diff --check",
+      "result": "passed"
+    }
+  ],
+  "security_fact": "lease records whose internal changeset_id differs from their path are rejected by inspect, acquire recovery, renew and release",
+  "limitations": [
+    "This is record integrity, not OS-level write isolation or authenticated identity."
+  ]
+}

@@ -101,6 +101,8 @@ def inspect_lease(root: Path, config: dict[str, Any], changeset_id: str) -> dict
     if not path.exists():
         return None
     value = _read(path)
+    if value["changeset_id"] != changeset_id:
+        raise LeaseError("租约记录与路径 ChangeSet ID 不匹配")
     value = dict(value)
     value["expired"] = _parse_timestamp(value["expires_at"]) <= _now()
     return value
@@ -128,6 +130,8 @@ def acquire_lease(root: Path, config: dict[str, Any], changeset: dict[str, Any],
     with acquire_write_lock(lock):
         if path.exists() or path.is_symlink():
             current = _read(path)
+            if current["changeset_id"] != changeset["id"]:
+                raise LeaseError("租约记录与 ChangeSet ID 不匹配")
             if _parse_timestamp(current["expires_at"]) > _now():
                 raise LeaseConflict("ChangeSet 已有未过期租约")
             path.unlink()
@@ -152,6 +156,8 @@ def renew_lease(root: Path, config: dict[str, Any], changeset: dict[str, Any], o
         if not path.exists():
             raise LeaseNotFound("租约不存在")
         current = _read(path)
+        if current["changeset_id"] != changeset["id"]:
+            raise LeaseError("租约记录与 ChangeSet ID 不匹配")
         if current["lease_id"] != lease_id or current["owner"] != owner:
             raise LeaseConflict("租约身份不匹配")
         if current["revision"] != changeset.get("revision", 1):
@@ -179,6 +185,8 @@ def release_lease(root: Path, config: dict[str, Any], changeset_id: str, owner: 
         if not path.exists():
             return False
         current = _read(path)
+        if current["changeset_id"] != changeset_id:
+            raise LeaseError("租约记录与路径 ChangeSet ID 不匹配")
         if current["lease_id"] != lease_id or current["owner"] != owner:
             raise LeaseConflict("租约身份不匹配")
         path.unlink()
