@@ -11,7 +11,7 @@
 
 `HermesACPAdapter`（`src/epe/adapters/hosts/acp.py`）提供显式 argv 的 ACP `initialize` 探测。握手成功时只返回 `handshaken-untrusted`，进程组控制为本地探针可测；`trusted_identity`、`write_isolation`、`cancellation` 和业务 `operations` 仍保持 false/空集合。它不会创建 session、运行模型或改变默认的 `unsupported-unintegrated` 能力矩阵。
 
-`open_session()` 是单独的探索接口：只发送 `initialize` 和 `session/new`，强制 `mcpServers: []`，返回必须显式关闭的会话句柄。会话句柄的 `prompt(text)` 只允许非空纯文本并返回原始 ACP transport result；它不执行工具、不授予身份，也不是 EPE 操作映射。
+`open_session()` 是单独的探索接口：只发送 `initialize` 和 `session/new`，强制 `mcpServers: []`，返回必须显式关闭的会话句柄。会话句柄的 `prompt(text)` 只允许非空纯文本并返回原始 ACP transport result，`cancel()` 发送 `session/cancel` 通知；它们不执行工具、不授予身份，也不是 EPE 操作映射。真实 Hermes 取消仍未实测，因此矩阵仍为 false。
 
 `HermesHostAdapter` 提供命令数组 + JSON stdin/stdout 的协议桥，先执行 capability handshake，再处理请求。默认 handshake 是 `handshaken-untrusted`：只能用于 verify，不能据此授予写入或可信身份；只有外部配置显式标记 `trusted_capabilities=True` 时，桥才允许声明的写入操作。命令失败、非 JSON 或超时返回明确错误/unsupported。
 
