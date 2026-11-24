@@ -10,6 +10,7 @@ Bottom-Up Traceable Agentic Engineering：自下而上构建、规格约束、�
 
 - [BTAE PRD](intent/PRD-BTAE.md)：用户、问题、产品范围、优先级与发布条件。
 - [BTAE SPEC](intent/requirements/SPEC-BTAE.md)：MVP 数据契约、接口、门禁、证据与验收矩阵。
+- [项目定位与使用说明](architecture/project-positioning.md)：BTAE/EPE 解决的问题、使用者、工作流、能力和边界。
 
 模块与实施：
 
