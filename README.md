@@ -12,6 +12,10 @@
 
 本地回归记录见[2026-11-23 本地复核](reports/acceptance/local-regression-20261123.md)，远程执行记录见[2026-11-23 GitHub Actions 复核](reports/acceptance/remote-ci-20261123.md)，分支治理记录见[2026-11-23 远程分支治理复核](reports/acceptance/remote-governance-20261123.md)，逐包边界见[本地 MVP 完成审计](reports/acceptance/local-mvp-completion-audit-20261122.md)。当前代码基线的本地与 GitHub Actions 检查均已通过；`master` 已配置保护规则，真实 Hermes 权限仍未验证。
 
+## Coding Agent 入口
+
+仓库提供 [BTAE Coding Agent Skill](skills/btae-coding-agent/SKILL.md) 和只读 `btae` stdio MCP 入口。MCP 提供 `btae_project_context`、`btae_design_plan`、`btae_validate_project` 以及章程、规格、架构和 Workflow 资源，让 coding agent 在修改代码前先装配 BTAE 上下文并形成草案追溯计划。配置示例与边界见 [MCP 集成说明](docs/integrations/btae-coding-agent.md)；这些入口不授予审批、写入隔离或宿主权限。
+
 ## 本地运行
 
 MVP 上手和故障恢复步骤见 [使用指南](docs/standards/user-guide-mvp.md) 与 [恢复手册](docs/standards/runbook-recovery.md)。

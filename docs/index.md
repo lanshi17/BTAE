@@ -16,6 +16,7 @@ Bottom-Up Traceable Agentic Engineering：自下而上构建、规格约束、�
 - [模块设计索引](modules/README.md)：9 个逻辑模块的职责、接口、依赖、工作包与验收。
 - [Agent 操作协议](contracts/agent-protocol.md)：宿主适配器请求/响应的最小结构与可信身份边界。
 - [实施计划](../plans/backlog/BTAE-implementation-plan.md)：14 个工作包、里程碑、交付顺序、风险与完成条件。
+- [Coding Agent MCP 入口](integrations/btae-coding-agent.md)：按 BTAE 设计优先、追溯和验证规则接入 coding agent。
 - [工作包细化计划](../plans/backlog/work-packages/README.md)：各 WP 的任务分解、决策项、拟议路径与完成门槛。
 - [计划状态索引](../plans/README.md)：计划的执行与归档位置。
 

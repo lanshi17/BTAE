@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "task_id": "TASK-btae-coding-agent-mcp",
+  "time_utc": "2026-11-24T02:54:50Z",
+  "source_state": "working tree after implementation; commit recorded when published",
+  "artifacts": [
+    "skills/btae-coding-agent/SKILL.md",
+    "skills/btae-coding-agent/agents/openai.yaml",
+    "skills/btae-coding-agent/references/mcp-integration.md",
+    "src/epe/mcp_server.py",
+    "mcp/btae_server.py",
+    "docs/integrations/btae-coding-agent.md"
+  ],
+  "commands": [
+    {
+      "command": "skill-creator/scripts/quick_validate.py skills/btae-coding-agent",
+      "result": "passed",
+      "details": "Skill is valid"
+    },
+    {
+      "command": "PYTHONPATH=src pytest -q -o addopts=''",
+      "result": "passed",
+      "details": "361 passed in 48.34s"
+    },
+    {
+      "command": "python -m py_compile src/epe/mcp_server.py mcp/btae_server.py",
+      "result": "passed"
+    },
+    {
+      "command": "wheel external venv: btae-mcp initialize protocolVersion=2025-06-18",
+      "result": "passed",
+      "details": "wheel-mcp-ok"
+    }
+  ],
+  "installed_entry": {
+    "codex_skill": "/home/lanshi/.codex/skills/btae-coding-agent",
+    "codex_mcp_config": "/home/lanshi/.codex/config.toml",
+    "server": "btae",
+    "transport": "stdio"
+  },
+  "limitations": [
+    "The entrypoint is read-only planning/context assistance; it does not replace EPE gates or external approvals.",
+    "The local Codex configuration is environment-specific and the repository documents the portable absolute-path snippet."
+  ]
+}
