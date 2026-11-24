@@ -9,6 +9,8 @@ verification_status: pending
 
 # BTAE 总体架构
 
+项目的定位、用途、当前能力矩阵和限制见[项目定位与使用说明](project-positioning.md)；本文聚焦总体架构和责任边界。
+
 ## 1. 定位与目标
 
 BTAE（Bottom-Up Traceable Agentic Engineering，自下而上的可追溯智能体工程模式）是一套约束 AI 如何理解项目、设计代码、执行开发、验证结果和维护工程知识的通用方法。
