@@ -4,7 +4,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from epe.mcp_server import dispatch, design_plan, project_context
+from epe.adapters.mcp_server import dispatch, design_plan, project_context
 
 
 ROOT = Path(__file__).resolve().parents[2]

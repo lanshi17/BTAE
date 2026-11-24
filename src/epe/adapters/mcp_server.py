@@ -6,6 +6,7 @@ surfaces. It does not write project authority files or infer approvals.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import subprocess
@@ -48,7 +49,7 @@ def _read_source(root: Path, relative: str, source_type: str) -> dict[str, Any]:
     return {
         "path": relative,
         "source_type": source_type,
-        "sha256": __import__("hashlib").sha256(data).hexdigest(),
+        "sha256": hashlib.sha256(data).hexdigest(),
         "content": data[:MAX_SOURCE_BYTES].decode("utf-8", errors="replace"),
         "truncated": len(data) > MAX_SOURCE_BYTES,
     }

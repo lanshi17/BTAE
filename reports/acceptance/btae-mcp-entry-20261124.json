@@ -7,7 +7,7 @@
     "skills/btae-coding-agent/SKILL.md",
     "skills/btae-coding-agent/agents/openai.yaml",
     "skills/btae-coding-agent/references/mcp-integration.md",
-    "src/epe/mcp_server.py",
+    "src/epe/adapters/mcp_server.py",
     "mcp/btae_server.py",
     "docs/integrations/btae-coding-agent.md"
   ],
@@ -25,6 +25,11 @@
     {
       "command": "python -m py_compile src/epe/mcp_server.py mcp/btae_server.py",
       "result": "passed"
+    },
+    {
+      "command": "PYTHONPATH=src python -m epe --format json graph build && PYTHONPATH=src python -m epe --format json architecture validate",
+      "result": "passed",
+      "details": "MCP adapter is assigned to MOD-009 and architecture import boundaries pass"
     },
     {
       "command": "wheel external venv: btae-mcp initialize protocolVersion=2025-06-18",
