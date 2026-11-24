@@ -20,6 +20,62 @@
 
 MVP 上手和故障恢复步骤见 [使用指南](docs/standards/user-guide-mvp.md) 与 [恢复手册](docs/standards/runbook-recovery.md)。
 
+### 安装
+
+推荐在仓库目录创建虚拟环境，避免修改系统 Python：
+
+```bash
+cd /mnt/data/Projects/Systems/01_btae
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install -e '.[test]'
+```
+
+安装后可直接使用 `epe` 和 `btae-mcp` 命令。只需要运行 CLI 时也可以跳过安装，使用下面的 `PYTHONPATH=src` 方式。
+
+### 启动 BTAE MCP
+
+安装后的 stdio MCP 服务：
+
+```bash
+cd /mnt/data/Projects/Systems/01_btae
+BTAE_ROOT="$PWD" .venv/bin/btae-mcp
+```
+
+源码树无需安装时：
+
+```bash
+cd /mnt/data/Projects/Systems/01_btae
+BTAE_ROOT="$PWD" python3 mcp/btae_server.py
+```
+
+MCP 服务通过 stdin/stdout 使用 JSON-RPC；启动后由 MCP 客户端发送 `initialize`。快速烟测：
+
+```bash
+printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18"}}' \
+  | BTAE_ROOT="$PWD" .venv/bin/btae-mcp
+```
+
+要让 Codex 自动发现 Skill，将仓库 Skill 链接到用户 Skill 目录（已存在时保留原目录并手工合并）：
+
+```bash
+codex_home="${CODEX_HOME:-$HOME/.codex}"
+mkdir -p "$codex_home/skills"
+ln -s "$PWD/skills/btae-coding-agent" "$codex_home/skills/btae-coding-agent"
+```
+
+然后将下面的 MCP 配置加入 `~/.codex/config.toml`，把路径替换为实际仓库目录：
+
+```toml
+[mcp_servers.btae]
+type = "stdio"
+command = "/absolute/path/to/01_btae/.venv/bin/btae-mcp"
+args = []
+env = { BTAE_ROOT = "/absolute/path/to/01_btae" }
+```
+
+客户端启动后先调用 `btae_project_context`，再调用 `btae_design_plan`；实现完成前调用 `btae_validate_project`。完整工具、资源和权限边界见 [MCP 集成说明](docs/integrations/btae-coding-agent.md)。
+
 无需安装到系统环境时可使用 `PYTHONPATH=src`：
 
 ```bash
