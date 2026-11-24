@@ -14,6 +14,22 @@
 
 ## Codex 配置
 
+### 快速安装 Skill
+
+从 GitHub 安装到用户级 agent 目录：
+
+```bash
+npx skills add lanshi17/BTAE --skill btae-coding-agent -g -y
+```
+
+从当前本地仓库安装：
+
+```bash
+npx skills add . --skill btae-coding-agent -g -y
+```
+
+`-g` 表示用户级安装；去掉它即可安装到当前项目。`--skill btae-coding-agent` 避免把仓库中的其他 Skill 一并安装，`-y` 用于非交互环境。
+
 将下面的绝对路径替换为本仓库路径后，加入 `~/.codex/config.toml`：
 
 ```toml

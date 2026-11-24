@@ -33,6 +33,26 @@ python -m pip install -e '.[test]'
 
 安装后可直接使用 `epe` 和 `btae-mcp` 命令。只需要运行 CLI 时也可以跳过安装，使用下面的 `PYTHONPATH=src` 方式。
 
+### 快速安装 Skill
+
+如果只想快速安装 Skill，可直接运行：
+
+```bash
+npx skills add lanshi17/BTAE --skill btae-coding-agent -g -y
+```
+
+安装到当前项目而不是用户目录时，去掉 `-g`：
+
+```bash
+npx skills add lanshi17/BTAE --skill btae-coding-agent -y
+```
+
+从本地工作树安装（适合修改 Skill 后测试）：
+
+```bash
+npx skills add . --skill btae-coding-agent -g -y
+```
+
 ### 启动 BTAE MCP
 
 安装后的 stdio MCP 服务：
