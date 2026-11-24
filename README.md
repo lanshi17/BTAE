@@ -12,9 +12,69 @@
 
 本地回归记录见[2026-11-23 本地复核](reports/acceptance/local-regression-20261123.md)，远程执行记录见[2026-11-23 GitHub Actions 复核](reports/acceptance/remote-ci-20261123.md)，分支治理记录见[2026-11-23 远程分支治理复核](reports/acceptance/remote-governance-20261123.md)，逐包边界见[本地 MVP 完成审计](reports/acceptance/local-mvp-completion-audit-20261122.md)。当前代码基线的本地与 GitHub Actions 检查均已通过；`master` 已配置保护规则，真实 Hermes 权限仍未验证。
 
+## Coding Agent 入口
+
+仓库提供 [BTAE Coding Agent Skill](skills/btae-coding-agent/SKILL.md) 和只读 `btae` stdio MCP 入口。MCP 提供 `btae_project_context`、`btae_design_plan`、`btae_validate_project` 以及章程、规格、架构和 Workflow 资源，让 coding agent 在修改代码前先装配 BTAE 上下文并形成草案追溯计划。配置示例与边界见 [MCP 集成说明](docs/integrations/btae-coding-agent.md)；这些入口不授予审批、写入隔离或宿主权限。
+
 ## 本地运行
 
 MVP 上手和故障恢复步骤见 [使用指南](docs/standards/user-guide-mvp.md) 与 [恢复手册](docs/standards/runbook-recovery.md)。
+
+### 安装
+
+推荐在仓库目录创建虚拟环境，避免修改系统 Python：
+
+```bash
+cd /mnt/data/Projects/Systems/01_btae
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install -e '.[test]'
+```
+
+安装后可直接使用 `epe` 和 `btae-mcp` 命令。只需要运行 CLI 时也可以跳过安装，使用下面的 `PYTHONPATH=src` 方式。
+
+### 启动 BTAE MCP
+
+安装后的 stdio MCP 服务：
+
+```bash
+cd /mnt/data/Projects/Systems/01_btae
+BTAE_ROOT="$PWD" .venv/bin/btae-mcp
+```
+
+源码树无需安装时：
+
+```bash
+cd /mnt/data/Projects/Systems/01_btae
+BTAE_ROOT="$PWD" python3 mcp/btae_server.py
+```
+
+MCP 服务通过 stdin/stdout 使用 JSON-RPC；启动后由 MCP 客户端发送 `initialize`。快速烟测：
+
+```bash
+printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18"}}' \
+  | BTAE_ROOT="$PWD" .venv/bin/btae-mcp
+```
+
+要让 Codex 自动发现 Skill，将仓库 Skill 链接到用户 Skill 目录（已存在时保留原目录并手工合并）：
+
+```bash
+codex_home="${CODEX_HOME:-$HOME/.codex}"
+mkdir -p "$codex_home/skills"
+ln -s "$PWD/skills/btae-coding-agent" "$codex_home/skills/btae-coding-agent"
+```
+
+然后将下面的 MCP 配置加入 `~/.codex/config.toml`，把路径替换为实际仓库目录：
+
+```toml
+[mcp_servers.btae]
+type = "stdio"
+command = "/absolute/path/to/01_btae/.venv/bin/btae-mcp"
+args = []
+env = { BTAE_ROOT = "/absolute/path/to/01_btae" }
+```
+
+客户端启动后先调用 `btae_project_context`，再调用 `btae_design_plan`；实现完成前调用 `btae_validate_project`。完整工具、资源和权限边界见 [MCP 集成说明](docs/integrations/btae-coding-agent.md)。
 
 无需安装到系统环境时可使用 `PYTHONPATH=src`：
 
@@ -44,6 +104,8 @@ PYTHONPATH=src pytest -q
 审批导入会追加本地 hash-chain 审计事件，可用 `epe audit verify` 检查；这能发现篡改但不替代远程不可变审计或宿主权限保护。
 
 可用 `epe policy validate` 在运行任务前统一检查架构、验证和 Workflow 配置。
+
+架构策略的 `exceptions` 只能引用注册快照中 `design_status: approved` 且仍在复查期限内的 `ADR-*` 实体，并同时匹配规则 ID 与当前依赖边的 `from`/`to` 范围。范围未命中的例外不会出现在 `exceptions_applied`，原规则继续生效；ADR 状态、复查时间或策略结构无效时命令返回 `error`。`epe architecture diff` 会在 `expected_architecture` 中保留同一份应用记录。
 
 也可以在虚拟环境中执行 `pip install -e .`，随后直接使用 `epe` 命令。`epe init` 只创建缺失的治理配置，发现内容冲突会在写入前返回 `blocked`，不会覆盖既有文件。
 

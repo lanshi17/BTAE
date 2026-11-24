@@ -1,0 +1,4 @@
+interface:
+  display_name: "BTAE Coding Agent"
+  short_description: "让 Coding Agent 按 BTAE 设计代码项目并建立证据"
+  default_prompt: "使用 $btae-coding-agent 按 BTAE 先设计、再实现并建立追溯证据。"

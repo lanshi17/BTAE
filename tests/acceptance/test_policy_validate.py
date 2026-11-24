@@ -16,7 +16,7 @@ def test_policy_validate_reports_unknown_fields(tmp_path, capsys):
     capsys.readouterr()
     path = tmp_path / "engineering/policies/architecture.yaml"
     path.write_text("schema_version: 1\nforbidden_dependencies: []\nunknown: true\n")
-    assert main(["--root", str(tmp_path), "--format", "json", "policy", "validate"]) == 3
+    assert main(["--root", str(tmp_path), "--format", "json", "policy", "validate"]) == 2
     result = json.loads(capsys.readouterr().out)
     assert result["status"] == "error"
     assert any(d["code"] == "EPE-POLICY-INVALID" for d in result["diagnostics"])

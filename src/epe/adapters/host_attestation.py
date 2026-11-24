@@ -19,8 +19,12 @@ def capability_payload(capabilities: dict[str, Any], nonce: str) -> bytes:
     if not isinstance(capabilities, dict) or not isinstance(nonce, str) or not nonce:
         raise ValueError("invalid capability attestation input")
     unsigned = {key: value for key, value in capabilities.items() if key != "attestation"}
-    return json.dumps({"protocol_version": "1", "nonce": nonce, "capabilities": unsigned},
-                      ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    try:
+        encoded = json.dumps({"protocol_version": "1", "nonce": nonce, "capabilities": unsigned},
+                             ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("能力证明载荷必须是有限 JSON") from exc
+    return encoded.encode("utf-8")
 
 
 def verify_capability_attestation(capabilities: dict[str, Any], nonce: str,
@@ -36,6 +40,11 @@ def verify_capability_attestation(capabilities: dict[str, Any], nonce: str,
         return None, "能力证明身份格式非法"
     if attestation.get("nonce") != nonce:
         return None, "能力证明 nonce 不匹配"
+    operations = capabilities.get("operations")
+    if (not isinstance(operations, list)
+            or any(not isinstance(operation, str) or not operation for operation in operations)
+            or len(set(operations)) != len(operations)):
+        return None, "能力证明操作字段无效"
     signature = attestation.get("signature")
     if (not isinstance(signature, str)
             or not signature.startswith("-----BEGIN SSH SIGNATURE-----\n")
@@ -53,6 +62,12 @@ def verify_capability_attestation(capabilities: dict[str, Any], nonce: str,
     if (not isinstance(allowed_operations, list) or not allowed_operations
             or any(not isinstance(operation, str) or not operation for operation in allowed_operations)):
         return None, "能力证明身份缺少允许操作配置"
+    if not set(operations).issubset(set(allowed_operations)):
+        return None, "能力证明操作超出受信范围"
+    try:
+        payload = capability_payload(capabilities, nonce)
+    except (TypeError, ValueError):
+        return None, "能力证明载荷无效"
     try:
         with tempfile.TemporaryDirectory(prefix="epe-host-attestation-") as directory:
             allowed = Path(directory) / "allowed_signers"
@@ -62,7 +77,7 @@ def verify_capability_attestation(capabilities: dict[str, Any], nonce: str,
             result = subprocess.run(
                 ["ssh-keygen", "-Y", "verify", "-f", str(allowed), "-I", principal,
                  "-n", "epe-host-capability", "-s", str(signed)],
-                input=capability_payload(capabilities, nonce), stdout=subprocess.PIPE,
+                input=payload, stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE, timeout=10,
             )
     except (OSError, UnicodeError, ValueError, subprocess.SubprocessError):

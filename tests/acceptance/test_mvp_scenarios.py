@@ -39,7 +39,7 @@ def test_invalid_check_configuration_cannot_report_pass(tmp_path, capsys):
     _project(tmp_path, capsys)
     (tmp_path / "engineering/policies/verification.yaml").write_text(
         'checks:\n  - id: OK\n    command: [python, -c, pass]\n  - id: BAD\n    command: bad\n', encoding="utf-8")
-    assert main(["--root", str(tmp_path), "--format", "json", "verify", "TASK-001"]) == 3
+    assert main(["--root", str(tmp_path), "--format", "json", "verify", "TASK-001"]) == 2
     result = json.loads(capsys.readouterr().out)
     assert result["status"] == "error"
     assert not result["evidence_ids"]

@@ -26,6 +26,8 @@ def validate_architecture(snapshot: dict[str, Any], policy: dict[str, Any] | Non
         ds.append(Diagnostic("EPE-ARCH-CYCLE", Severity.ERROR, "发现依赖循环: " + " -> ".join(cycle)))
     forbidden = policy.get("forbidden_dependencies", []) or []
     exceptions = valid_exceptions or []
+    applied_exceptions: list[dict[str, Any]] = []
+    applied_exception_keys: set[str] = set()
     reported = set()
     for edge in snapshot.get("edges", []):
         if edge.get("relation") != "depends_on": continue
@@ -38,6 +40,10 @@ def validate_architecture(snapshot: dict[str, Any], policy: dict[str, Any] | Non
                                           and fnmatch(frm, exception.get("from", ""))
                                           and fnmatch(to, exception.get("to", ""))), None)
                 if matched_exception is not None:
+                    exception_key = sha256_json(matched_exception)
+                    if exception_key not in applied_exception_keys:
+                        applied_exception_keys.add(exception_key)
+                        applied_exceptions.append(matched_exception)
                     continue
                 key = (rule.get("id", "ARCH-FORBIDDEN"), frm, to)
                 if key in reported: continue
@@ -46,7 +52,7 @@ def validate_architecture(snapshot: dict[str, Any], policy: dict[str, Any] | Non
                 ds.append(Diagnostic("EPE-ARCH-FORBIDDEN", Severity.ERROR, f"禁止依赖: {frm} -> {to}"))
     status = "fail" if any(d.is_error for d in ds) else ("unknown" if blind_spots else "pass")
     return {"status": status, "cycles": cycles, "violations": violations, "unknowns": blind_spots,
-            "module_coverage": coverage, "exceptions_applied": exceptions}, ds
+            "module_coverage": coverage, "exceptions_applied": applied_exceptions}, ds
 
 
 def diff_architecture_snapshots(previous: dict[str, Any], current: dict[str, Any]) -> dict[str, Any]:

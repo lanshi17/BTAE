@@ -6,7 +6,8 @@ import os
 import re
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from fnmatch import fnmatch
 from importlib.resources import files
 from pathlib import Path
 from typing import Any, Callable
@@ -100,7 +101,14 @@ def _print(result: CommandResult, fmt: str) -> int:
     codes = {d.get("code") for d in obj["diagnostics"]}
     if "EPE-WRITE-CONFLICT" in codes:
         return 5
-    parameter_prefixes = ("EPE-CONFIG", "EPE-POLICY-CONFIG", "EPE-TASK-TYPE", "EPE-TASK-ID", "EPE-TASK-STATUS", "EPE-TASK-REQUIRED", "EPE-TASK-RISK", "EPE-TASK-ACCEPTANCE", "EPE-TASK-OBJECTIVE", "EPE-TASK-TARGET", "EPE-TASK-CHANGESET", "EPE-TASK-REVISION", "EPE-TASK-WORKFLOW", "EPE-PATH-OUTSIDE", "EPE-PATH-SYMLINK", "EPE-ENTITY-ID")
+    parameter_prefixes = (
+        "EPE-CONFIG", "EPE-POLICY-CONFIG", "EPE-POLICY-INVALID", "EPE-POLICY-TYPE", "EPE-POLICY-READ",
+        "EPE-POLICY-SCHEMA", "EPE-TASK-TYPE", "EPE-TASK-ID", "EPE-TASK-STATUS", "EPE-TASK-REQUIRED",
+        "EPE-TASK-RISK", "EPE-TASK-ACCEPTANCE", "EPE-TASK-OBJECTIVE", "EPE-TASK-TARGET",
+        "EPE-TASK-CHANGESET", "EPE-TASK-REVISION", "EPE-TASK-WORKFLOW", "EPE-TASK-UNKNOWN-FIELD",
+        "EPE-VERIFY-CONFIG", "EPE-VERIFY-NO-CHECKS",
+        "EPE-CHANGESET-ID", "EPE-PATH-OUTSIDE", "EPE-PATH-SYMLINK", "EPE-ENTITY-ID", "EPE-DESIGN-ID",
+    )
     if obj["status"] == "error" and any(str(code).startswith(parameter_prefixes) for code in codes):
         return 2
     return EXIT_CODES.get(obj["status"], 3)
@@ -388,6 +396,8 @@ def cmd_task_transition(args) -> CommandResult:
 def cmd_changeset_transition(args) -> CommandResult:
     root = _root(args.root); config, failure = _config_or_result(root, "changeset transition")
     if failure: return failure
+    if not re.fullmatch(r"CHANGE-[A-Z0-9][A-Z0-9_-]*", args.changeset_id):
+        return _result("changeset transition", "error", [Diagnostic("EPE-CHANGESET-ID", Severity.ERROR, "ChangeSet ID 格式非法", entity_id=args.changeset_id)])
     try:
         change_path, _ = changeset_paths(root, config, args.changeset_id)
         lock = _safe_input(root, config.get("storage", {}).get("derived", ".engineering") + "/.write.lock")
@@ -553,6 +563,8 @@ def cmd_changeset_lease(args) -> CommandResult:
     config, failure = _config_or_result(root, "changeset lease")
     if failure:
         return failure
+    if not re.fullmatch(r"CHANGE-[A-Z0-9][A-Z0-9_-]*", args.changeset_id):
+        return _result("changeset lease", "error", [Diagnostic("EPE-CHANGESET-ID", Severity.ERROR, "ChangeSet ID 格式非法", entity_id=args.changeset_id)])
     try:
         path, _ = changeset_paths(root, config, args.changeset_id)
         if path.is_symlink() or not path.exists():
@@ -743,7 +755,7 @@ def cmd_architecture(args) -> CommandResult:
     snap, sds = load_graph(root, config)
     if snap is None: return _result("architecture validate", "error", sds)
     data, ds = _check_architecture_policy(root, config, snap)
-    return _result("architecture validate", "error" if any(d.code.startswith(("EPE-ARCH-POLICY", "EPE-YAML")) for d in ds) else ("blocked" if any(d.is_error for d in ds) else "passed"), sds + ds, data)
+    return _result("architecture validate", "error" if any(d.code.startswith(("EPE-ARCH-POLICY", "EPE-ARCH-EXCEPTION", "EPE-YAML")) for d in ds) else ("blocked" if any(d.is_error for d in ds) else "passed"), sds + ds, data)
 
 
 def cmd_architecture_diff(args) -> CommandResult:
@@ -762,6 +774,7 @@ def cmd_architecture_diff(args) -> CommandResult:
         "violations": expected_report.get("violations", []),
         "unknowns": expected_report.get("unknowns", []),
         "module_coverage": expected_report.get("module_coverage"),
+        "exceptions_applied": expected_report.get("exceptions_applied", []),
     }
     diagnostics = previous_diagnostics + policy_diagnostics
     if any(d.is_error for d in policy_diagnostics):
@@ -788,7 +801,7 @@ def _check_architecture_policy(root: Path, config: dict[str, Any], snap: dict) -
             or any(not isinstance(rule, dict) or not isinstance(rule.get("from"), str) or not rule["from"].strip()
                    or not isinstance(rule.get("to"), str) or not rule["to"].strip() for rule in policy.get("forbidden_dependencies", []))):
         return {}, [Diagnostic("EPE-ARCH-POLICY", Severity.ERROR, "架构策略缺少有效 forbidden_dependencies 规则")]
-    valid_exceptions, exception_diagnostics = _effective_architecture_exceptions(root, config, policy)
+    valid_exceptions, exception_diagnostics = _effective_architecture_exceptions(root, config, policy, snap)
     if any(d.is_error for d in exception_diagnostics):
         return {}, exception_diagnostics
     report, diagnostics = validate_architecture(snap, policy, valid_exceptions)
@@ -800,7 +813,7 @@ def _check_architecture_policy(root: Path, config: dict[str, Any], snap: dict) -
     return report, diagnostics
 
 
-def _effective_architecture_exceptions(root: Path, config: dict[str, Any], policy: dict[str, Any]) -> tuple[list[dict[str, Any]], list[Diagnostic]]:
+def _effective_architecture_exceptions(root: Path, config: dict[str, Any], policy: dict[str, Any], snapshot: dict[str, Any]) -> tuple[list[dict[str, Any]], list[Diagnostic]]:
     """Resolve only current, approved ADR-backed architecture exceptions."""
     exceptions = policy.get("exceptions", []) or []
     if not exceptions:
@@ -811,12 +824,19 @@ def _effective_architecture_exceptions(root: Path, config: dict[str, Any], polic
     rule_ids = {str(rule.get("id", "ARCH-FORBIDDEN")) for rule in policy.get("forbidden_dependencies", []) if isinstance(rule, dict)}
     now = datetime.now(timezone.utc)
     valid: list[dict[str, Any]] = []
+    seen_exception_ids: set[str] = set()
     for exception in exceptions:
         if not isinstance(exception, dict):
             diagnostics.append(Diagnostic("EPE-ARCH-EXCEPTION", Severity.ERROR, "架构例外必须为对象"))
             continue
         rule_id = exception.get("rule_id")
         adr_id = exception.get("adr")
+        exception_id = exception.get("id")
+        if isinstance(exception_id, str) and exception_id in seen_exception_ids:
+            diagnostics.append(Diagnostic("EPE-ARCH-EXCEPTION", Severity.ERROR, f"例外 ID 重复: {exception_id}"))
+            continue
+        if isinstance(exception_id, str):
+            seen_exception_ids.add(exception_id)
         if rule_id not in rule_ids:
             diagnostics.append(Diagnostic("EPE-ARCH-EXCEPTION", Severity.ERROR, f"例外引用未知规则: {rule_id}"))
             continue
@@ -826,14 +846,29 @@ def _effective_architecture_exceptions(root: Path, config: dict[str, Any], polic
             continue
         try:
             expires = datetime.fromisoformat(str(exception.get("review_until")).replace("Z", "+00:00"))
-            if expires.tzinfo is None or expires.utcoffset() is None:
-                raise ValueError("review_until 必须带时区")
+            if expires.tzinfo is None or expires.utcoffset() != timedelta(0):
+                raise ValueError("review_until 必须为 UTC 时区")
             expires = expires.astimezone(timezone.utc)
         except (TypeError, ValueError):
             diagnostics.append(Diagnostic("EPE-ARCH-EXCEPTION", Severity.ERROR, f"例外复查期限无效: {exception.get('review_until')}"))
             continue
         if expires <= now:
             diagnostics.append(Diagnostic("EPE-ARCH-EXCEPTION", Severity.ERROR, f"例外已过期: {exception.get('id')}"))
+            continue
+        rule = next((candidate for candidate in policy.get("forbidden_dependencies", [])
+                     if isinstance(candidate, dict)
+                     and candidate.get("id", "ARCH-FORBIDDEN") == rule_id), None)
+        if rule is None:
+            continue
+        if not any(
+            edge.get("relation") == "depends_on"
+            and fnmatch(str(edge.get("from", "")), str(rule.get("from", "")))
+            and fnmatch(str(edge.get("to", "")), str(rule.get("to", "")))
+            and fnmatch(str(edge.get("from", "")), str(exception.get("from", "")))
+            and fnmatch(str(edge.get("to", "")), str(exception.get("to", "")))
+            for edge in snapshot.get("edges", [])
+            if isinstance(edge, dict)
+        ):
             continue
         valid.append(exception)
     return valid, diagnostics
@@ -997,7 +1032,12 @@ def cmd_check(args) -> CommandResult:
     evidence_ds += _check_evidence_audit(root, config, task_id, evidences)
     status, gate_ds = finalize_gate(task, design_ok, mapping_ok, arch_ok, evidences, scope_ok, required_checks)
     all_ds = tds + built.diagnostics + design_ds + pds + map_ds + gds + arch_ds + scope_ds + policy_ds + evidence_ds + gate_ds
-    if any(d.is_error for d in tds + gds + policy_ds + evidence_ds): status = "error"
+    architecture_configuration_error = any(
+        d.is_error and d.code.startswith(("EPE-ARCH-POLICY", "EPE-ARCH-EXCEPTION", "EPE-YAML"))
+        for d in arch_ds
+    )
+    if any(d.is_error for d in tds + gds + policy_ds + evidence_ds) or architecture_configuration_error:
+        status = "error"
     return _result("check", status, all_ds, {"task_id": task_id, "design_ok": design_ok, "mapping_ok": mapping_ok, "architecture_ok": arch_ok, "evidence": evidences}, [e["id"] for e in evidences])
 
 
