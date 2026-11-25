@@ -187,6 +187,15 @@ def _run_epe(root: Path, command: list[str]) -> dict[str, Any]:
     return {"argv": command, "exit_code": process.returncode, "result": result, "stderr": process.stderr}
 
 
+def _check_failed(item: dict[str, Any]) -> bool:
+    if item.get("status") == "skipped":
+        return False
+    if item.get("status") == "error" or item.get("exit_code") not in (0, None):
+        return True
+    result = item.get("result")
+    return not result or result.get("status") in {"error", "blocked"}
+
+
 def validate_project(arguments: dict[str, Any]) -> dict[str, Any]:
     root = _root(arguments.get("root"))
     checks = [_run_epe(root, ["policy", "validate"]), _run_epe(root, ["inspect"])]
@@ -195,8 +204,8 @@ def validate_project(arguments: dict[str, Any]) -> dict[str, Any]:
         checks.append(_run_epe(root, ["architecture", "validate"]))
     else:
         checks.append({"argv": ["architecture", "validate"], "status": "skipped", "reason": "no current graph snapshot"})
-    errors = [item for item in checks if item.get("status") == "error" or item.get("result", {}).get("status") == "error"]
-    return {"status": "error" if errors else "checked", "root": str(root), "checks": checks, "write_effects": "none"}
+    failures = [item for item in checks if _check_failed(item)]
+    return {"status": "error" if failures else "checked", "root": str(root), "checks": checks, "write_effects": "none"}
 
 
 TOOLS = [
