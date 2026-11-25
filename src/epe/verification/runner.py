@@ -75,6 +75,9 @@ def load_required_checks(root: Path, config: dict[str, Any]) -> tuple[list[dict[
                 raise ValueError
         except (ValueError, TypeError):
             return [], [Diagnostic("EPE-VERIFY-CONFIG", Severity.ERROR, f"检查超时必须是正有限数: {check['id']}", path=str(rel))]
+        expected_exit_code = check.get("expected_exit_code", 0)
+        if type(expected_exit_code) is not int:
+            return [], [Diagnostic("EPE-VERIFY-CONFIG", Severity.ERROR, f"expected_exit_code 必须是整数: {check['id']}", path=str(rel))]
         allowed_env = check.get("allowed_env")
         if allowed_env is not None and (not isinstance(allowed_env, list)
                 or any(not isinstance(name, str) or not name for name in allowed_env)
@@ -128,12 +131,18 @@ def _result_from_process(proc, check: dict[str, Any], xml_path: Path | None = No
                     counts["passed"] += 1
             if counts["failed"]: return "failed", "test_failure_in_report", counts
             if not counts["passed"]: return "error", "test_execution_unconfirmed", counts
-            if proc.returncode != 0: return "error", "pytest_nonzero_exit", counts
+            expected = check.get("expected_exit_code", 0)
+            if proc.returncode != expected: return "failed", _exit_reason(expected), counts
             return "passed", None, counts
         except (OSError, ET.ParseError, ValueError):
             return "error", "test_report_unavailable", None
-    if proc.returncode != 0: return "failed", "nonzero_exit", None
+    expected = check.get("expected_exit_code", 0)
+    if proc.returncode != expected: return "failed", _exit_reason(expected), None
     return "passed", None, None
+
+
+def _exit_reason(expected: int) -> str:
+    return "nonzero_exit" if expected == 0 else "unexpected_exit_code"
 
 
 def _redact(text: str) -> str:
@@ -266,7 +275,7 @@ def run_checks(root: Path, config: dict[str, Any], task_id: str | None = None, c
             }
             if pytest_check:
                 provenance["test_protocol"] = "pytest-junit-v1"
-            evidence = Evidence(evidence_id, run_id, task_id, changeset_id, list(check.get("target_entities", [])), check_id, str(check.get("version", "1")), argv, str(root), started, now(clock), proc.returncode, reason, result, validity, after.to_dict(), artifacts, {"python": sys.version.split()[0], "os": platform.platform()}, provenance)
+            evidence = Evidence(evidence_id, run_id, task_id, changeset_id, list(check.get("target_entities", [])), check_id, str(check.get("version", "1")), argv, str(root), started, now(clock), proc.returncode, check.get("expected_exit_code", 0), reason, result, validity, after.to_dict(), artifacts, {"python": sys.version.split()[0], "os": platform.platform()}, provenance)
             evidence_bytes = (json.dumps(evidence.to_dict(), ensure_ascii=False, sort_keys=True, indent=2) + "\n").encode("utf-8")
             bundle_files["evidence.json"] = evidence_bytes
             artifact_store.publish_bundle(run_dir_relative, bundle_files)
@@ -369,7 +378,7 @@ def evidence_validity(root: Path, config: dict[str, Any], evidence: dict[str, An
         if (required_check.get("result_parser") != "pytest" or not isinstance(provenance, dict)
                 or provenance.get("test_protocol") != "pytest-junit-v1"
                 or not isinstance(run_id, str) or not re.fullmatch(r"RUN-[0-9a-f]{32}", run_id)
-                or evidence.get("exit_code") != 0 or evidence.get("command") != required_check.get("command")):
+                or evidence.get("exit_code") != required_check.get("expected_exit_code", 0) or evidence.get("command") != required_check.get("command")):
             return "unknown"
         report_dir = root / config.get("storage", {}).get("evidence", "engineering/evidence") / run_id
         expected_xml = f"--junitxml={(report_dir / 'pytest-result.xml').resolve()}"

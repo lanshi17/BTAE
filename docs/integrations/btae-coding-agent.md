@@ -50,3 +50,30 @@ env = { BTAE_ROOT = "/absolute/path/to/01_btae" }
 4. 真实测试、Evidence、审批和最终门禁仍由仓库 EPE CLI 与 CI 负责，MCP 结果不能替代它们。
 
 Skill 入口位于 [`skills/btae-coding-agent`](../../skills/btae-coding-agent)，可复制到目标 agent 的 skills 目录或用 `$btae-coding-agent` 显式调用。
+
+## 两种运行模式
+
+Skill 启动时先查看宿主的工具列表。`btae_project_context` 不在列表中就不要调用，直接记录 `repo-native`；在列表中则调用一次，并把结果写进任务记录：
+
+- `mcp`：工具返回有界来源（仅限 BTAE 自身仓库布局）时使用。
+- `repo-native`：工具缺失、未配置、调用报错，或返回 `status: incomplete` 且无来源（普通目标仓库的常态）时使用降级路径：`AGENTS.md` + 模块文档 + `git status/diff` 替代上下文，任务记录模板替代设计草案，仓库原生类型/测试/lint 替代 `btae_validate_project`。
+
+记录格式为 `Tooling: mcp | repo-native (client=<agent runtime> <version>, date=<YYYY-MM-DD>)`；`client` 是 agent runtime 的名称和版本，不是模型厂商。`git check-ignore -v` 对可提交路径返回 1 属正常结果，返回 0 才表示命中忽略规则。
+
+MCP 只提供上下文与草案，不构成批准、写入隔离、宿主信任或门禁通过。
+
+## 目标仓库引导
+
+Skill 附带最小模板 [AGENTS.md](../../skills/btae-coding-agent/templates/AGENTS.md)、[SPEC.md](../../skills/btae-coding-agent/templates/SPEC.md)、[task-record.md](../../skills/btae-coding-agent/templates/task-record.md) 和 [ADR.md](../../skills/btae-coding-agent/templates/ADR.md)，仅在用户明确要求或目标仓库确实没有权威文档时使用。新建权威文档前必须用 `git check-ignore -v <path>` 确认可提交；优先复用已有规划位置，不在普通仓库中预建 `docs/intent/`、`engineering/`。
+
+## 变更分级与接管
+
+- T1：单文件低风险，或纯文档且不改可执行面、契约、Schema 或权威内容；记录头部 + 目标 + 1 条验收 + 1 条检查，≤ 25 行。
+- T2（默认）：多文件模块改动；修改 `AGENTS.md`、`SPEC`、ADR、协议本身或机器契约即使没有代码改动也属于 T2；新增或修改治理工具/检查器也属于 T2，且必须包含一个对故意错误输入失败的负向对照。
+- T3：公共契约、Schema、数据库、安全边界或跨层架构改动，要求 ADR/设计批准记录、双端测试与指纹。
+
+类型统一记为 `feature | bugfix | refactor | exploration | adoption | governance | tooling`；EPE 任务 Schema 只登记前四种工作流类型，治理/工具类工作在目标和写入范围中说明。
+
+工作区已有未提交改动时走 adoption 流程：盘点 → 归属 → 基线检查 → 补缺 → 合并验证 → 按声明范围选择性提交，整树提交需用户确认。
+
+验证命令矩阵与证据字段分别见 [verification.md](../../skills/btae-coding-agent/references/verification.md) 和 [evidence.md](../../skills/btae-coding-agent/references/evidence.md)。证据摘要使用固定字节格式（UTF-8 规范化 JSON：键排序、`,`/`:` 分隔、无空格、无尾随换行、非 ASCII 不转义）；证据记录和承载它的任务记录必须从自身 manifest 排除，`validity` 只锚定其余输入。`result` 由 `exit_code == expected_exit_code` 决定；负向对照显式写 `expected_exit_code`，不得用括号解释 `1 + passed`。artifact 使用仓库相对路径或持久 URL，临时文件标 `ephemeral: true` 且不能单独支撑门禁。纯文档改动运行检查器时，无位置参数会扫描所有 Git 跟踪的 `*.md`（包括根与嵌套 README），未跟踪文件需显式传入；CI 配置受保护时只提交 patch 提案并标注 `local-only`，不得直接修改。仅 BTAE 自身仓库存在 `engineering/schemas/evidence.schema.json`；其他仓库按该字段集记录即可，不要求创建该文件。

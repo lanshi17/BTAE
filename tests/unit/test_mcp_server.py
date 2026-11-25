@@ -4,7 +4,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from epe.adapters.mcp_server import dispatch, design_plan, project_context
+from epe.adapters.mcp_server import dispatch, design_plan, project_context, validate_project
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -61,3 +61,11 @@ def test_stdio_mcp_entry_supports_initialize_tools_and_tool_call(tmp_path):
 def test_initialize_negotiates_a_supported_protocol_version():
     result = dispatch({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2025-06-18"}})
     assert result["result"]["protocolVersion"] == "2025-06-18"
+
+
+def test_validate_project_reports_error_when_epe_is_unavailable(tmp_path):
+    result = validate_project({"root": str(tmp_path)})
+    assert result["status"] == "error"
+    executed = [check for check in result["checks"] if check.get("status") != "skipped"]
+    assert executed
+    assert all(check.get("exit_code") != 0 or check.get("result", {}).get("status") in {"error", "blocked"} for check in executed)
