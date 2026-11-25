@@ -1,0 +1,15 @@
+$ python skills/btae-coding-agent/scripts/check-docs-links.py --root . skills/btae-coding-agent docs/integrations/btae-coding-agent.md plans/active/TASK-skill-evidence-interop-v3.md
+checked 10 file(s): ok
+exit=0
+
+$ git ls-files -z -- "*.md" | wc -l
+172
+
+$ check-docs-links.py --root <tracked fixture with broken link>
+docs/a.md:3: broken link target: missing.md
+checked 1 file(s): 1 problem(s)
+exit=1
+
+$ check-docs-links.py --root <fixture with inline-code link that must be ignored>
+checked 1 file(s): ok
+exit=0

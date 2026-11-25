@@ -3,6 +3,10 @@
 
 Standard library only. Run from the repository root, or pass --root.
 
+With no positional paths, scan every git-tracked Markdown file under the root.
+Outside a Git worktree, fall back to a recursive glob. Untracked Markdown
+must be named explicitly.
+
 Exit codes: 0 = clean, 1 = problems found, 2 = usage or I/O error.
 """
 
@@ -12,6 +16,7 @@ import argparse
 import fnmatch
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
@@ -167,7 +172,7 @@ def check_file(md: Path, root: Path, check_ids: bool) -> list[str]:
     rel_md = md.relative_to(root).as_posix()
 
     for number, line in prose:
-        targets = [match.group(1) for match in LINK_RE.finditer(line)]
+        targets = [match.group(1) for match in LINK_RE.finditer(INLINE_CODE_RE.sub("", line))]
         ref_def = REF_DEF_RE.match(line)
         if ref_def:
             targets.append(ref_def.group(1))
@@ -202,18 +207,20 @@ def check_file(md: Path, root: Path, check_ids: bool) -> list[str]:
 
         for code in INLINE_CODE_RE.findall(line):
             token = code.strip()
+            if is_path_like(token, root):
+                bare = token.rstrip("/").split("::", 1)[0]
+                candidates = [root / bare, md.parent / bare]
+                if not any(candidate.exists() for candidate in candidates):
+                    errors.append(f"{rel_md}:{number}: missing repository path: {token}")
+                continue
             if check_ids:
                 for identifier in ID_RE.findall(token):
+                    if identifier.endswith(".md"):
+                        continue
                     if identifier not in DECLARATIONS:
                         errors.append(
                             f"{rel_md}:{number}: undeclared ID reference: {identifier}"
                         )
-            if not is_path_like(token, root):
-                continue
-            bare = token.rstrip("/")
-            candidates = [root / bare, md.parent / bare]
-            if not any(candidate.exists() for candidate in candidates):
-                errors.append(f"{rel_md}:{number}: missing repository path: {token}")
 
     if check_ids:
         collect_declarations(md, prose, fenced)
@@ -239,6 +246,22 @@ def collect_declarations(
     # it is also not a cross-reference; skip it deliberately.
 
 
+def tracked_markdown(root: Path) -> list[Path] | None:
+    """Return git-tracked Markdown, or None when root is not a Git worktree."""
+    try:
+        proc = subprocess.run(
+            ["git", "-C", str(root), "ls-files", "-z", "--", "*.md"],
+            capture_output=True,
+            check=False,
+        )
+    except (OSError, ValueError):
+        return None
+    if proc.returncode != 0:
+        return None
+    names = [name for name in proc.stdout.decode("utf-8", "surrogateescape").split("\0") if name]
+    return [root / name for name in names if (root / name).is_file()]
+
+
 def collect_files(root: Path, paths: list[str], excludes: list[str]) -> list[Path]:
     candidates: list[Path] = []
     if paths:
@@ -251,7 +274,7 @@ def collect_files(root: Path, paths: list[str], excludes: list[str]) -> list[Pat
             else:
                 raise FileNotFoundError(f"path not found: {item}")
     else:
-        candidates = list(root.rglob("*.md"))
+        candidates = tracked_markdown(root) or list(root.rglob("*.md"))
 
     selected: list[Path] = []
     for path in sorted(set(candidates)):
@@ -272,7 +295,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Check Markdown links, anchors, backticked repo paths, and BTAE IDs."
     )
-    parser.add_argument("paths", nargs="*", help="files or directories (default: all Markdown)")
+    parser.add_argument("paths", nargs="*", help="files or directories (default: all git-tracked Markdown)")
     parser.add_argument("--root", default=".", help="repository root (default: .)")
     parser.add_argument(
         "--exclude",

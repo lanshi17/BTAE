@@ -4,7 +4,7 @@
 
 Owner: <person or handle>
 Protocol: v2
-Type: feature | bugfix | refactor | exploration | adoption
+Type: feature | bugfix | refactor | exploration | adoption | governance | tooling
 Tier: T1 | T2 | T3
 Tooling: mcp | repo-native (client=<agent runtime> <version>, date=<YYYY-MM-DD>)
 Risk: low | medium | high
@@ -12,6 +12,9 @@ Design status: draft | reviewed | approved  (approval by: <person/record> — le
 Implementation: not_started | in_progress | implemented
 Verification: pending | passed | failed
 Evidence: valid | stale | invalid | unknown
+Evidence refs: <EVIDENCE-ID>, <EVIDENCE-ID>
+Supersedes: <TASK-ID or none>
+Superseded by: <TASK-ID or none>
 
 ## Objective
 

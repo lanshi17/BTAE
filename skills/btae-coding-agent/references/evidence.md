@@ -15,6 +15,7 @@ Protocol: v2. This reference is portable: the field names below work in a task r
 | `cwd` | Working directory of the run |
 | `started_at`, `finished_at` | UTC ISO-8601 timestamps |
 | `exit_code` | Process exit code, or `null` when no process ran |
+| `expected_exit_code` | Exit code that constitutes success for this check; `0` unless the check is an intentional negative control |
 | `termination_reason` | Optional short reason for `error` / `not_run`, otherwise `null` |
 | `result` | `passed` / `failed` / `error` / `not_run` |
 | `validity` | `valid` / `stale` / `invalid` / `unknown` — independent of `result` |
@@ -22,6 +23,8 @@ Protocol: v2. This reference is portable: the field names below work in a task r
 | `artifacts` | `[{path, sha256, ephemeral}]` output files; `ephemeral` defaults to `false` |
 | `environment` | OS, runtime and tool versions, relevant non-secret env vars |
 | `provenance` | `{commit, worktree_digest, host, client}` |
+
+`result` describes whether the run met the declared expectation, not whether the process exited zero. For a normal check `expected_exit_code` is `0`. A negative control sets the expected failure explicitly and records `result: passed` only when the observed `exit_code` equals it; `exit_code: 1` with `result: passed` is therefore meaningful only when `expected_exit_code: 1` is present. A missing `exit_code` when a process ran is a schema/record error, not an expected failure.
 
 `client` is the agent runtime name and version (for example `omp 1.4` or `Codex CLI 0.42.0`), never the model vendor alone. `host` is `<os>/<arch>` (for example `linux/x86_64`). `commit` is the 40-character HEAD SHA or `null`; `worktree_digest` fingerprints uncommitted changes and is `null` for a clean tree.
 
@@ -35,9 +38,13 @@ A digest is exchangeable only when its bytes are fixed. Use exactly this form:
 4. `entries` is sorted by `path` (UTF-8 byte order). Paths are unique.
 5. `digest` is the SHA-256 of the UTF-8 canonical JSON array of entries: object keys sorted, separators `,` and `:`, no trailing newline, `ensure_ascii=false`.
 
-This is the same canonical JSON used by EPE's `sha256_json`, so an EPE-produced digest and a hand-computed one agree.
+The aggregate digest hashes one canonical JSON array, not `sha256sum` output and not the pretty-printed JSON:
 
-Per-file hashes for review (these are not the bytes that are hashed for the aggregate digest):
+```text
+[{"path":"docs/intent/INTENT-001.md","sha256":"9f2c..."},{"path":"src/example.py","sha256":"4a1b..."},{"path":"tests/unit/test_example.py","sha256":"7d3e..."}]
+```
+
+Exact bytes: UTF-8, keys sorted (`path` before `sha256`), separators `,` and `:`, no spaces, no trailing newline, non-ASCII characters unescaped. The digest is `sha256` of exactly those bytes. The following per-file lines are a human review aid only; hashing them, or a `sha256sum` listing, gives a different value and is not the manifest digest:
 
 ```text
 9f2c...  docs/intent/INTENT-001.md
@@ -73,7 +80,9 @@ git ls-files -z -- 'src/**' 'docs/**' | sort -z | xargs -0 sha256sum
 
 If two tools disagree, compare the canonical JSON bytes first; the most common causes are `ensure_ascii`, separators, entry order, and a trailing newline.
 
-Do not include the evidence record or the task record that contains it in its own `input_manifest`: the record would change whenever the digest is written, so it can never be valid. Fingerprint the implementation and check inputs, not the description of the run.
+Do not include the evidence record or the task record that contains it in its own `input_manifest`: the record would change whenever the digest is written, so it can never be valid. Fingerprint the implementation and check inputs, not the description of the run. `validity` is anchored to the remaining inputs: recompute those entries only, and never make a record valid by excluding every input except itself.
+
+A docs link/path check still scans the evidence-bearing Markdown file, because broken references are defects in the record. That scan is not a fingerprint of the record: it validates the record's references, while the manifest excludes the record's own bytes. If the only declared input was the record itself, the evidence is `unknown` (nothing independent was fingerprinted), not `valid`.
 
 ## Artifacts and persistence
 
@@ -101,6 +110,7 @@ This object is valid against the field set above and against EPE's evidence sche
   "started_at": "2026-11-25T08:00:00Z",
   "finished_at": "2026-11-25T08:00:04Z",
   "exit_code": 0,
+  "expected_exit_code": 0,
   "termination_reason": null,
   "result": "passed",
   "validity": "valid",
@@ -122,6 +132,23 @@ This object is valid against the field set above and against EPE's evidence sche
   }
 }
 ```
+
+## Negative controls and expected failures
+
+A checker that must prove it rejects a bad input is a negative control. Declare the failure rather than hiding it in prose:
+
+```json
+{
+  "checker": "check-docs-links.py",
+  "command": ["python", "scripts/check-docs-links.py", "fixture/broken-link.md"],
+  "exit_code": 1,
+  "expected_exit_code": 1,
+  "result": "passed",
+  "termination_reason": null
+}
+```
+
+The same exit code with `expected_exit_code: 0` is `failed` with `termination_reason: "nonzero_exit"`. With a non-zero expectation that does not match, the result is `failed` with `termination_reason: "unexpected_exit_code"`. Do not widen `result` to mean "the command ran"; keep it tied to the declared expectation.
 
 ## Freshness and invalidation
 

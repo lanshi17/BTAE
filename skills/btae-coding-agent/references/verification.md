@@ -17,6 +17,8 @@ Rules:
 - A command that does not exist is reported as "no configured check", not replaced by an invented one.
 - Report pre-existing failures separately from failures introduced by the change.
 - Test counts are evidence of execution, not of design conformity; mapping and architecture checks remain separate.
+- A new checker or gate needs a negative control: run it against a deliberately bad input, record the non-zero `exit_code`, `expected_exit_code: 1`, and `result: passed`. A checker that has never failed is unproven.
+- When CI configuration is protected, do not edit it. Put a patch proposal in the report, mark the check `local-only`, and record that enforcement is missing.
 
 ## Docs and cross-document references
 
@@ -28,6 +30,7 @@ python "$SKILL/scripts/check-docs-links.py" --root . docs plans README.md
 
 Rules:
 
+- File discovery is part of the contract. With no positional paths, the checker scans every git-tracked `*.md` under `--root` (`git ls-files`), which includes root and nested `README.md`; outside a Git worktree it falls back to a recursive glob. Untracked Markdown is not scanned unless you pass it explicitly. Passing a directory scans all Markdown below it. Exclusion defaults cover `.git`, `.engineering`, virtual environments, `node_modules`, `build`, `dist`, and `__pycache__`; add `--exclude` for project-specific caches.
 - Refer to another document with a Markdown relative link, for example `[evidence fields](../references/evidence.md)`, not a bare path. Link text may be human-readable; the target resolves relative to the containing file.
 - Use backticks for code, commands, and paths that are not navigation. The checker still validates a backticked token that looks like a repository path (it contains `/` and has a file extension, a trailing `/`, or an existing first directory).
 - Anchor checks apply to Markdown targets; GitHub-style heading slugs are used, including `-1`, `-2` suffixes for duplicate headings.

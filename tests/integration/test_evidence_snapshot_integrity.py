@@ -28,6 +28,26 @@ def test_change_during_real_check_remains_stale(tmp_path):
     assert evidence_validity(tmp_path, config(), evidence[0]) == "stale"
 
 
+def test_expected_exit_code_makes_negative_control_explicit(tmp_path):
+    policy = tmp_path / "engineering/policies/verification.yaml"
+    policy.parent.mkdir(parents=True)
+    command = [sys.executable, "-c", "raise SystemExit(3)"]
+    good = {"id": "negative-control", "command": command, "expected_exit_code": 3}
+    policy.write_text(json.dumps({"checks": [good]}))
+    evidence, diagnostics = run_checks(tmp_path, config(), "TASK-001")
+    assert not diagnostics
+    assert evidence[0]["exit_code"] == 3 and evidence[0]["expected_exit_code"] == 3
+    assert evidence[0]["result"] == "passed" and evidence[0]["termination_reason"] is None
+    assert evidence_validity(tmp_path, config(), evidence[0], good) == "valid"
+
+    bad = {**good, "expected_exit_code": 4}
+    policy.write_text(json.dumps({"checks": [bad]}))
+    evidence, diagnostics = run_checks(tmp_path, config(), "TASK-001")
+    assert not diagnostics
+    assert evidence[0]["result"] == "failed"
+    assert evidence[0]["termination_reason"] == "unexpected_exit_code"
+
+
 def test_custom_policy_changes_invalidate_evidence_even_when_excluded(tmp_path):
     cfg = config()
     cfg["policies"]["verification"] = "custom/verification.json"

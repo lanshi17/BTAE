@@ -68,10 +68,12 @@ Skill 附带最小模板 [AGENTS.md](../../skills/btae-coding-agent/templates/AG
 
 ## 变更分级与接管
 
-- T1：单文件，或纯文档且不改可执行面、契约、Schema 或权威内容；记录头部 + 目标 + 1 条验收 + 1 条检查，≤ 25 行。
-- T2（默认）：多文件模块改动；修改 `AGENTS.md`、`SPEC`、ADR、协议本身或机器契约即使没有代码改动也属于 T2。
+- T1：单文件低风险，或纯文档且不改可执行面、契约、Schema 或权威内容；记录头部 + 目标 + 1 条验收 + 1 条检查，≤ 25 行。
+- T2（默认）：多文件模块改动；修改 `AGENTS.md`、`SPEC`、ADR、协议本身或机器契约即使没有代码改动也属于 T2；新增或修改治理工具/检查器也属于 T2，且必须包含一个对故意错误输入失败的负向对照。
 - T3：公共契约、Schema、数据库、安全边界或跨层架构改动，要求 ADR/设计批准记录、双端测试与指纹。
+
+类型统一记为 `feature | bugfix | refactor | exploration | adoption | governance | tooling`；EPE 任务 Schema 只登记前四种工作流类型，治理/工具类工作在目标和写入范围中说明。
 
 工作区已有未提交改动时走 adoption 流程：盘点 → 归属 → 基线检查 → 补缺 → 合并验证 → 按声明范围选择性提交，整树提交需用户确认。
 
-验证命令矩阵与证据字段分别见 [verification.md](../../skills/btae-coding-agent/references/verification.md) 和 [evidence.md](../../skills/btae-coding-agent/references/evidence.md)。证据摘要使用固定字节格式（UTF-8 规范化 JSON），artifact 使用仓库相对路径或持久 URL，临时文件标 `ephemeral: true` 且不能单独支撑门禁。仅 BTAE 自身仓库存在 `engineering/schemas/evidence.schema.json`；其他仓库按该字段集记录即可，不要求创建该文件。纯文档改动运行 `skills/btae-coding-agent/scripts/check-docs-links.py` 检查相对链接、锚点、反引号路径和（可选的）ID 交叉引用。
+验证命令矩阵与证据字段分别见 [verification.md](../../skills/btae-coding-agent/references/verification.md) 和 [evidence.md](../../skills/btae-coding-agent/references/evidence.md)。证据摘要使用固定字节格式（UTF-8 规范化 JSON：键排序、`,`/`:` 分隔、无空格、无尾随换行、非 ASCII 不转义）；证据记录和承载它的任务记录必须从自身 manifest 排除，`validity` 只锚定其余输入。`result` 由 `exit_code == expected_exit_code` 决定；负向对照显式写 `expected_exit_code`，不得用括号解释 `1 + passed`。artifact 使用仓库相对路径或持久 URL，临时文件标 `ephemeral: true` 且不能单独支撑门禁。纯文档改动运行检查器时，无位置参数会扫描所有 Git 跟踪的 `*.md`（包括根与嵌套 README），未跟踪文件需显式传入；CI 配置受保护时只提交 patch 提案并标注 `local-only`，不得直接修改。仅 BTAE 自身仓库存在 `engineering/schemas/evidence.schema.json`；其他仓库按该字段集记录即可，不要求创建该文件。

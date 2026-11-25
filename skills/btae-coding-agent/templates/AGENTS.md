@@ -35,15 +35,16 @@ Commands here override ecosystem defaults. If a command is absent, say so instea
 
 - Protected paths (require explicit approval): `<paths>`
 - Forbidden operations: secrets in tree, destructive git commands, production data access, network side effects outside scope.
+- Protected CI: do not edit protected workflow files; put a patch proposal in the report and mark the check `local-only`.
 - Bindings/config: `<files>`
 
 ## Workflow and evidence
 
-- Classify work as feature / bugfix / refactor / exploration / adoption.
+- Classify work as feature / bugfix / refactor / exploration / adoption / governance / tooling.
 - Start each task record with `Protocol: v2`, `Tooling: mcp | repo-native (client=<runtime> <version>, date=<YYYY-MM-DD>)`, and the tier.
 - Design first for multi-file or contract-affecting changes; one-file low-risk fixes need only a reproduction and a check.
-- Record the exact command, cwd, UTC time, exit code, and result. `passed` is a recorded fact, not an opinion.
-- Use the canonical input-manifest format for fingerprints; a digest without its byte format is not evidence.
+- Record the exact command, cwd, UTC time, exit code, expected exit code, and result. `passed` is a recorded fact, not an opinion; a negative control declares `expected_exit_code` and is not a hidden failure.
+- Use the canonical input-manifest format for fingerprints; a digest without its byte format is not evidence. Exclude the record from its own manifest.
 - Keep artifacts at durable repository paths (or stable URLs); mark `/tmp` outputs `ephemeral: true`, and never let an ephemeral file alone support a gate.
 - Never write `approved`, sign an approval, or mark evidence `valid` on the user's behalf.
 - Keep design, implementation, verification, and evidence states separate.
