@@ -176,6 +176,7 @@ class Evidence:
     started_at: str
     finished_at: str
     exit_code: int | None
+    expected_exit_code: int | None
     termination_reason: str | None
     result: str
     validity: str

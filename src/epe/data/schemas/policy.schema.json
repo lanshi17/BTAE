@@ -81,6 +81,9 @@
             "type": "number",
             "exclusiveMinimum": 0
           },
+          "expected_exit_code": {
+            "type": "integer"
+          },
           "max_age_seconds": {
             "type": "integer",
             "minimum": 1

@@ -1,13 +1,20 @@
 # TASK-001 — <objective>
 
-Type: feature | bugfix | refactor | exploration | adoption
+<!-- T1: keep this header, Objective, one acceptance condition, and one verification row; omit the other sections. Target ≤ 25 lines. -->
+
+Owner: <person or handle>
+Protocol: v2
+Type: feature | bugfix | refactor | exploration | adoption | governance | tooling
 Tier: T1 | T2 | T3
-Tooling: mcp | repo-native (<client>, <YYYY-MM-DD>)
+Tooling: mcp | repo-native (client=<agent runtime> <version>, date=<YYYY-MM-DD>)
 Risk: low | medium | high
 Design status: draft | reviewed | approved  (approval by: <person/record> — leave `draft` if none)
 Implementation: not_started | in_progress | implemented
 Verification: pending | passed | failed
 Evidence: valid | stale | invalid | unknown
+Evidence refs: <EVIDENCE-ID>, <EVIDENCE-ID>
+Supersedes: <TASK-ID or none>
+Superseded by: <TASK-ID or none>
 
 ## Objective
 
@@ -20,6 +27,7 @@ Evidence: valid | stale | invalid | unknown
 ## Scope
 
 - Target entities: `<ID>`, `<ID>`
+- ChangeSet: `<CHANGE-ID or n/a>`
 - Write scope: `<paths/globs>`
 - Protected paths: `<paths>`
 - Dependencies: `<contracts/modules>`
@@ -34,9 +42,9 @@ Evidence: valid | stale | invalid | unknown
 | --- | --- | --- |
 | `<ID>` | `<file#symbol>` | `<test>` |
 
-## Reproduction / baseline (bugfix / refactor)
+## Baseline / reproduction
 
-<Command and observed pre-change result.>
+<Bugfix, refactor, and adoption: command and observed pre-change result, plus the commit or worktree baseline. Feature: `n/a`.>
 
 ## Verification
 
