@@ -53,23 +53,25 @@ Skill 入口位于 [`skills/btae-coding-agent`](../../skills/btae-coding-agent)�
 
 ## 两种运行模式
 
-Skill 启动时先探测 `btae_project_context` 是否可用，并把结果写进任务记录：
+Skill 启动时先查看宿主的工具列表。`btae_project_context` 不在列表中就不要调用，直接记录 `repo-native`；在列表中则调用一次，并把结果写进任务记录：
 
 - `mcp`：工具返回有界来源（仅限 BTAE 自身仓库布局）时使用。
 - `repo-native`：工具缺失、未配置、调用报错，或返回 `status: incomplete` 且无来源（普通目标仓库的常态）时使用降级路径：`AGENTS.md` + 模块文档 + `git status/diff` 替代上下文，任务记录模板替代设计草案，仓库原生类型/测试/lint 替代 `btae_validate_project`。
+
+记录格式为 `Tooling: mcp | repo-native (client=<agent runtime> <version>, date=<YYYY-MM-DD>)`；`client` 是 agent runtime 的名称和版本，不是模型厂商。`git check-ignore -v` 对可提交路径返回 1 属正常结果，返回 0 才表示命中忽略规则。
 
 MCP 只提供上下文与草案，不构成批准、写入隔离、宿主信任或门禁通过。
 
 ## 目标仓库引导
 
-Skill 附带最小模板 `templates/AGENTS.md`、`templates/SPEC.md`、`templates/task-record.md`，仅在用户明确要求或目标仓库确实没有权威文档时使用。新建权威文档前必须用 `git check-ignore -v <path>` 确认可提交；优先复用已有规划位置，不在普通仓库中预建 `docs/intent/`、`engineering/`。
+Skill 附带最小模板 [AGENTS.md](../../skills/btae-coding-agent/templates/AGENTS.md)、[SPEC.md](../../skills/btae-coding-agent/templates/SPEC.md)、[task-record.md](../../skills/btae-coding-agent/templates/task-record.md) 和 [ADR.md](../../skills/btae-coding-agent/templates/ADR.md)，仅在用户明确要求或目标仓库确实没有权威文档时使用。新建权威文档前必须用 `git check-ignore -v <path>` 确认可提交；优先复用已有规划位置，不在普通仓库中预建 `docs/intent/`、`engineering/`。
 
 ## 变更分级与接管
 
-- T1：单文件、不涉及契约/结构/安全面的小改，任务记录 ≤ 15 行。
-- T2（默认）：多文件模块改动，要求规格增量、实体与追溯表、验收条件。
+- T1：单文件，或纯文档且不改可执行面、契约、Schema 或权威内容；记录头部 + 目标 + 1 条验收 + 1 条检查，≤ 25 行。
+- T2（默认）：多文件模块改动；修改 `AGENTS.md`、`SPEC`、ADR、协议本身或机器契约即使没有代码改动也属于 T2。
 - T3：公共契约、Schema、数据库、安全边界或跨层架构改动，要求 ADR/设计批准记录、双端测试与指纹。
 
 工作区已有未提交改动时走 adoption 流程：盘点 → 归属 → 基线检查 → 补缺 → 合并验证 → 按声明范围选择性提交，整树提交需用户确认。
 
-验证命令矩阵与证据字段分别见 `skills/btae-coding-agent/references/verification.md` 和 `skills/btae-coding-agent/references/evidence.md`；后者与 `engineering/schemas/evidence.schema.json` 对齐。
+验证命令矩阵与证据字段分别见 [verification.md](../../skills/btae-coding-agent/references/verification.md) 和 [evidence.md](../../skills/btae-coding-agent/references/evidence.md)。证据摘要使用固定字节格式（UTF-8 规范化 JSON），artifact 使用仓库相对路径或持久 URL，临时文件标 `ephemeral: true` 且不能单独支撑门禁。仅 BTAE 自身仓库存在 `engineering/schemas/evidence.schema.json`；其他仓库按该字段集记录即可，不要求创建该文件。纯文档改动运行 `skills/btae-coding-agent/scripts/check-docs-links.py` 检查相对链接、锚点、反引号路径和（可选的）ID 交叉引用。

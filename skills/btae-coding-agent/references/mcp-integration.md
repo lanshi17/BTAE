@@ -16,7 +16,7 @@ The server must be registered as a stdio MCP server with the repository root sup
 
 `btae_project_context` assembles sources from BTAE's own layout (`AGENTS.md`, `docs/intent/*`, `docs/architecture/*`, `plans/active/*`). In any other repository it returns `status: incomplete` with an empty `sources` list; that is not an error, and the skill then falls back to the repo-native path in `SKILL.md` §0. Provide `root` for the target project so validation inspects the right tree.
 
-`btae_validate_project` shells out to the target project's `epe`. When EPE is not importable or the project is not initialised, it now returns `status: error` with per-check `exit_code` and `stderr`, instead of a misleading `checked`. Either state means the repo-native checks from `references/verification.md` are the actual evidence.
+`btae_validate_project` shells out to the target project's `epe`. When EPE is not importable or the project is not initialised, it now returns `status: error` with per-check `exit_code` and `stderr`, instead of a misleading `checked`. Either state means the repo-native checks from the [verification matrix](verification.md) are the actual evidence.
 
 A Codex config entry is:
 
