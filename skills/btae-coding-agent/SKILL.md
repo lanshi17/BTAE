@@ -5,29 +5,92 @@ description: "Use when designing or changing a software project so the coding ag
 
 # BTAE Coding Agent
 
-Use this skill for feature, bugfix, refactor, and exploration work in a BTAE-managed repository. It is the coding-agent entrypoint for the `btae` MCP server; the server provides read-only context, design planning, and validation tools. It does not grant approval, write isolation, or host trust.
+Applies BTAE discipline to feature, bugfix, refactor, exploration, and worktree-adoption work. It runs in two modes: with the `btae` MCP server, and repo-native without it. It assumes no particular repository layout, language, or toolchain.
 
-## Before editing
+## 0. Select the operating mode (first action)
 
-1. Read the repository `AGENTS.md` and identify the repository root.
-2. Classify the request as Feature, Bugfix, Refactor, or Exploration.
-3. Call `btae_project_context` with the objective, change type, and known target entities. Use its sources as C0–C2 context; do not load the whole repository by default.
-4. Call `btae_design_plan` before implementation. Treat its result as a draft plan, not as approval. Record the task, affected entities, write scope, protected paths, dependencies, acceptance conditions, and risks in the repository's planning locations.
+Probe once, then record the result in the task record or plan header:
 
-## Design and implementation rules
+- Try `btae_project_context` with a short objective.
+- `mcp`: the call succeeds and returns bounded sources → use it.
+- `repo-native`: the tool is absent, the server is not configured, the call errors, or the result is `status: incomplete` with no sources (the normal case for a repository that is not BTAE's own) → use the fallback table below and say so. Never fabricate tool output or silently skip the step.
 
-- Design first: update the applicable intent/spec, architecture/module boundary, component/class design, contract, ADR, or task plan before changing implementation. Keep the smallest logical entity set; do not create one document per code file mechanically.
-- Use stable English entity IDs and preserve identity when files move. Keep Markdown as design intent, machine schemas as constraints, code as implementation, tests as behavior evidence, and execution records as proof.
-- Trace both directions: design → implementation/tests and implementation → design. Mark static discovery and model inference as unverified until checked.
-- Keep `draft/reviewed/approved`, implementation state, verification result, and evidence validity separate. Never write `approved`, `passed`, or `valid` merely because the agent believes it is true.
-- Follow the repository's Feature/Bugfix/Refactor/Exploration workflow. For bugfixes reproduce first; for refactors capture a baseline; for exploration label prototypes and hypotheses.
-- Do not change protected paths or execute external commands outside the user's authorized scope. A ChangeSet declaration is not a lock or permission grant.
+Record `Tooling: mcp | repo-native (<client>, <YYYY-MM-DD>)`.
 
-## Before reporting completion
+| BTAE surface | Repo-native substitute |
+| --- | --- |
+| `btae_project_context` | `AGENTS.md` + module docs + `git status` / `git diff --stat`; bounded, never the whole tree |
+| `btae_design_plan` | `templates/task-record.md` + existing plan/spec documents |
+| `btae_validate_project` | repository-native type/lint/test commands ([verification matrix](references/verification.md)), each recorded |
 
-1. Run the relevant repository checks and preserve real commands, results, timestamps, environment, input/code/contract fingerprints, and artifact paths.
-2. Call `btae_validate_project` for the current root. Resolve errors and unknowns or report them explicitly.
-3. Check mapping, architecture, scope, evidence freshness, and required checks. A green unit-test count does not prove design conformity.
-4. Report changed entities/files, validation commands and results, evidence locations, unresolved risks, and any external approval or host capability still missing.
+MCP provides context and draft planning only. It never grants approval, write isolation, host trust, or a governance pass. A successful or green tool result is not `approved` / `passed`.
 
-For the tool contract and client configuration, read [MCP integration reference](references/mcp-integration.md). For the project authority and layer boundaries, use the repository `AGENTS.md`, `docs/intent/requirements/SPEC-BTAE.md`, and `docs/architecture/engineering-protocol.md`.
+EPE CLI commands (`epe init`, `epe task`, `epe check`, `epe verify`, `epe changeset`) exist only when the project has installed that CLI. Probe; do not cite them as if present.
+
+## 1. Establish repository authority
+
+1. Find the repository root (`git rev-parse --show-toplevel`) and read the authority documents that exist: `AGENTS.md`, `CLAUDE.md`, contributor docs, CI config. Never create BTAE's own layout (`docs/intent`, `engineering/`) in a foreign repository unless the user asks to bootstrap it.
+2. Prefer declared commands and locations: package scripts, Makefile, CI, existing plans. Do not add a second convention.
+3. If no authority document exists and the work is non-trivial, ask one compact question (objective, whether to bootstrap, where plans live), then continue repo-native. Default to continuing, not stalling.
+4. Before writing authoritative files, check commit-ability: `git check-ignore -v <path>` for each new charter/spec/task file. If ignored, fix the ignore rule or choose a tracked path. A silently ignored authority document is not evidence and may never reach the repository.
+5. Reuse an existing plan/spec/task location before creating one. No empty scaffold directories; no one-document-per-code-file layout.
+
+When bootstrap is explicitly requested or clearly absent, copy the minimal set from `templates/`:
+
+- `templates/AGENTS.md` — scope, authoritative commands, boundaries, evidence rule.
+- `templates/SPEC.md` — intent/spec with observable acceptance conditions.
+- `templates/task-record.md` — task with separated design/implementation/verification/evidence states.
+
+## 2. Classify and size the change
+
+Workflows: Feature (Intent → Spec → Impact/Design → Contract → Implement → Verify), Bugfix (Reproduce → Affected entity → Root cause → Fix design → Implement → Regression), Refactor (Baseline → Snapshot → Impact → Design → Refactor → Regression/Architecture diff), Exploration (Question → Hypothesis → Prototype → Experiment → Evaluation → Decision). Exploration output is a prototype; never present it as production design.
+
+Fifth case — Adoption: an uncommitted, half-finished worktree, possibly from another session. See §5.
+
+Change tiers; T2 is the default:
+
+| Tier | Trigger | Required artifacts | Verification |
+| --- | --- | --- | --- |
+| T1 | one file; no contract, API, schema, security, or architecture surface | task record ≤ 15 lines | reproduction or focused test; one native check |
+| T2 | default; multi-file module work | intent/spec delta, affected entities, trace table, acceptance | native checks for every touched stack |
+| T3 | public contract, schema, DB, security boundary, cross-layer or multi-module architecture | ADR / design approval record, scope and dependency analysis | T2 checks + contract tests on both sides + fingerprints |
+
+Never downgrade a tier to avoid documentation; never apply T3 ceremony to a T1 fix.
+
+## 3. Context and design
+
+- Assemble bounded context: target entities/files, direct dependencies, contracts, tests, recent history. Do not load the whole repository by default.
+- Design before implementation for T2/T3: update the applicable intent/spec, boundary, component/class design, contract, ADR, or task plan first. Keep the smallest logical entity set.
+- Stable English IDs (`REQ-`, `SPEC-`, `ARCH-`, `MOD-`, `COMP-`, `CLASS-`, `CONTRACT-`, `TASK-`, `CHANGE-`, `EVIDENCE-`, `ADR-`). Moving a file must not change identity.
+- Trace both directions: design → implementation/tests and implementation → design. Static discovery and model inference stay unverified until checked.
+- Keep four states separate: design `draft/reviewed/approved`, implementation `not_started/in_progress/implemented`, verification `pending/passed/failed`, evidence `valid/stale/invalid/unknown`. Never write `approved` or an approval on the user's behalf; only a recorded human or CI approval may do that.
+- Declare target entities, write scope, protected paths, dependencies, and risks. With EPE installed, declaration is a `CHANGE-` record checked by `epe changeset`; elsewhere it is a task-record field. In both cases a declaration is not a lock or a permission grant.
+
+## 4. Implementation
+
+- Change only the declared scope. Unexpected repository changes belong to the user: adapt, do not revert them.
+- Keep docs, contracts, code, and tests coherent in one change; delete obsolete aliases and shims instead of layering new ones.
+- No secrets, no destructive commands, no external side effects beyond authorization; ask before deleting code you did not write.
+
+## 5. Adoption of an uncommitted worktree
+
+1. Inventory: `git status --short`, `git diff --stat`, untracked list; note files you did not write.
+2. Attribute: determine which changes are in scope for this session; never claim authorship of unknown work.
+3. Baseline: run the existing repository checks before editing so pre-existing failures are distinguishable.
+4. Fill gaps: add design/spec entries only for what you change; do not retro-document untouched files.
+5. Verify the combined result, not only your own delta.
+6. Commit only declared-scope files; a whole-worktree commit requires explicit user confirmation. Use selective staging (per-file or staged patches), never `git add -A`.
+
+## 6. Verification and evidence
+
+1. Run the repository checks for touched stacks. Record the exact command, cwd, UTC start/end, exit code, environment, result, and summary.
+2. Fingerprint inputs (source + contract) and list artifacts by path. Field set and freshness rule: [evidence reference](references/evidence.md).
+3. With EPE installed, run `epe check [--task TASK-ID]` and `epe verify TASK-ID`; resolve errors and unknowns or report them explicitly.
+4. Distinguish "planned check", "ran locally", and "CI-enforced". A green unit-test count does not prove design conformity.
+5. Mark evidence `stale` when fingerprinted inputs changed after the run. Keep the historical result; never rewrite it to `valid`.
+
+## 7. Report
+
+Report the mode (`Tooling`), tier, changed entities/files, commands and results, evidence locations, unresolved risks, and any approval or host capability still missing. Label inference as `[INFERENCE]`; never present it as observed fact.
+
+References: [MCP integration](references/mcp-integration.md) · [verification matrix](references/verification.md) · [evidence fields and freshness](references/evidence.md) · [templates](templates/)
